@@ -1,0 +1,853 @@
+/**
+ * Dashboard Styles for Parfume Reviews Plugin
+ * 
+ * Comprehensive styling for admin dashboard widgets including:
+ * - Statistics widgets
+ * - Activity feeds
+ * - Quick actions
+ * - Charts and graphs
+ * - System status indicators
+ * - Responsive layouts
+ * 
+ * @package ParfumeReviews
+ * @version 1.0.0
+ */
+
+/* ==============================================
+   Dashboard Widget Base Styles
+   ============================================== */
+
+.parfume-dashboard-widget {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    padding: 0;
+    margin: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.parfume-dashboard-widget .widget-top {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 16px;
+    border-bottom: none;
+}
+
+.parfume-dashboard-widget .widget-title {
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    margin: 0;
+}
+
+.parfume-dashboard-widget .inside {
+    padding: 0;
+    margin: 0;
+}
+
+/* ==============================================
+   Statistics Widget
+   ============================================== */
+
+.parfume-stats-widget {
+    padding: 20px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 15px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-number {
+    font-size: 2.2em;
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.85em;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-change {
+    font-size: 0.75em;
+    margin-top: 5px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.stat-change.positive {
+    background: #d4edda;
+    color: #155724;
+}
+
+.stat-change.negative {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.chart-container {
+    position: relative;
+    height: 200px;
+    margin: 20px 0;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.widget-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+}
+
+/* ==============================================
+   Activity Widget
+   ============================================== */
+
+.parfume-activity-widget {
+    padding: 0;
+}
+
+.activity-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 15px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.3s ease;
+}
+
+.activity-item:hover {
+    background: #f8f9fa;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    flex: 0 0 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px;
+    margin-right: 15px;
+}
+
+.activity-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.activity-title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.activity-description {
+    color: #6c757d;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.activity-time {
+    color: #adb5bd;
+    font-size: 12px;
+}
+
+.activity-action {
+    flex: 0 0 auto;
+    margin-left: 10px;
+}
+
+.button-link {
+    color: #007cba;
+    text-decoration: none;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    transition: background-color 0.3s ease;
+}
+
+.button-link:hover {
+    background: #f0f6fc;
+    color: #005a87;
+}
+
+.no-activity {
+    padding: 40px 20px;
+    text-align: center;
+    color: #6c757d;
+}
+
+/* ==============================================
+   Quick Actions Widget
+   ============================================== */
+
+.parfume-quick-actions-widget {
+    padding: 20px;
+}
+
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+}
+
+.quick-action-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 15px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    text-decoration: none;
+    color: #495057;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.quick-action-item:hover {
+    border-color: #007cba;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 124, 186, 0.15);
+}
+
+.quick-action-item:focus {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+}
+
+.action-icon {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #007cba 0%, #005a87 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    margin-bottom: 12px;
+    transition: transform 0.3s ease;
+}
+
+.quick-action-item:hover .action-icon {
+    transform: scale(1.1);
+}
+
+.action-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.3;
+}
+
+/* Loading state for quick actions */
+.quick-action-item.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.quick-action-item.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007cba;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.quick-action-item.success {
+    border-color: #28a745;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+}
+
+.quick-action-item.success .action-icon {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ==============================================
+   Top Content Widget
+   ============================================== */
+
+.parfume-top-content-widget {
+    padding: 0;
+}
+
+.top-content-tabs {
+    display: flex;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 12px 16px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6c757d;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.tab-button:hover {
+    background: rgba(0, 124, 186, 0.1);
+    color: #007cba;
+}
+
+.tab-button.active {
+    background: white;
+    color: #007cba;
+    border-bottom: 2px solid #007cba;
+}
+
+.tab-content {
+    display: none;
+    padding: 20px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.parfume-list {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.parfume-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.3s ease;
+}
+
+.parfume-item:hover {
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.parfume-item:last-child {
+    border-bottom: none;
+}
+
+.parfume-thumbnail {
+    flex: 0 0 50px;
+    height: 50px;
+    margin-right: 15px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+.parfume-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.no-image {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
+    font-size: 18px;
+}
+
+.parfume-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.parfume-title {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.parfume-title a {
+    color: #495057;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.parfume-title a:hover {
+    color: #007cba;
+}
+
+.parfume-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.rating {
+    color: #ffc107;
+    font-weight: 500;
+}
+
+.no-content {
+    padding: 40px 20px;
+    text-align: center;
+    color: #6c757d;
+}
+
+/* ==============================================
+   System Status Widget
+   ============================================== */
+
+.parfume-system-status-widget {
+    padding: 20px;
+}
+
+.status-items {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.status-item.ok {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border-color: #c3e6cb;
+}
+
+.status-item.warning {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-color: #ffeaa7;
+}
+
+.status-item.error {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border-color: #f5c6cb;
+}
+
+.status-icon {
+    flex: 0 0 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px;
+    margin-right: 15px;
+}
+
+.status-item.ok .status-icon {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.status-item.warning .status-icon {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+}
+
+.status-item.error .status-icon {
+    background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+}
+
+.status-content {
+    flex: 1;
+}
+
+.status-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.status-item.ok .status-title {
+    color: #155724;
+}
+
+.status-item.warning .status-title {
+    color: #856404;
+}
+
+.status-item.error .status-title {
+    color: #721c24;
+}
+
+.status-description {
+    font-size: 13px;
+    opacity: 0.8;
+}
+
+.status-actions {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+    text-align: center;
+}
+
+/* ==============================================
+   Responsive Design
+   ============================================== */
+
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 15px;
+    }
+    
+    .quick-actions-grid {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 12px;
+    }
+}
+
+@media (max-width: 782px) {
+    .parfume-dashboard-widget {
+        margin-bottom: 20px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .stat-item {
+        padding: 12px;
+    }
+    
+    .stat-number {
+        font-size: 1.8em;
+    }
+    
+    .quick-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .quick-action-item {
+        padding: 15px 10px;
+    }
+    
+    .action-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+    
+    .action-title {
+        font-size: 12px;
+    }
+    
+    .top-content-tabs {
+        flex-direction: column;
+    }
+    
+    .tab-button {
+        text-align: left;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .tab-button.active {
+        border-bottom: 1px solid #e9ecef;
+        border-left: 3px solid #007cba;
+    }
+    
+    .parfume-item {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 15px 0;
+    }
+    
+    .parfume-thumbnail {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .status-items {
+        gap: 12px;
+    }
+    
+    .status-item {
+        padding: 12px;
+    }
+    
+    .status-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .parfume-dashboard-widget {
+        border-radius: 6px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .chart-container {
+        height: 150px;
+        padding: 10px;
+    }
+    
+    .quick-actions-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .activity-item {
+        padding: 12px 15px;
+    }
+    
+    .activity-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 14px;
+        margin-right: 12px;
+    }
+    
+    .widget-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .widget-actions .button {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* ==============================================
+   Dark Mode Support
+   ============================================== */
+
+@media (prefers-color-scheme: dark) {
+    .parfume-dashboard-widget {
+        background: #2c2c2c;
+        border-color: #404040;
+        color: #e0e0e0;
+    }
+    
+    .stat-item {
+        background: linear-gradient(135deg, #404040 0%, #505050 100%);
+        border-color: #505050;
+        color: #e0e0e0;
+    }
+    
+    .stat-number {
+        color: #ffffff;
+    }
+    
+    .chart-container {
+        background: #404040;
+        border-color: #505050;
+    }
+    
+    .activity-item:hover {
+        background: #404040;
+    }
+    
+    .quick-action-item {
+        background: linear-gradient(135deg, #404040 0%, #505050 100%);
+        border-color: #505050;
+        color: #e0e0e0;
+    }
+    
+    .tab-button {
+        color: #b0b0b0;
+    }
+    
+    .tab-button:hover {
+        background: rgba(0, 124, 186, 0.2);
+        color: #5dade2;
+    }
+    
+    .tab-button.active {
+        background: #2c2c2c;
+        color: #5dade2;
+        border-bottom-color: #5dade2;
+    }
+    
+    .parfume-item:hover {
+        background: #404040;
+    }
+    
+    .status-item {
+        border-color: #505050;
+    }
+}
+
+/* ==============================================
+   Print Styles
+   ============================================== */
+
+@media print {
+    .parfume-dashboard-widget {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+    
+    .quick-action-item,
+    .widget-actions {
+        display: none;
+    }
+    
+    .chart-container {
+        background: white;
+        border: 1px solid #ccc;
+    }
+    
+    .activity-icon,
+    .status-icon {
+        background: #666 !important;
+    }
+}
+
+/* ==============================================
+   Accessibility Enhancements
+   ============================================== */
+
+.parfume-dashboard-widget {
+    position: relative;
+}
+
+.parfume-dashboard-widget:focus-within {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+}
+
+.quick-action-item:focus,
+.tab-button:focus,
+.button-link:focus {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+}
+
+.stat-item[role="button"]:focus {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+}
+
+/* Screen reader only content */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .parfume-dashboard-widget {
+        border: 2px solid;
+    }
+    
+    .stat-item,
+    .quick-action-item,
+    .status-item {
+        border: 2px solid;
+    }
+    
+    .action-icon,
+    .activity-icon,
+    .status-icon {
+        border: 2px solid;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .parfume-dashboard-widget,
+    .stat-item,
+    .quick-action-item,
+    .activity-item,
+    .status-item,
+    .button-link,
+    .tab-button,
+    .action-icon,
+    .parfume-item {
+        transition: none;
+    }
+    
+    .quick-action-item.loading::after {
+        animation: none;
+    }
+    
+    .quick-action-item:hover {
+        transform: none;
+    }
+}

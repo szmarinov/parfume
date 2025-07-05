@@ -1,0 +1,841 @@
+/**
+ * Parfume Comparison Styles
+ * 
+ * Handles all comparison-related styling including:
+ * - Compare buttons
+ * - Comparison table
+ * - Compare widget
+ * - Compare popup/modal
+ */
+
+/* ===== COMPARE BUTTONS ===== */
+.parfume-compare-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.parfume-compare-btn:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.parfume-compare-btn:active {
+    transform: translateY(0);
+}
+
+.parfume-compare-btn.added {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.parfume-compare-btn.added:hover {
+    background: linear-gradient(135deg, #218838 0%, #1abc9c 100%);
+}
+
+.parfume-compare-btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.parfume-compare-btn.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: compareButtonSpin 1s linear infinite;
+}
+
+@keyframes compareButtonSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Button styles */
+.parfume-compare-btn.button {
+    /* Default button style (already defined above) */
+}
+
+.parfume-compare-btn.link {
+    background: none;
+    color: #667eea;
+    padding: 4px 8px;
+    border: 1px solid #667eea;
+    border-radius: 4px;
+}
+
+.parfume-compare-btn.link:hover {
+    background: #667eea;
+    color: white;
+    transform: none;
+    box-shadow: none;
+}
+
+.parfume-compare-btn.icon {
+    padding: 8px;
+    border-radius: 50%;
+    min-width: 40px;
+    min-height: 40px;
+    justify-content: center;
+}
+
+.compare-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+/* ===== COMPARISON TABLE ===== */
+.parfume-comparison-table {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    margin: 20px 0;
+}
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.comparison-table .row-label {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    color: #495057;
+    font-weight: 600;
+    padding: 16px 20px;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
+    min-width: 140px;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+}
+
+.comparison-table .perfume-cell {
+    padding: 16px 20px;
+    text-align: center;
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
+    border-left: 1px solid #dee2e6;
+    background: white;
+    position: relative;
+}
+
+.comparison-table .perfume-cell:first-of-type {
+    border-left: none;
+}
+
+/* Images Row */
+.images-row .perfume-cell {
+    padding: 20px;
+}
+
+.perfume-image {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.perfume-image img {
+    max-width: 120px;
+    max-height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.perfume-image img:hover {
+    transform: scale(1.05);
+}
+
+.no-image {
+    width: 120px;
+    height: 120px;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 12px;
+}
+
+/* Names Row */
+.names-row {
+    background: #f8f9fa;
+}
+
+.names-row .perfume-cell {
+    background: #f8f9fa;
+}
+
+.perfume-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.perfume-title a {
+    color: #495057;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.perfume-title a:hover {
+    color: #667eea;
+}
+
+/* Brands Row */
+.brands-row .perfume-cell {
+    font-weight: 500;
+    color: #667eea;
+}
+
+/* Ratings Row */
+.rating-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.rating-stars {
+    color: #ffc107;
+    font-size: 18px;
+    letter-spacing: 2px;
+}
+
+.rating-number {
+    font-size: 12px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.no-rating {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Detail Rows */
+.detail-row .perfume-cell {
+    font-size: 13px;
+    color: #495057;
+}
+
+/* Notes Row */
+.notes-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+}
+
+.note-tag {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    color: #1976d2;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid #90caf9;
+}
+
+.no-notes {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Price Row */
+.price-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.price {
+    font-weight: 600;
+    color: #28a745;
+    font-size: 16px;
+}
+
+.store {
+    color: #6c757d;
+    font-size: 11px;
+}
+
+.no-price {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Actions Row */
+.perfume-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.view-btn {
+    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.view-btn:hover {
+    background: linear-gradient(135deg, #138496 0%, #1abc9c 100%);
+    transform: translateY(-1px);
+}
+
+.remove-from-compare {
+    background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.remove-from-compare:hover {
+    background: linear-gradient(135deg, #c82333 0%, #d62c1a 100%);
+    transform: translateY(-1px);
+}
+
+/* ===== COMPARE WIDGET ===== */
+.parfume-compare-widget {
+    position: fixed;
+    z-index: 1000;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    min-width: 300px;
+    max-width: 400px;
+    border: 1px solid #dee2e6;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+/* Widget positions */
+.parfume-compare-widget.position-bottom-right {
+    bottom: 20px;
+    right: 20px;
+}
+
+.parfume-compare-widget.position-bottom-left {
+    bottom: 20px;
+    left: 20px;
+}
+
+.parfume-compare-widget.position-top-right {
+    top: 20px;
+    right: 20px;
+}
+
+.parfume-compare-widget.position-top-left {
+    top: 20px;
+    left: 20px;
+}
+
+.parfume-compare-widget.auto-hide.minimized {
+    transform: translateY(calc(100% - 50px));
+}
+
+.parfume-compare-widget.auto-hide.minimized.position-top-right,
+.parfume-compare-widget.auto-hide.minimized.position-top-left {
+    transform: translateY(calc(-100% + 50px));
+}
+
+.widget-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.widget-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.widget-toggle,
+.widget-close {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    font-size: 16px;
+    line-height: 1;
+    transition: background-color 0.3s ease;
+}
+
+.widget-toggle:hover,
+.widget-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.widget-content {
+    padding: 16px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.compare-items {
+    margin-bottom: 16px;
+}
+
+.compare-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.compare-item:hover {
+    background: #e9ecef;
+}
+
+.compare-item-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.compare-item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.compare-item-info {
+    flex: 1;
+}
+
+.compare-item-title {
+    font-size: 13px;
+    font-weight: 500;
+    margin: 0;
+    color: #495057;
+    line-height: 1.3;
+}
+
+.compare-item-remove {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.compare-item-remove:hover {
+    background: #c82333;
+    transform: scale(1.1);
+}
+
+.widget-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.compare-view-btn,
+.compare-clear-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.compare-view-btn {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.compare-view-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #218838 0%, #1abc9c 100%);
+    transform: translateY(-1px);
+}
+
+.compare-view-btn:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.compare-clear-btn {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+}
+
+.compare-clear-btn:hover {
+    background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+    transform: translateY(-1px);
+}
+
+/* ===== COMPARE POPUP ===== */
+.parfume-compare-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.popup-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.popup-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: popupFadeIn 0.3s ease-out;
+}
+
+@keyframes popupFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.popup-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.popup-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.popup-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: background-color 0.3s ease;
+}
+
+.popup-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.popup-body {
+    padding: 24px;
+    max-height: calc(90vh - 160px);
+    overflow: auto;
+}
+
+.popup-footer {
+    background: #f8f9fa;
+    padding: 16px 24px;
+    text-align: right;
+    border-top: 1px solid #dee2e6;
+}
+
+.popup-close-btn {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.popup-close-btn:hover {
+    background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+    transform: translateY(-1px);
+}
+
+/* Loading spinner */
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 40px 20px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e9ecef;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ===== EMPTY STATE ===== */
+.comparison-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+    font-size: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 1200px) {
+    .comparison-table {
+        font-size: 12px;
+    }
+    
+    .perfume-cell {
+        padding: 12px 16px;
+    }
+    
+    .row-label {
+        padding: 12px 16px;
+    }
+}
+
+@media (max-width: 992px) {
+    .parfume-comparison-table {
+        overflow-x: auto;
+    }
+    
+    .comparison-table {
+        min-width: 800px;
+    }
+    
+    .popup-content {
+        max-width: 98vw;
+        max-height: 95vh;
+    }
+    
+    .popup-body {
+        padding: 16px;
+        max-height: calc(95vh - 140px);
+    }
+}
+
+@media (max-width: 768px) {
+    .parfume-compare-widget {
+        min-width: 280px;
+        max-width: calc(100vw - 40px);
+    }
+    
+    .parfume-compare-widget.position-bottom-right,
+    .parfume-compare-widget.position-bottom-left {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+    }
+    
+    .parfume-compare-widget.position-top-right,
+    .parfume-compare-widget.position-top-left {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+    }
+    
+    .widget-actions {
+        flex-direction: column;
+    }
+    
+    .popup-header {
+        padding: 16px 20px;
+    }
+    
+    .popup-header h3 {
+        font-size: 16px;
+    }
+    
+    .popup-footer {
+        padding: 12px 20px;
+    }
+}
+
+@media (max-width: 576px) {
+    .perfume-image img,
+    .no-image {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .perfume-title {
+        font-size: 14px;
+    }
+    
+    .comparison-table {
+        min-width: 600px;
+        font-size: 11px;
+    }
+    
+    .perfume-cell {
+        padding: 8px 12px;
+    }
+    
+    .row-label {
+        padding: 8px 12px;
+        min-width: 100px;
+    }
+    
+    .notes-list {
+        gap: 2px;
+    }
+    
+    .note-tag {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+}
+
+/* ===== ACCESSIBILITY ===== */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+.parfume-compare-btn:focus,
+.widget-toggle:focus,
+.widget-close:focus,
+.popup-close:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* ===== DARK MODE SUPPORT ===== */
+@media (prefers-color-scheme: dark) {
+    .comparison-table .row-label {
+        background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+        color: #f8f9fa;
+        border-color: #495057;
+    }
+    
+    .comparison-table .perfume-cell {
+        background: #212529;
+        color: #f8f9fa;
+        border-color: #495057;
+    }
+    
+    .names-row .perfume-cell {
+        background: #343a40;
+    }
+    
+    .perfume-title a {
+        color: #f8f9fa;
+    }
+    
+    .perfume-title a:hover {
+        color: #667eea;
+    }
+    
+    .parfume-compare-widget,
+    .popup-content {
+        background: #212529;
+        border-color: #495057;
+    }
+    
+    .widget-content {
+        background: #212529;
+    }
+    
+    .compare-item {
+        background: #343a40;
+        border-color: #495057;
+    }
+    
+    .compare-item:hover {
+        background: #495057;
+    }
+    
+    .popup-footer {
+        background: #343a40;
+        border-color: #495057;
+    }
+}
