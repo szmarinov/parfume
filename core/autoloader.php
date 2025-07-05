@@ -78,6 +78,7 @@ class Autoloader {
             'Parfume_Reviews\\Frontend\\Shortcodes\\' => 'frontend/shortcodes/',
             'Parfume_Reviews\\Admin\\'        => 'admin/',
             'Parfume_Reviews\\Utils\\'        => 'utils/',
+            'Parfume_Reviews\\Utils\\Base_Classes\\' => 'utils/', // FIX: Добавен правилен mapping
             'Parfume_Reviews\\Templates\\'    => 'templates/',
         );
         
@@ -99,7 +100,7 @@ class Autoloader {
             'Parfume_Reviews\\Core\\Constants'    => $plugin_dir . 'core/constants.php',
             'Parfume_Reviews\\Core\\Autoloader'   => $plugin_dir . 'core/autoloader.php',
             
-            // Utils classes
+            // Utils classes - FIX: Добавени правилните namespace-ове
             'Parfume_Reviews\\Utils\\Helpers'           => $plugin_dir . 'utils/helpers.php',
             'Parfume_Reviews\\Utils\\Post_Type_Base'    => $plugin_dir . 'utils/base-classes.php',
             'Parfume_Reviews\\Utils\\Taxonomy_Base'     => $plugin_dir . 'utils/base-classes.php',
@@ -111,6 +112,15 @@ class Autoloader {
             'Parfume_Reviews\\Utils\\Cache'             => $plugin_dir . 'utils/cache.php',
             'Parfume_Reviews\\Utils\\Seo'               => $plugin_dir . 'utils/seo.php',
             'Parfume_Reviews\\Utils\\Singleton'         => $plugin_dir . 'utils/base-classes.php',
+            
+            // FIX: Добавени Base_Classes namespace-овете
+            'Parfume_Reviews\\Utils\\Base_Classes\\Post_Type_Base'    => $plugin_dir . 'utils/base-classes.php',
+            'Parfume_Reviews\\Utils\\Base_Classes\\Taxonomy_Base'     => $plugin_dir . 'utils/base-classes.php',
+            'Parfume_Reviews\\Utils\\Base_Classes\\Shortcode_Base'    => $plugin_dir . 'utils/base-classes.php',
+            'Parfume_Reviews\\Utils\\Base_Classes\\Admin_Page_Base'   => $plugin_dir . 'utils/base-classes.php',
+            'Parfume_Reviews\\Utils\\Base_Classes\\Widget_Base'       => $plugin_dir . 'utils/base-classes.php',
+            'Parfume_Reviews\\Utils\\Base_Classes\\Ajax_Base'         => $plugin_dir . 'utils/base-classes.php',
+            'Parfume_Reviews\\Utils\\Base_Classes\\Meta_Box_Base'     => $plugin_dir . 'utils/base-classes.php',
             
             // Post Types
             'Parfume_Reviews\\PostTypes\\Parfume'     => $plugin_dir . 'post-types/parfume.php',
@@ -128,21 +138,18 @@ class Autoloader {
             
             // Frontend Shortcodes
             'Parfume_Reviews\\Frontend\\Shortcodes\\Rating'     => $plugin_dir . 'frontend/shortcodes/rating.php',
-            'Parfume_Reviews\\Frontend\\Shortcodes\\Filters'    => $plugin_dir . 'frontend/shortcodes/filters.php',
+            'Parfume_Reviews\\Frontend\\Shortcodes\\Details'    => $plugin_dir . 'frontend/shortcodes/details.php',
             'Parfume_Reviews\\Frontend\\Shortcodes\\Stores'     => $plugin_dir . 'frontend/shortcodes/stores.php',
+            'Parfume_Reviews\\Frontend\\Shortcodes\\Filters'    => $plugin_dir . 'frontend/shortcodes/filters.php',
             'Parfume_Reviews\\Frontend\\Shortcodes\\Archives'   => $plugin_dir . 'frontend/shortcodes/archives.php',
             'Parfume_Reviews\\Frontend\\Shortcodes\\Comparison' => $plugin_dir . 'frontend/shortcodes/comparison.php',
-            'Parfume_Reviews\\Frontend\\Shortcodes\\Blog'       => $plugin_dir . 'frontend/shortcodes/blog.php',
-            
-            // Admin classes
-            'Parfume_Reviews\\Admin\\Settings'      => $plugin_dir . 'admin/settings.php',
-            'Parfume_Reviews\\Admin\\Import_Export' => $plugin_dir . 'admin/import-export.php',
-            'Parfume_Reviews\\Admin\\Dashboard'     => $plugin_dir . 'admin/dashboard.php',
+            'Parfume_Reviews\\Frontend\\Shortcodes\\Collections' => $plugin_dir . 'frontend/shortcodes/collections.php',
+            'Parfume_Reviews\\Frontend\\Shortcodes\\Similar'    => $plugin_dir . 'frontend/shortcodes/similar.php',
         );
     }
     
     /**
-     * Add a namespace prefix and directory
+     * Adds a base directory for a namespace prefix
      * @param string $prefix The namespace prefix
      * @param string $base_dir A base directory for class files in the namespace
      * @param bool $prepend If true, prepend the base directory to the stack instead of appending it
@@ -219,27 +226,20 @@ class Autoloader {
             return false;
         }
         
-        // Look through base directories for this namespace prefix
+        // Look through each base directory for this namespace prefix
         foreach (self::$prefixes[$prefix] as $base_dir) {
             
-            // Replace namespace separators with directory separators
-            // in the relative class name, append with .php
+            // Replace the namespace prefix with the base directory
+            // replace namespace separators with directory separators in the relative class name
+            // append with .php
             $file = $base_dir
                   . str_replace('\\', '/', $relative_class)
                   . '.php';
             
-            // Convert class name to lowercase and replace underscores with hyphens for file naming
-            $file_alt = $base_dir
-                      . strtolower(str_replace(array('\\', '_'), array('/', '-'), $relative_class))
-                      . '.php';
-            
-            // Try both naming conventions
+            // If the mapped file exists, require it
             if (self::require_file($file)) {
+                // Yes, we're done
                 return $file;
-            }
-            
-            if (self::require_file($file_alt)) {
-                return $file_alt;
             }
         }
         
@@ -250,7 +250,7 @@ class Autoloader {
     /**
      * If a file exists, require it from the file system
      * @param string $file The file to require
-     * @return bool True if the file exists and is loaded, false if not
+     * @return bool True if the file exists and was required successfully
      */
     protected static function require_file($file) {
         if (file_exists($file)) {
@@ -269,54 +269,10 @@ class Autoloader {
     }
     
     /**
-     * Get all class mappings
+     * Get explicit class mappings
      * @return array
      */
     public static function get_class_map() {
         return self::$class_map;
-    }
-    
-    /**
-     * Check if autoloader is registered
-     * @return bool
-     */
-    public static function is_registered() {
-        return self::$registered;
-    }
-    
-    /**
-     * Debug function to show mapping attempts
-     * @param string $class
-     */
-    public static function debug_class_loading($class) {
-        if (!defined('WP_DEBUG') || !WP_DEBUG) {
-            return;
-        }
-        
-        $plugin_dir = defined('PARFUME_REVIEWS_PLUGIN_DIR') ? PARFUME_REVIEWS_PLUGIN_DIR : plugin_dir_path(dirname(__DIR__));
-        
-        error_log("Parfume Reviews Autoloader: Attempting to load class: {$class}");
-        
-        // Check explicit mapping
-        if (isset(self::$class_map[$class])) {
-            $file = self::$class_map[$class];
-            error_log("  Found in explicit mapping: {$file}");
-            error_log("  File exists: " . (file_exists($file) ? 'YES' : 'NO'));
-        }
-        
-        // Check namespace mappings
-        foreach (self::$prefixes as $prefix => $dirs) {
-            if (strpos($class, $prefix) === 0) {
-                error_log("  Matches prefix: {$prefix}");
-                foreach ($dirs as $dir) {
-                    $relative_class = substr($class, strlen($prefix));
-                    $file1 = $dir . str_replace('\\', '/', $relative_class) . '.php';
-                    $file2 = $dir . strtolower(str_replace(array('\\', '_'), array('/', '-'), $relative_class)) . '.php';
-                    
-                    error_log("    Trying: {$file1} - " . (file_exists($file1) ? 'EXISTS' : 'NOT FOUND'));
-                    error_log("    Trying: {$file2} - " . (file_exists($file2) ? 'EXISTS' : 'NOT FOUND'));
-                }
-            }
-        }
     }
 }
