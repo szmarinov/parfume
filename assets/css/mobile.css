@@ -1,0 +1,722 @@
+/**
+ * Mobile-specific styles for Parfume Catalog Plugin
+ * 
+ * @package ParfumeCatalog
+ */
+
+/* ==========================================================================
+   Mobile Store Panel (Column 2) - Core Styles
+   ========================================================================== */
+
+.parfume-stores-column {
+    position: relative;
+}
+
+/* Desktop default - normal positioning */
+@media (min-width: 769px) {
+    .parfume-stores-column {
+        position: sticky;
+        top: 20px;
+        height: fit-content;
+    }
+}
+
+/* Mobile styles - fixed positioning */
+@media (max-width: 768px) {
+    .parfume-stores-column {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: #fff;
+        border-top: 1px solid #e0e0e0;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+        max-height: 80vh;
+        overflow: hidden;
+    }
+    
+    .parfume-stores-column.hidden {
+        transform: translateY(100%);
+    }
+    
+    .parfume-stores-column.expanded {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+}
+
+/* ==========================================================================
+   Mobile Store Items
+   ========================================================================== */
+
+.mobile-store-item {
+    background: #fff;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 15px 20px;
+    position: relative;
+}
+
+.mobile-store-item:last-child {
+    border-bottom: none;
+}
+
+.mobile-store-item.first-store {
+    border-bottom: 2px solid #e0e0e0;
+}
+
+/* Store header with logo and price */
+.mobile-store-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.mobile-store-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.mobile-store-price {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+}
+
+.mobile-current-price {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #2c3e50;
+    line-height: 1;
+}
+
+.mobile-old-price {
+    font-size: 0.9rem;
+    color: #999;
+    text-decoration: line-through;
+    margin-bottom: 2px;
+}
+
+.mobile-discount {
+    font-size: 0.8rem;
+    color: #28a745;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.mobile-price-info {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background: #007cba;
+    color: #fff;
+    border-radius: 50%;
+    text-align: center;
+    font-size: 12px;
+    line-height: 16px;
+    margin-left: 5px;
+    cursor: help;
+    position: relative;
+}
+
+.mobile-price-info:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 120%;
+    right: 0;
+    background: #333;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1001;
+    opacity: 1;
+}
+
+/* Store meta information */
+.mobile-store-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.mobile-store-volume {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 0.8rem;
+    color: #495057;
+}
+
+.mobile-availability {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.mobile-shipping {
+    background: #cce5ff;
+    border: 1px solid #99d3ff;
+    color: #004085;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 0.8rem;
+}
+
+/* Multiple size options */
+.mobile-size-options {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.mobile-size-option {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: #495057;
+    font-size: 0.8rem;
+    text-align: center;
+    min-width: 60px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.mobile-size-option:hover {
+    background: #e9ecef;
+    text-decoration: none;
+}
+
+.mobile-size-option.on-sale::after {
+    content: '%';
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #dc3545;
+    color: #fff;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.mobile-size-ml {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.mobile-size-price {
+    display: block;
+    color: #007cba;
+    font-weight: 700;
+}
+
+/* Action buttons */
+.mobile-store-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.mobile-store-actions.single-button {
+    flex-direction: column;
+}
+
+.mobile-store-actions.dual-buttons {
+    flex-direction: row;
+}
+
+.mobile-btn-store {
+    background: #ff8c00;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 12px 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    text-align: center;
+    flex: 1;
+    transition: background 0.3s ease;
+}
+
+.mobile-btn-store:hover {
+    background: #e67c00;
+    color: #fff;
+    text-decoration: none;
+}
+
+.mobile-btn-promo {
+    background: #fff;
+    border: 2px dashed #dc3545;
+    border-radius: 4px;
+    padding: 10px 15px;
+    text-decoration: none;
+    color: #dc3545;
+    text-align: center;
+    flex: 1;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.mobile-btn-promo:hover {
+    background: #f8f9fa;
+    text-decoration: none;
+}
+
+.mobile-promo-info {
+    font-size: 0.7rem;
+    color: #666;
+    margin-bottom: 3px;
+    display: block;
+}
+
+.mobile-promo-code {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #dc3545;
+    display: block;
+    letter-spacing: 1px;
+}
+
+.mobile-promo-copy-icon {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+/* ==========================================================================
+   Mobile Controls
+   ========================================================================== */
+
+.mobile-controls {
+    display: none;
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    z-index: 1001;
+}
+
+@media (max-width: 768px) {
+    .mobile-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+}
+
+.mobile-expand-btn,
+.mobile-close-btn {
+    background: rgba(255,255,255,0.95);
+    border: 1px solid #dee2e6;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: #495057;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.mobile-expand-btn:hover,
+.mobile-close-btn:hover {
+    background: #f8f9fa;
+    transform: scale(1.05);
+}
+
+.mobile-expand-btn.rotated {
+    transform: rotate(180deg);
+}
+
+.mobile-show-panel {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #007cba;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    z-index: 999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.mobile-show-panel:hover {
+    background: #005a87;
+    transform: scale(1.05);
+}
+
+.mobile-show-panel.visible {
+    display: flex;
+}
+
+/* ==========================================================================
+   Animation and Transitions
+   ========================================================================== */
+
+.mobile-stores-list {
+    transition: max-height 0.3s ease;
+    overflow: hidden;
+}
+
+.mobile-stores-list.collapsed {
+    max-height: 0;
+}
+
+.mobile-stores-list.expanded {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease;
+}
+
+.slide-down {
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(-100%);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+
+/* Copy animation */
+.copy-success {
+    animation: copySuccess 0.5s ease;
+}
+
+@keyframes copySuccess {
+    0% {
+        background: #fff;
+    }
+    50% {
+        background: #d4edda;
+        border-color: #c3e6cb;
+    }
+    100% {
+        background: #fff;
+    }
+}
+
+/* ==========================================================================
+   Z-Index Management
+   ========================================================================== */
+
+/* Default z-index for mobile stores panel */
+.parfume-stores-column {
+    z-index: 1000;
+}
+
+/* Higher z-index when user sets it in settings */
+.parfume-stores-column.high-priority {
+    z-index: 9999;
+}
+
+/* Overlay protection */
+.parfume-stores-column::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.1);
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.parfume-stores-column.expanded::before {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ==========================================================================
+   Offset Management
+   ========================================================================== */
+
+/* Default positioning */
+.parfume-stores-column {
+    bottom: 0;
+}
+
+/* With offset for other fixed elements */
+.parfume-stores-column.with-offset {
+    bottom: var(--mobile-offset, 0px);
+}
+
+/* Common offsets for popular elements */
+.parfume-stores-column.offset-cookie-bar {
+    bottom: 60px;
+}
+
+.parfume-stores-column.offset-bottom-nav {
+    bottom: 50px;
+}
+
+.parfume-stores-column.offset-chat-widget {
+    bottom: 80px;
+}
+
+/* ==========================================================================
+   Loading States
+   ========================================================================== */
+
+.mobile-store-loading {
+    position: relative;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.mobile-store-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007cba;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.mobile-scraping-indicator {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 8px;
+    height: 8px;
+    background: #ffc107;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* ==========================================================================
+   Error States
+   ========================================================================== */
+
+.mobile-store-error {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 15px;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.mobile-store-unavailable {
+    opacity: 0.5;
+    position: relative;
+}
+
+.mobile-store-unavailable::after {
+    content: 'Временно недостъпен';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   Accessibility
+   ========================================================================== */
+
+.mobile-controls button:focus,
+.mobile-size-option:focus,
+.mobile-btn-store:focus,
+.mobile-btn-promo:focus {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+}
+
+.screen-reader-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .mobile-store-item {
+        border-bottom: 2px solid #000;
+    }
+    
+    .mobile-size-option,
+    .mobile-btn-store,
+    .mobile-btn-promo {
+        border: 2px solid #000;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .parfume-stores-column,
+    .mobile-stores-list,
+    .mobile-expand-btn,
+    .mobile-size-option,
+    .mobile-btn-store,
+    .mobile-btn-promo {
+        transition: none;
+        animation: none;
+    }
+}
+
+/* ==========================================================================
+   Touch Improvements
+   ========================================================================== */
+
+.mobile-size-option,
+.mobile-btn-store,
+.mobile-btn-promo,
+.mobile-expand-btn,
+.mobile-close-btn {
+    min-height: 44px; /* Apple's recommended touch target size */
+    min-width: 44px;
+}
+
+.mobile-btn-promo {
+    padding: 12px 15px; /* Increased padding for better touch */
+}
+
+/* Prevent zoom on input focus */
+.mobile-store-search input {
+    font-size: 16px;
+}
+
+/* ==========================================================================
+   Dark Mode Support
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+    .parfume-stores-column {
+        background: #1a1a1a;
+        border-top-color: #333;
+    }
+    
+    .mobile-store-item {
+        background: #1a1a1a;
+        border-bottom-color: #333;
+        color: #e0e0e0;
+    }
+    
+    .mobile-current-price {
+        color: #e0e0e0;
+    }
+    
+    .mobile-size-option {
+        background: #2a2a2a;
+        border-color: #444;
+        color: #e0e0e0;
+    }
+    
+    .mobile-size-option:hover {
+        background: #3a3a3a;
+    }
+    
+    .mobile-btn-store {
+        background: #cc7a00;
+    }
+    
+    .mobile-btn-store:hover {
+        background: #b36b00;
+    }
+    
+    .mobile-btn-promo {
+        background: #1a1a1a;
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+    
+    .mobile-expand-btn,
+    .mobile-close-btn {
+        background: rgba(42,42,42,0.95);
+        border-color: #444;
+        color: #e0e0e0;
+    }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+    .parfume-stores-column,
+    .mobile-controls,
+    .mobile-show-panel {
+        display: none !important;
+    }
+}
