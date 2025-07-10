@@ -1,0 +1,939 @@
+/**
+ * Frontend styles for Parfume Catalog Plugin
+ * 
+ * @package ParfumeCatalog
+ */
+
+/* ==========================================================================
+   Archive and Taxonomy Pages
+   ========================================================================== */
+
+.parfume-taxonomy-archive {
+    margin: 20px 0;
+}
+
+.parfume-taxonomy-archive .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.archive-header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding: 30px 0;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.archive-title {
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+}
+
+.archive-description {
+    font-size: 1.1rem;
+    color: #666;
+    line-height: 1.6;
+    max-width: 600px;
+    margin: 0 auto 20px auto;
+}
+
+.archive-meta {
+    color: #888;
+    font-size: 0.9rem;
+}
+
+/* ==========================================================================
+   Navigation Elements
+   ========================================================================== */
+
+.vid-types-nav,
+.season-nav,
+.intensity-nav,
+.notes-by-group {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.vid-types-nav h3,
+.season-nav h3,
+.intensity-nav h3,
+.notes-by-group h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.vid-types-list,
+.season-list,
+.intensity-list,
+.note-groups-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.vid-type-link,
+.season-link,
+.intensity-link,
+.group-nav-link {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    text-decoration: none;
+    color: #495057;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.vid-type-link:hover,
+.season-link:hover,
+.intensity-link:hover,
+.group-nav-link:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+    text-decoration: none;
+}
+
+.vid-type-link.current,
+.season-link.current,
+.intensity-link.current,
+.group-nav-link.current {
+    background: #007cba;
+    border-color: #007cba;
+    color: #fff;
+}
+
+.count {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    margin-left: 5px;
+}
+
+/* ==========================================================================
+   Filters Section
+   ========================================================================== */
+
+.parfume-filters {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-section h3 {
+    margin: 0 0 20px 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #2c3e50;
+}
+
+.filter-group select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background: #fff;
+    max-width: 300px;
+}
+
+.filter-group select:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 2px rgba(0,124,186,0.2);
+}
+
+.parfume-sorting {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.parfume-sorting label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.parfume-sorting select {
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-right: 10px;
+}
+
+.btn-primary {
+    background: #007cba;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #005a87;
+    color: #fff;
+    text-decoration: none;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: #fff;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+    color: #fff;
+    text-decoration: none;
+}
+
+/* ==========================================================================
+   Parfume Grid
+   ========================================================================== */
+
+.parfume-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.parfume-item {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.parfume-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.parfume-image {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1;
+}
+
+.parfume-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.parfume-item:hover .parfume-image img {
+    transform: scale(1.05);
+}
+
+.no-image-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    background: #f8f9fa;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.compare-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.compare-btn:hover {
+    background: #007cba;
+    color: #fff;
+    border-color: #007cba;
+}
+
+.compare-btn.active {
+    background: #dc3545;
+    color: #fff;
+    border-color: #dc3545;
+}
+
+.season-indicators,
+.intensity-indicator {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    display: flex;
+    gap: 5px;
+}
+
+.season-icon,
+.intensity-icon {
+    background: rgba(255,255,255,0.9);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.note-position-indicator {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+.position-badge {
+    background: rgba(0,124,186,0.9);
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.parfume-content {
+    padding: 20px;
+}
+
+.parfume-title {
+    margin: 0 0 10px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.parfume-title a {
+    color: #2c3e50;
+    text-decoration: none;
+}
+
+.parfume-title a:hover {
+    color: #007cba;
+}
+
+.parfume-meta {
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.parfume-meta span {
+    display: block;
+    margin-bottom: 5px;
+    color: #666;
+}
+
+.parfume-meta a {
+    color: #007cba;
+    text-decoration: none;
+}
+
+.parfume-meta a:hover {
+    text-decoration: underline;
+}
+
+.parfume-excerpt {
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.parfume-notes-preview {
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+}
+
+.notes-list {
+    color: #007cba;
+    font-style: italic;
+}
+
+.parfume-performance {
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+}
+
+.parfume-performance span {
+    display: inline-block;
+    margin-right: 15px;
+    color: #666;
+}
+
+.related-notes {
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+}
+
+.note-tag {
+    display: inline-block;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    padding: 2px 8px;
+    margin: 2px;
+    font-size: 0.8rem;
+    color: #495057;
+    text-decoration: none;
+}
+
+.note-tag:hover {
+    background: #e9ecef;
+    text-decoration: none;
+}
+
+.parfume-actions {
+    text-align: center;
+}
+
+/* ==========================================================================
+   Special Info Sections
+   ========================================================================== */
+
+.season-info,
+.intensity-info,
+.note-info {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.season-info h3,
+.intensity-info h3,
+.note-info h3 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.2rem;
+}
+
+.season-description,
+.intensity-description {
+    color: #666;
+    line-height: 1.6;
+}
+
+.note-group-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    padding: 8px 16px;
+    margin-bottom: 20px;
+}
+
+.note-group-label {
+    font-weight: 600;
+    color: #666;
+}
+
+.note-group-name {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+/* Note group colors */
+.note-group-name.цветни { background: #ff6b9d; }
+.note-group-name.плодови { background: #ff8c00; }
+.note-group-name.цитрусови { background: #ffd700; color: #333; }
+.note-group-name.зелени { background: #32cd32; }
+.note-group-name.ароматни { background: #9370db; }
+.note-group-name.подправки { background: #dc143c; }
+.note-group-name.дървесни { background: #8b4513; }
+.note-group-name.ориенталски { background: #cd853f; }
+.note-group-name.мускусни { background: #708090; }
+.note-group-name.амброви { background: #ffb347; color: #333; }
+.note-group-name.морски { background: #4682b4; }
+.note-group-name.гурме { background: #d2691e; }
+.note-group-name.други { background: #696969; }
+
+.notes-groups-display {
+    margin-bottom: 30px;
+}
+
+.note-group-section {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.note-group-section.current-group {
+    border-color: #007cba;
+    background: #f0f8ff;
+}
+
+.group-title {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.notes-in-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.note-link {
+    display: inline-block;
+    padding: 6px 12px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 15px;
+    text-decoration: none;
+    color: #495057;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.note-link:hover {
+    background: #e9ecef;
+    text-decoration: none;
+}
+
+.note-link.current {
+    background: #007cba;
+    border-color: #007cba;
+    color: #fff;
+}
+
+.group-color {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+/* ==========================================================================
+   Blog Styles
+   ========================================================================== */
+
+.parfume-blog-archive,
+.parfume-blog-single {
+    margin: 20px 0;
+}
+
+.blog-navigation {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.blog-nav-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.nav-link {
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #495057;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    background: #e9ecef;
+    text-decoration: none;
+}
+
+.nav-link.current {
+    background: #007cba;
+    border-color: #007cba;
+    color: #fff;
+}
+
+.blog-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    gap: 20px;
+}
+
+.blog-search form {
+    display: flex;
+    gap: 10px;
+}
+
+.blog-search input[type="search"] {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 250px;
+}
+
+.blog-search button {
+    padding: 8px 16px;
+    background: #007cba;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.blog-posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.blog-post-item {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.blog-post-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.blog-post-image {
+    position: relative;
+    aspect-ratio: 16/9;
+    overflow: hidden;
+}
+
+.blog-post-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.post-date-overlay {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: rgba(0,124,186,0.9);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.post-day {
+    display: block;
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.post-month {
+    display: block;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.blog-post-content {
+    padding: 20px;
+}
+
+.post-title {
+    margin: 0 0 15px 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.post-title a {
+    color: #2c3e50;
+    text-decoration: none;
+}
+
+.post-title a:hover {
+    color: #007cba;
+}
+
+.post-meta {
+    margin-bottom: 15px;
+    color: #666;
+    font-size: 0.9rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.post-excerpt {
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.post-tags {
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+}
+
+.tags-label {
+    font-weight: 600;
+    color: #666;
+    margin-right: 8px;
+}
+
+.tag-link {
+    color: #007cba;
+    text-decoration: none;
+    font-size: 0.8rem;
+}
+
+.tag-link:hover {
+    text-decoration: underline;
+}
+
+.read-more-btn {
+    background: #007cba;
+    color: #fff;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: background 0.3s ease;
+}
+
+.read-more-btn:hover {
+    background: #005a87;
+    color: #fff;
+    text-decoration: none;
+}
+
+/* ==========================================================================
+   Pagination
+   ========================================================================== */
+
+.navigation.pagination {
+    margin: 40px 0;
+    text-align: center;
+}
+
+.page-numbers {
+    display: inline-block;
+    padding: 8px 12px;
+    margin: 0 2px;
+    background: #fff;
+    border: 1px solid #ddd;
+    color: #007cba;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.page-numbers:hover {
+    background: #f8f9fa;
+    text-decoration: none;
+}
+
+.page-numbers.current {
+    background: #007cba;
+    color: #fff;
+    border-color: #007cba;
+}
+
+.page-numbers.dots {
+    background: none;
+    border: none;
+    color: #666;
+}
+
+/* ==========================================================================
+   No Results
+   ========================================================================== */
+
+.no-results {
+    text-align: center;
+    padding: 60px 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin: 40px 0;
+}
+
+.no-results h2 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    font-size: 1.5rem;
+}
+
+.no-results p {
+    color: #666;
+    font-size: 1rem;
+    line-height: 1.6;
+    max-width: 500px;
+    margin: 0 auto 20px auto;
+}
+
+.search-form-container {
+    margin: 30px 0;
+}
+
+.search-form-container form {
+    display: inline-flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.search-form-container input[type="search"] {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 300px;
+}
+
+.search-form-container button {
+    padding: 10px 20px;
+    background: #007cba;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .parfume-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+    }
+    
+    .blog-posts-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .blog-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+    
+    .blog-search input[type="search"] {
+        width: 100%;
+    }
+    
+    .archive-title {
+        font-size: 2rem;
+    }
+    
+    .vid-types-list,
+    .season-list,
+    .intensity-list,
+    .note-groups-nav {
+        justify-content: center;
+    }
+    
+    .notes-in-group {
+        justify-content: center;
+    }
+    
+    .search-form-container form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-form-container input[type="search"] {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .parfume-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .archive-title {
+        font-size: 1.8rem;
+    }
+    
+    .vid-types-list,
+    .season-list,
+    .intensity-list,
+    .note-groups-nav,
+    .notes-in-group {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .post-meta {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
