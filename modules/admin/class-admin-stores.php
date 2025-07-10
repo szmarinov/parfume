@@ -27,8 +27,8 @@ class Parfume_Catalog_Admin_Stores {
     public function add_stores_page() {
         add_submenu_page(
             'edit.php?post_type=parfumes',
-            __('Магазини', 'parfume-catalog'),
-            __('Магазини', 'parfume-catalog'),
+            __('Управление на магазини', 'parfume-catalog'),
+            __('Управление на магазини', 'parfume-catalog'),
             'manage_options',
             'parfume-stores',
             array($this, 'render_stores_page')
@@ -72,7 +72,9 @@ class Parfume_Catalog_Admin_Stores {
                 'errorDeleting' => __('Грешка при изтриване', 'parfume-catalog'),
                 'selectLogo' => __('Избери лого', 'parfume-catalog'),
                 'changeLogo' => __('Смени лого', 'parfume-catalog'),
-                'removeLogo' => __('Премахни лого', 'parfume-catalog')
+                'removeLogo' => __('Премахни лого', 'parfume-catalog'),
+                'addStore' => __('Добави магазин', 'parfume-catalog'),
+                'editStore' => __('Редактирай магазин', 'parfume-catalog')
             )
         ));
     }

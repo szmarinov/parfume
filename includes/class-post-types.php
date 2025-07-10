@@ -477,16 +477,515 @@ class Parfume_Catalog_Post_Types {
         $options = get_option('parfume_catalog_options', array());
         $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
 
-        // Custom rewrite rules за таксономии
+        // Main archive rule
         add_rewrite_rule(
-            '^' . $archive_slug . '/([^/]+)/page/?([0-9]{1,})/?$',
-            'index.php?taxonomy=parfume_type&term=$matches[1]&paged=$matches[2]',
+            '^' . $archive_slug . '/?
+
+    /**
+     * Custom permalink за парфюми
+     */
+    public function custom_permalink($permalink, $post) {
+        if ($post->post_type == 'parfumes') {
+            $options = get_option('parfume_catalog_options', array());
+            $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+            
+            $permalink = home_url($archive_slug . '/' . $post->post_name . '/');
+        }
+        
+        return $permalink;
+    }
+
+    /**
+     * Custom term link за таксономии
+     */
+    public function custom_term_link($termlink, $term, $taxonomy) {
+        $options = get_option('parfume_catalog_options', array());
+        $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+
+        switch ($taxonomy) {
+            case 'parfume_type':
+                $type_slug = isset($options['type_slug']) ? $options['type_slug'] : $archive_slug;
+                $termlink = home_url($type_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_vid':
+                $vid_slug = isset($options['vid_slug']) ? $options['vid_slug'] : $archive_slug;
+                $termlink = home_url($vid_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_marki':
+                $marki_slug = isset($options['marki_slug']) ? $options['marki_slug'] : $archive_slug . '/marki';
+                $termlink = home_url($marki_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_season':
+                $season_slug = isset($options['season_slug']) ? $options['season_slug'] : $archive_slug . '/season';
+                $termlink = home_url($season_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_intensity':
+                $intensity_slug = isset($options['intensity_slug']) ? $options['intensity_slug'] : $archive_slug . '/intensity';
+                $termlink = home_url($intensity_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_notes':
+                $notes_slug = isset($options['notes_slug']) ? $options['notes_slug'] : 'notes';
+                $termlink = home_url($notes_slug . '/' . $term->slug . '/');
+                break;
+        }
+
+        return $termlink;
+    }
+},
+            'index.php?post_type=parfumes',
             'top'
         );
 
+        // Single parfume rule
         add_rewrite_rule(
-            '^' . $archive_slug . '/([^/]+)/?$',
-            'index.php?taxonomy=parfume_type&term=$matches[1]',
+            '^' . $archive_slug . '/([^/]+)/?
+
+    /**
+     * Custom permalink за парфюми
+     */
+    public function custom_permalink($permalink, $post) {
+        if ($post->post_type == 'parfumes') {
+            $options = get_option('parfume_catalog_options', array());
+            $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+            
+            $permalink = home_url($archive_slug . '/' . $post->post_name . '/');
+        }
+        
+        return $permalink;
+    }
+
+    /**
+     * Custom term link за таксономии
+     */
+    public function custom_term_link($termlink, $term, $taxonomy) {
+        $options = get_option('parfume_catalog_options', array());
+        $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+
+        switch ($taxonomy) {
+            case 'parfume_type':
+                $type_slug = isset($options['type_slug']) ? $options['type_slug'] : $archive_slug;
+                $termlink = home_url($type_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_vid':
+                $vid_slug = isset($options['vid_slug']) ? $options['vid_slug'] : $archive_slug;
+                $termlink = home_url($vid_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_marki':
+                $marki_slug = isset($options['marki_slug']) ? $options['marki_slug'] : $archive_slug . '/marki';
+                $termlink = home_url($marki_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_season':
+                $season_slug = isset($options['season_slug']) ? $options['season_slug'] : $archive_slug . '/season';
+                $termlink = home_url($season_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_intensity':
+                $intensity_slug = isset($options['intensity_slug']) ? $options['intensity_slug'] : $archive_slug . '/intensity';
+                $termlink = home_url($intensity_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_notes':
+                $notes_slug = isset($options['notes_slug']) ? $options['notes_slug'] : 'notes';
+                $termlink = home_url($notes_slug . '/' . $term->slug . '/');
+                break;
+        }
+
+        return $termlink;
+    }
+},
+            'index.php?post_type=parfumes&name=$matches[1]',
+            'top'
+        );
+
+        // Archive pagination
+        add_rewrite_rule(
+            '^' . $archive_slug . '/page/([0-9]{1,})/?
+
+    /**
+     * Custom permalink за парфюми
+     */
+    public function custom_permalink($permalink, $post) {
+        if ($post->post_type == 'parfumes') {
+            $options = get_option('parfume_catalog_options', array());
+            $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+            
+            $permalink = home_url($archive_slug . '/' . $post->post_name . '/');
+        }
+        
+        return $permalink;
+    }
+
+    /**
+     * Custom term link за таксономии
+     */
+    public function custom_term_link($termlink, $term, $taxonomy) {
+        $options = get_option('parfume_catalog_options', array());
+        $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+
+        switch ($taxonomy) {
+            case 'parfume_type':
+                $type_slug = isset($options['type_slug']) ? $options['type_slug'] : $archive_slug;
+                $termlink = home_url($type_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_vid':
+                $vid_slug = isset($options['vid_slug']) ? $options['vid_slug'] : $archive_slug;
+                $termlink = home_url($vid_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_marki':
+                $marki_slug = isset($options['marki_slug']) ? $options['marki_slug'] : $archive_slug . '/marki';
+                $termlink = home_url($marki_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_season':
+                $season_slug = isset($options['season_slug']) ? $options['season_slug'] : $archive_slug . '/season';
+                $termlink = home_url($season_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_intensity':
+                $intensity_slug = isset($options['intensity_slug']) ? $options['intensity_slug'] : $archive_slug . '/intensity';
+                $termlink = home_url($intensity_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_notes':
+                $notes_slug = isset($options['notes_slug']) ? $options['notes_slug'] : 'notes';
+                $termlink = home_url($notes_slug . '/' . $term->slug . '/');
+                break;
+        }
+
+        return $termlink;
+    }
+},
+            'index.php?post_type=parfumes&paged=$matches[1]',
+            'top'
+        );
+
+        // Taxonomy rules
+        add_rewrite_rule(
+            '^' . $archive_slug . '/([^/]+)/([^/]+)/?
+
+    /**
+     * Custom permalink за парфюми
+     */
+    public function custom_permalink($permalink, $post) {
+        if ($post->post_type == 'parfumes') {
+            $options = get_option('parfume_catalog_options', array());
+            $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+            
+            $permalink = home_url($archive_slug . '/' . $post->post_name . '/');
+        }
+        
+        return $permalink;
+    }
+
+    /**
+     * Custom term link за таксономии
+     */
+    public function custom_term_link($termlink, $term, $taxonomy) {
+        $options = get_option('parfume_catalog_options', array());
+        $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+
+        switch ($taxonomy) {
+            case 'parfume_type':
+                $type_slug = isset($options['type_slug']) ? $options['type_slug'] : $archive_slug;
+                $termlink = home_url($type_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_vid':
+                $vid_slug = isset($options['vid_slug']) ? $options['vid_slug'] : $archive_slug;
+                $termlink = home_url($vid_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_marki':
+                $marki_slug = isset($options['marki_slug']) ? $options['marki_slug'] : $archive_slug . '/marki';
+                $termlink = home_url($marki_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_season':
+                $season_slug = isset($options['season_slug']) ? $options['season_slug'] : $archive_slug . '/season';
+                $termlink = home_url($season_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_intensity':
+                $intensity_slug = isset($options['intensity_slug']) ? $options['intensity_slug'] : $archive_slug . '/intensity';
+                $termlink = home_url($intensity_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_notes':
+                $notes_slug = isset($options['notes_slug']) ? $options['notes_slug'] : 'notes';
+                $termlink = home_url($notes_slug . '/' . $term->slug . '/');
+                break;
+        }
+
+        return $termlink;
+    }
+},
+            'index.php?taxonomy=parfume_type&term=$matches[2]',
+            'top'
+        );
+
+        // Taxonomy pagination
+        add_rewrite_rule(
+            '^' . $archive_slug . '/([^/]+)/([^/]+)/page/([0-9]{1,})/?
+
+    /**
+     * Custom permalink за парфюми
+     */
+    public function custom_permalink($permalink, $post) {
+        if ($post->post_type == 'parfumes') {
+            $options = get_option('parfume_catalog_options', array());
+            $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+            
+            $permalink = home_url($archive_slug . '/' . $post->post_name . '/');
+        }
+        
+        return $permalink;
+    }
+
+    /**
+     * Custom term link за таксономии
+     */
+    public function custom_term_link($termlink, $term, $taxonomy) {
+        $options = get_option('parfume_catalog_options', array());
+        $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+
+        switch ($taxonomy) {
+            case 'parfume_type':
+                $type_slug = isset($options['type_slug']) ? $options['type_slug'] : $archive_slug;
+                $termlink = home_url($type_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_vid':
+                $vid_slug = isset($options['vid_slug']) ? $options['vid_slug'] : $archive_slug;
+                $termlink = home_url($vid_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_marki':
+                $marki_slug = isset($options['marki_slug']) ? $options['marki_slug'] : $archive_slug . '/marki';
+                $termlink = home_url($marki_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_season':
+                $season_slug = isset($options['season_slug']) ? $options['season_slug'] : $archive_slug . '/season';
+                $termlink = home_url($season_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_intensity':
+                $intensity_slug = isset($options['intensity_slug']) ? $options['intensity_slug'] : $archive_slug . '/intensity';
+                $termlink = home_url($intensity_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_notes':
+                $notes_slug = isset($options['notes_slug']) ? $options['notes_slug'] : 'notes';
+                $termlink = home_url($notes_slug . '/' . $term->slug . '/');
+                break;
+        }
+
+        return $termlink;
+    }
+},
+            'index.php?taxonomy=parfume_type&term=$matches[2]&paged=$matches[3]',
+            'top'
+        );
+
+        // Marki rules
+        add_rewrite_rule(
+            '^' . $archive_slug . '/marki/([^/]+)/?
+
+    /**
+     * Custom permalink за парфюми
+     */
+    public function custom_permalink($permalink, $post) {
+        if ($post->post_type == 'parfumes') {
+            $options = get_option('parfume_catalog_options', array());
+            $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+            
+            $permalink = home_url($archive_slug . '/' . $post->post_name . '/');
+        }
+        
+        return $permalink;
+    }
+
+    /**
+     * Custom term link за таксономии
+     */
+    public function custom_term_link($termlink, $term, $taxonomy) {
+        $options = get_option('parfume_catalog_options', array());
+        $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+
+        switch ($taxonomy) {
+            case 'parfume_type':
+                $type_slug = isset($options['type_slug']) ? $options['type_slug'] : $archive_slug;
+                $termlink = home_url($type_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_vid':
+                $vid_slug = isset($options['vid_slug']) ? $options['vid_slug'] : $archive_slug;
+                $termlink = home_url($vid_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_marki':
+                $marki_slug = isset($options['marki_slug']) ? $options['marki_slug'] : $archive_slug . '/marki';
+                $termlink = home_url($marki_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_season':
+                $season_slug = isset($options['season_slug']) ? $options['season_slug'] : $archive_slug . '/season';
+                $termlink = home_url($season_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_intensity':
+                $intensity_slug = isset($options['intensity_slug']) ? $options['intensity_slug'] : $archive_slug . '/intensity';
+                $termlink = home_url($intensity_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_notes':
+                $notes_slug = isset($options['notes_slug']) ? $options['notes_slug'] : 'notes';
+                $termlink = home_url($notes_slug . '/' . $term->slug . '/');
+                break;
+        }
+
+        return $termlink;
+    }
+},
+            'index.php?taxonomy=parfume_marki&term=$matches[1]',
+            'top'
+        );
+
+        // Season rules
+        add_rewrite_rule(
+            '^' . $archive_slug . '/season/([^/]+)/?
+
+    /**
+     * Custom permalink за парфюми
+     */
+    public function custom_permalink($permalink, $post) {
+        if ($post->post_type == 'parfumes') {
+            $options = get_option('parfume_catalog_options', array());
+            $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+            
+            $permalink = home_url($archive_slug . '/' . $post->post_name . '/');
+        }
+        
+        return $permalink;
+    }
+
+    /**
+     * Custom term link за таксономии
+     */
+    public function custom_term_link($termlink, $term, $taxonomy) {
+        $options = get_option('parfume_catalog_options', array());
+        $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+
+        switch ($taxonomy) {
+            case 'parfume_type':
+                $type_slug = isset($options['type_slug']) ? $options['type_slug'] : $archive_slug;
+                $termlink = home_url($type_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_vid':
+                $vid_slug = isset($options['vid_slug']) ? $options['vid_slug'] : $archive_slug;
+                $termlink = home_url($vid_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_marki':
+                $marki_slug = isset($options['marki_slug']) ? $options['marki_slug'] : $archive_slug . '/marki';
+                $termlink = home_url($marki_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_season':
+                $season_slug = isset($options['season_slug']) ? $options['season_slug'] : $archive_slug . '/season';
+                $termlink = home_url($season_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_intensity':
+                $intensity_slug = isset($options['intensity_slug']) ? $options['intensity_slug'] : $archive_slug . '/intensity';
+                $termlink = home_url($intensity_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_notes':
+                $notes_slug = isset($options['notes_slug']) ? $options['notes_slug'] : 'notes';
+                $termlink = home_url($notes_slug . '/' . $term->slug . '/');
+                break;
+        }
+
+        return $termlink;
+    }
+},
+            'index.php?taxonomy=parfume_season&term=$matches[1]',
+            'top'
+        );
+
+        // Notes rules
+        add_rewrite_rule(
+            '^notes/([^/]+)/?
+
+    /**
+     * Custom permalink за парфюми
+     */
+    public function custom_permalink($permalink, $post) {
+        if ($post->post_type == 'parfumes') {
+            $options = get_option('parfume_catalog_options', array());
+            $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+            
+            $permalink = home_url($archive_slug . '/' . $post->post_name . '/');
+        }
+        
+        return $permalink;
+    }
+
+    /**
+     * Custom term link за таксономии
+     */
+    public function custom_term_link($termlink, $term, $taxonomy) {
+        $options = get_option('parfume_catalog_options', array());
+        $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+
+        switch ($taxonomy) {
+            case 'parfume_type':
+                $type_slug = isset($options['type_slug']) ? $options['type_slug'] : $archive_slug;
+                $termlink = home_url($type_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_vid':
+                $vid_slug = isset($options['vid_slug']) ? $options['vid_slug'] : $archive_slug;
+                $termlink = home_url($vid_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_marki':
+                $marki_slug = isset($options['marki_slug']) ? $options['marki_slug'] : $archive_slug . '/marki';
+                $termlink = home_url($marki_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_season':
+                $season_slug = isset($options['season_slug']) ? $options['season_slug'] : $archive_slug . '/season';
+                $termlink = home_url($season_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_intensity':
+                $intensity_slug = isset($options['intensity_slug']) ? $options['intensity_slug'] : $archive_slug . '/intensity';
+                $termlink = home_url($intensity_slug . '/' . $term->slug . '/');
+                break;
+
+            case 'parfume_notes':
+                $notes_slug = isset($options['notes_slug']) ? $options['notes_slug'] : 'notes';
+                $termlink = home_url($notes_slug . '/' . $term->slug . '/');
+                break;
+        }
+
+        return $termlink;
+    }
+},
+            'index.php?taxonomy=parfume_notes&term=$matches[1]',
             'top'
         );
     }

@@ -17,8 +17,8 @@
         bindEvents: function() {
             var self = this;
 
-            // Add new store button
-            $('#add-store-btn').on('click', function(e) {
+            // Add new store button - multiple selectors for compatibility
+            $(document).on('click', '#add-store-btn, #add-new-store', function(e) {
                 e.preventDefault();
                 self.openModal();
             });

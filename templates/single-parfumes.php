@@ -2,7 +2,7 @@
 /**
  * Single Parfume Template
  * 
- * Template for displaying individual parfume posts
+ * Template for displaying individual parfume posts with full functionality
  */
 
 if (!defined('ABSPATH')) {
@@ -13,10 +13,10 @@ get_header();
 
 // Get parfume data
 $post_id = get_the_ID();
-$parfume_basic = Parfume_Meta_Basic::get_parfume_info($post_id);
-$parfume_notes = Parfume_Meta_Notes::get_notes_composition($post_id);
-$parfume_stores = Parfume_Meta_Stores::get_formatted_stores($post_id);
-$parfume_stats = Parfume_Meta_Stats::get_public_stats($post_id);
+$parfume_basic = Parfume_Catalog_Meta_Basic::get_parfume_info($post_id);
+$parfume_notes = Parfume_Catalog_Meta_Notes::get_notes_composition($post_id);
+$parfume_stores = Parfume_Catalog_Meta_Stores::get_formatted_stores($post_id);
+$parfume_stats = Parfume_Catalog_Meta_Stats::get_public_stats($post_id);
 
 // Get taxonomies
 $parfume_type = get_the_terms($post_id, 'parfume_type');
@@ -26,8 +26,52 @@ $parfume_season = get_the_terms($post_id, 'parfume_season');
 $parfume_intensity = get_the_terms($post_id, 'parfume_intensity');
 
 // Settings
-$comparison_settings = Parfume_Admin_Comparison::get_comparison_settings();
-$comments_settings = Parfume_Admin_Comments::get_comments_settings();
+$comparison_settings = Parfume_Catalog_Admin_Comparison::get_comparison_settings();
+$comments_settings = Parfume_Catalog_Admin_Comments::get_comments_settings();
+$plugin_options = get_option('parfume_catalog_options', array());
+
+// Get suitable conditions
+$suitable_conditions = array();
+if ($parfume_season && !is_wp_error($parfume_season)) {
+    foreach ($parfume_season as $season) {
+        $suitable_conditions[] = $season->slug;
+    }
+}
+
+// Day/Night suitability
+$day_night_suitable = get_post_meta($post_id, '_parfume_day_night_suitable', true);
+if ($day_night_suitable) {
+    $suitable_conditions = array_merge($suitable_conditions, $day_night_suitable);
+}
+
+// Icons for suitable conditions
+$suitable_icons = array(
+    'prolet' => '🌸',
+    'liato' => '☀️',
+    'esen' => '🍂',
+    'zima' => '❄️',
+    'den' => '🌞',
+    'nosht' => '🌙'
+);
+
+$suitable_labels = array(
+    'prolet' => __('Пролет', 'parfume-catalog'),
+    'liato' => __('Лято', 'parfume-catalog'),
+    'esen' => __('Есен', 'parfume-catalog'),
+    'zima' => __('Зима', 'parfume-catalog'),
+    'den' => __('Ден', 'parfume-catalog'),
+    'nosht' => __('Нощ', 'parfume-catalog')
+);
+
+// Get advantages and disadvantages
+$advantages = get_post_meta($post_id, '_parfume_advantages', true);
+$disadvantages = get_post_meta($post_id, '_parfume_disadvantages', true);
+
+// Get stats for graphics
+$durability_stats = get_post_meta($post_id, '_parfume_durability_stats', true);
+$sillage_stats = get_post_meta($post_id, '_parfume_sillage_stats', true);
+$gender_stats = get_post_meta($post_id, '_parfume_gender_stats', true);
+$price_stats = get_post_meta($post_id, '_parfume_price_stats', true);
 ?>
 
 <div class="parfume-single-container">
@@ -72,56 +116,52 @@ $comments_settings = Parfume_Admin_Comments::get_comments_settings();
                                         data-parfume-id="<?php echo $post_id; ?>"
                                         data-parfume-title="<?php echo esc_attr(get_the_title()); ?>"
                                         data-parfume-image="<?php echo esc_url(get_the_post_thumbnail_url($post_id, 'thumbnail')); ?>">
-                                    <span class="comparison-icon">⚖️</span>
-                                    <span class="comparison-text"><?php echo esc_html($comparison_settings['texts']['add']); ?></span>
+                                    <?php echo esc_html($comparison_settings['texts']['add_to_comparison']); ?>
                                 </button>
                             </div>
                         <?php endif; ?>
                     </div>
                     
-                    <?php if (!empty($parfume_notes['main_notes'])): ?>
-                        <div class="parfume-main-notes">
-                            <strong><?php _e('Основни нотки:', 'parfume-catalog'); ?></strong>
-                            <div class="main-notes-list">
+                    <!-- Basic aromantic notes -->
+                    <?php if (!empty($parfume_notes['top_notes']) || !empty($parfume_notes['middle_notes']) || !empty($parfume_notes['base_notes'])): ?>
+                        <div class="parfume-basic-notes">
+                            <strong><?php _e('Основни ароматни нотки:', 'parfume-catalog'); ?></strong>
+                            <div class="basic-notes-list">
                                 <?php
-                                $main_notes = Parfume_Meta_Notes::get_formatted_notes($parfume_notes['main_notes']);
-                                foreach ($main_notes as $note):
+                                $all_notes = array();
+                                if (!empty($parfume_notes['top_notes'])) {
+                                    $all_notes = array_merge($all_notes, array_slice($parfume_notes['top_notes'], 0, 3));
+                                }
+                                if (!empty($parfume_notes['middle_notes'])) {
+                                    $all_notes = array_merge($all_notes, array_slice($parfume_notes['middle_notes'], 0, 2));
+                                }
+                                if (!empty($parfume_notes['base_notes'])) {
+                                    $all_notes = array_merge($all_notes, array_slice($parfume_notes['base_notes'], 0, 2));
+                                }
+                                
+                                $note_names = array();
+                                foreach (array_slice($all_notes, 0, 5) as $note) {
+                                    $note_names[] = $note['name'];
+                                }
+                                echo esc_html(implode(', ', $note_names));
                                 ?>
-                                    <span class="main-note">
-                                        <?php if ($note['icon_url']): ?>
-                                            <img src="<?php echo esc_url($note['icon_url']); ?>" alt="" class="note-icon">
-                                        <?php endif; ?>
-                                        <a href="<?php echo esc_url($note['link']); ?>">
-                                            <?php echo esc_html($note['name']); ?>
-                                        </a>
-                                    </span>
-                                <?php endforeach; ?>
                             </div>
                         </div>
                     <?php endif; ?>
                 </div>
             </div>
             
-            <!-- Suitable For Icons -->
-            <?php if (!empty($parfume_basic['suitable_for'])): ?>
-                <div class="parfume-suitable-for">
+            <!-- Suitable conditions -->
+            <?php if (!empty($suitable_conditions)): ?>
+                <div class="parfume-suitable-conditions">
+                    <strong><?php _e('Подходящ за:', 'parfume-catalog'); ?></strong>
                     <div class="suitable-icons">
-                        <?php
-                        $suitable_labels = Parfume_Meta_Basic::get_suitable_for_labels();
-                        $suitable_icons = array(
-                            'spring' => '🌸',
-                            'summer' => '☀️', 
-                            'autumn' => '🍂',
-                            'winter' => '❄️',
-                            'day' => '🌅',
-                            'night' => '🌙'
-                        );
-                        
-                        foreach ($parfume_basic['suitable_for'] as $suitable):
-                            if (isset($suitable_labels[$suitable])):
+                        <?php 
+                        foreach ($suitable_conditions as $suitable): 
+                            if (isset($suitable_icons[$suitable])):
                         ?>
-                            <div class="suitable-item" title="<?php echo esc_attr($suitable_labels[$suitable]); ?>">
-                                <span class="suitable-icon"><?php echo $suitable_icons[$suitable] ?? '⭐'; ?></span>
+                            <div class="suitable-item" title="<?php echo esc_attr($suitable_labels[$suitable] ?? ''); ?>">
+                                <span class="suitable-icon"><?php echo $suitable_icons[$suitable]; ?></span>
                                 <span class="suitable-label"><?php echo esc_html($suitable_labels[$suitable]); ?></span>
                             </div>
                         <?php 
@@ -138,7 +178,7 @@ $comments_settings = Parfume_Admin_Comments::get_comments_settings();
             </div>
             
             <!-- Composition Section -->
-            <?php if (Parfume_Meta_Notes::has_notes($post_id)): ?>
+            <?php if (!empty($parfume_notes['top_notes']) || !empty($parfume_notes['middle_notes']) || !empty($parfume_notes['base_notes'])): ?>
                 <div class="parfume-composition">
                     <h3><?php _e('Състав', 'parfume-catalog'); ?></h3>
                     <div class="composition-pyramid">
@@ -147,11 +187,10 @@ $comments_settings = Parfume_Admin_Comments::get_comments_settings();
                                 <h4><?php _e('Връхни нотки', 'parfume-catalog'); ?></h4>
                                 <div class="notes-list">
                                     <?php
-                                    $top_notes = Parfume_Meta_Notes::get_formatted_notes($parfume_notes['top_notes']);
-                                    foreach ($top_notes as $note):
+                                    foreach ($parfume_notes['top_notes'] as $note):
                                     ?>
                                         <span class="note-item">
-                                            <?php if ($note['icon_url']): ?>
+                                            <?php if (!empty($note['icon_url'])): ?>
                                                 <img src="<?php echo esc_url($note['icon_url']); ?>" alt="" class="note-icon">
                                             <?php endif; ?>
                                             <a href="<?php echo esc_url($note['link']); ?>">
@@ -163,16 +202,15 @@ $comments_settings = Parfume_Admin_Comments::get_comments_settings();
                             </div>
                         <?php endif; ?>
                         
-                        <?php if (!empty($parfume_notes['heart_notes'])): ?>
-                            <div class="notes-section heart-notes">
+                        <?php if (!empty($parfume_notes['middle_notes'])): ?>
+                            <div class="notes-section middle-notes">
                                 <h4><?php _e('Средни нотки', 'parfume-catalog'); ?></h4>
                                 <div class="notes-list">
                                     <?php
-                                    $heart_notes = Parfume_Meta_Notes::get_formatted_notes($parfume_notes['heart_notes']);
-                                    foreach ($heart_notes as $note):
+                                    foreach ($parfume_notes['middle_notes'] as $note):
                                     ?>
                                         <span class="note-item">
-                                            <?php if ($note['icon_url']): ?>
+                                            <?php if (!empty($note['icon_url'])): ?>
                                                 <img src="<?php echo esc_url($note['icon_url']); ?>" alt="" class="note-icon">
                                             <?php endif; ?>
                                             <a href="<?php echo esc_url($note['link']); ?>">
@@ -189,11 +227,10 @@ $comments_settings = Parfume_Admin_Comments::get_comments_settings();
                                 <h4><?php _e('Базови нотки', 'parfume-catalog'); ?></h4>
                                 <div class="notes-list">
                                     <?php
-                                    $base_notes = Parfume_Meta_Notes::get_formatted_notes($parfume_notes['base_notes']);
-                                    foreach ($base_notes as $note):
+                                    foreach ($parfume_notes['base_notes'] as $note):
                                     ?>
                                         <span class="note-item">
-                                            <?php if ($note['icon_url']): ?>
+                                            <?php if (!empty($note['icon_url'])): ?>
                                                 <img src="<?php echo esc_url($note['icon_url']); ?>" alt="" class="note-icon">
                                             <?php endif; ?>
                                             <a href="<?php echo esc_url($note['link']); ?>">
@@ -209,140 +246,151 @@ $comments_settings = Parfume_Admin_Comments::get_comments_settings();
             <?php endif; ?>
             
             <!-- Fragrance Graphics -->
-            <div class="parfume-graphics">
-                <h3><?php _e('Графика на аромата', 'parfume-catalog'); ?></h3>
-                <div class="graphics-grid">
-                    <div class="graphics-column">
-                        <h4><?php _e('ДЪЛГОТРАЙНОСТ', 'parfume-catalog'); ?></h4>
-                        <div class="progress-bars">
-                            <?php
-                            $durability_labels = array(
-                                1 => __('много слаб', 'parfume-catalog'),
-                                2 => __('слаб', 'parfume-catalog'),
-                                3 => __('умерен', 'parfume-catalog'),
-                                4 => __('траен', 'parfume-catalog'),
-                                5 => __('изключително траен', 'parfume-catalog')
-                            );
-                            
-                            $durability = $parfume_basic['durability'] ?: 3;
-                            for ($i = 1; $i <= 5; $i++):
-                            ?>
-                                <div class="progress-bar <?php echo $i <= $durability ? 'active' : ''; ?>">
-                                    <span class="progress-label"><?php echo esc_html($durability_labels[$i]); ?></span>
-                                    <div class="progress-fill"></div>
+            <?php if ($durability_stats || $sillage_stats || $gender_stats || $price_stats): ?>
+                <div class="parfume-graphics">
+                    <h3><?php _e('Графика на аромата', 'parfume-catalog'); ?></h3>
+                    
+                    <div class="graphics-row">
+                        <?php if ($durability_stats): ?>
+                            <div class="graphic-section">
+                                <h4><?php _e('ДЪЛГОТРАЙНОСТ', 'parfume-catalog'); ?></h4>
+                                <div class="progress-bars">
+                                    <?php
+                                    $durability_levels = array(
+                                        'very_weak' => __('много слаб', 'parfume-catalog'),
+                                        'weak' => __('слаб', 'parfume-catalog'),
+                                        'moderate' => __('умерен', 'parfume-catalog'),
+                                        'long_lasting' => __('траен', 'parfume-catalog'),
+                                        'very_long_lasting' => __('изключително траен', 'parfume-catalog')
+                                    );
+                                    
+                                    foreach ($durability_levels as $level => $label):
+                                        $value = isset($durability_stats[$level]) ? intval($durability_stats[$level]) : 0;
+                                    ?>
+                                        <div class="progress-bar">
+                                            <span class="progress-label"><?php echo esc_html($label); ?></span>
+                                            <div class="progress-track">
+                                                <div class="progress-fill" style="width: <?php echo $value; ?>%"></div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
                                 </div>
-                            <?php endfor; ?>
-                        </div>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($sillage_stats): ?>
+                            <div class="graphic-section">
+                                <h4><?php _e('АРОМАТНА СЛЕДА', 'parfume-catalog'); ?></h4>
+                                <div class="progress-bars">
+                                    <?php
+                                    $sillage_levels = array(
+                                        'weak' => __('слаба', 'parfume-catalog'),
+                                        'moderate' => __('умерена', 'parfume-catalog'),
+                                        'strong' => __('силна', 'parfume-catalog'),
+                                        'enormous' => __('огромна', 'parfume-catalog')
+                                    );
+                                    
+                                    foreach ($sillage_levels as $level => $label):
+                                        $value = isset($sillage_stats[$level]) ? intval($sillage_stats[$level]) : 0;
+                                    ?>
+                                        <div class="progress-bar">
+                                            <span class="progress-label"><?php echo esc_html($label); ?></span>
+                                            <div class="progress-track">
+                                                <div class="progress-fill" style="width: <?php echo $value; ?>%"></div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </div>
                     
-                    <div class="graphics-column">
-                        <h4><?php _e('АРОМАТНА СЛЕДА', 'parfume-catalog'); ?></h4>
-                        <div class="progress-bars">
-                            <?php
-                            $sillage_labels = array(
-                                1 => __('слаба', 'parfume-catalog'),
-                                2 => __('умерена', 'parfume-catalog'),
-                                3 => __('силна', 'parfume-catalog'),
-                                4 => __('огромна', 'parfume-catalog')
-                            );
-                            
-                            $sillage = $parfume_basic['sillage'] ?: 3;
-                            for ($i = 1; $i <= 4; $i++):
-                            ?>
-                                <div class="progress-bar <?php echo $i <= $sillage ? 'active' : ''; ?>">
-                                    <span class="progress-label"><?php echo esc_html($sillage_labels[$i]); ?></span>
-                                    <div class="progress-fill"></div>
+                    <div class="graphics-row">
+                        <?php if ($gender_stats): ?>
+                            <div class="graphic-section">
+                                <h4><?php _e('ПОЛ', 'parfume-catalog'); ?></h4>
+                                <div class="progress-bars">
+                                    <?php
+                                    $gender_levels = array(
+                                        'female' => __('дамски', 'parfume-catalog'),
+                                        'male' => __('мъжки', 'parfume-catalog'),
+                                        'unisex' => __('унисекс', 'parfume-catalog'),
+                                        'younger' => __('по-млади', 'parfume-catalog'),
+                                        'older' => __('по-зрели', 'parfume-catalog')
+                                    );
+                                    
+                                    foreach ($gender_levels as $level => $label):
+                                        $value = isset($gender_stats[$level]) ? intval($gender_stats[$level]) : 0;
+                                    ?>
+                                        <div class="progress-bar">
+                                            <span class="progress-label"><?php echo esc_html($label); ?></span>
+                                            <div class="progress-track">
+                                                <div class="progress-fill" style="width: <?php echo $value; ?>%"></div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
                                 </div>
-                            <?php endfor; ?>
-                        </div>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($price_stats): ?>
+                            <div class="graphic-section">
+                                <h4><?php _e('ЦЕНА', 'parfume-catalog'); ?></h4>
+                                <div class="progress-bars">
+                                    <?php
+                                    $price_levels = array(
+                                        'too_expensive' => __('прекалено скъп', 'parfume-catalog'),
+                                        'expensive' => __('скъп', 'parfume-catalog'),
+                                        'acceptable' => __('приемлива цена', 'parfume-catalog'),
+                                        'good_price' => __('добра цена', 'parfume-catalog'),
+                                        'cheap' => __('евтин', 'parfume-catalog')
+                                    );
+                                    
+                                    foreach ($price_levels as $level => $label):
+                                        $value = isset($price_stats[$level]) ? intval($price_stats[$level]) : 0;
+                                    ?>
+                                        <div class="progress-bar">
+                                            <span class="progress-label"><?php echo esc_html($label); ?></span>
+                                            <div class="progress-track">
+                                                <div class="progress-fill" style="width: <?php echo $value; ?>%"></div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
-                
-                <div class="graphics-grid">
-                    <div class="graphics-column">
-                        <h4><?php _e('ПОЛ', 'parfume-catalog'); ?></h4>
-                        <div class="progress-bars">
-                            <?php
-                            $gender_labels = array(
-                                1 => __('дамски', 'parfume-catalog'),
-                                2 => __('мъжки', 'parfume-catalog'),
-                                3 => __('унисекс', 'parfume-catalog'),
-                                4 => __('по-млади', 'parfume-catalog'),
-                                5 => __('по-зрели', 'parfume-catalog')
-                            );
-                            
-                            // Determine gender based on taxonomies
-                            $gender_score = 3; // Default unisex
-                            if ($parfume_type) {
-                                $type_name = strtolower($parfume_type[0]->name);
-                                if (strpos($type_name, 'дамски') !== false) $gender_score = 1;
-                                elseif (strpos($type_name, 'мъжки') !== false) $gender_score = 2;
-                                elseif (strpos($type_name, 'младежки') !== false) $gender_score = 4;
-                                elseif (strpos($type_name, 'възрастни') !== false) $gender_score = 5;
-                            }
-                            
-                            for ($i = 1; $i <= 5; $i++):
-                            ?>
-                                <div class="progress-bar <?php echo $i <= $gender_score ? 'active' : ''; ?>">
-                                    <span class="progress-label"><?php echo esc_html($gender_labels[$i]); ?></span>
-                                    <div class="progress-fill"></div>
-                                </div>
-                            <?php endfor; ?>
-                        </div>
-                    </div>
-                    
-                    <div class="graphics-column">
-                        <h4><?php _e('ЦЕНА', 'parfume-catalog'); ?></h4>
-                        <div class="progress-bars">
-                            <?php
-                            $price_labels = array(
-                                1 => __('евтин', 'parfume-catalog'),
-                                2 => __('добра цена', 'parfume-catalog'),
-                                3 => __('приемлива цена', 'parfume-catalog'),
-                                4 => __('скъп', 'parfume-catalog'),
-                                5 => __('прекалено скъп', 'parfume-catalog')
-                            );
-                            
-                            $price_range = $parfume_basic['price_range'] ?: 3;
-                            for ($i = 1; $i <= 5; $i++):
-                            ?>
-                                <div class="progress-bar <?php echo $i <= $price_range ? 'active' : ''; ?>">
-                                    <span class="progress-label"><?php echo esc_html($price_labels[$i]); ?></span>
-                                    <div class="progress-fill"></div>
-                                </div>
-                            <?php endfor; ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <?php endif; ?>
             
-            <!-- Pros and Cons -->
-            <?php if (!empty($parfume_basic['pros']) || !empty($parfume_basic['cons'])): ?>
+            <!-- Advantages and Disadvantages -->
+            <?php if ($advantages || $disadvantages): ?>
                 <div class="parfume-pros-cons">
                     <h3><?php _e('Предимства и недостатъци', 'parfume-catalog'); ?></h3>
+                    
                     <div class="pros-cons-grid">
-                        <?php if (!empty($parfume_basic['pros'])): ?>
-                            <div class="pros-column">
+                        <?php if ($advantages): ?>
+                            <div class="pros-section">
                                 <h4><?php _e('Предимства', 'parfume-catalog'); ?></h4>
                                 <ul class="pros-list">
-                                    <?php foreach ($parfume_basic['pros'] as $pro): ?>
+                                    <?php foreach ($advantages as $advantage): ?>
                                         <li class="pro-item">
-                                            <span class="pro-icon">✅</span>
-                                            <?php echo esc_html($pro); ?>
+                                            <span class="pro-icon">✓</span>
+                                            <?php echo esc_html($advantage); ?>
                                         </li>
                                     <?php endforeach; ?>
                                 </ul>
                             </div>
                         <?php endif; ?>
                         
-                        <?php if (!empty($parfume_basic['cons'])): ?>
-                            <div class="cons-column">
+                        <?php if ($disadvantages): ?>
+                            <div class="cons-section">
                                 <h4><?php _e('Недостатъци', 'parfume-catalog'); ?></h4>
                                 <ul class="cons-list">
-                                    <?php foreach ($parfume_basic['cons'] as $con): ?>
+                                    <?php foreach ($disadvantages as $disadvantage): ?>
                                         <li class="con-item">
-                                            <span class="con-icon">❌</span>
-                                            <?php echo esc_html($con); ?>
+                                            <span class="con-icon">✗</span>
+                                            <?php echo esc_html($disadvantage); ?>
                                         </li>
                                     <?php endforeach; ?>
                                 </ul>
@@ -352,28 +400,27 @@ $comments_settings = Parfume_Admin_Comments::get_comments_settings();
                 </div>
             <?php endif; ?>
             
-            <!-- Similar Fragrances -->
+            <!-- Similar Parfumes -->
             <?php
-            $similar_count = get_option('parfume_similar_count', 4);
-            $similar_columns = get_option('parfume_similar_columns', 4);
-            $similar_parfumes = $this->get_similar_parfumes($post_id, $similar_count);
+            $similar_count = isset($plugin_options['similar_parfumes_count']) ? intval($plugin_options['similar_parfumes_count']) : 4;
+            $similar_parfumes = Parfume_Catalog_Template_Loader::get_similar_parfumes($post_id, $similar_count);
             
-            if (!empty($similar_parfumes)):
+            if ($similar_parfumes):
             ?>
                 <div class="parfume-similar">
                     <h3><?php _e('Подобни аромати', 'parfume-catalog'); ?></h3>
-                    <div class="similar-grid" style="grid-template-columns: repeat(<?php echo $similar_columns; ?>, 1fr);">
+                    <div class="similar-parfumes-grid">
                         <?php foreach ($similar_parfumes as $similar): ?>
-                            <div class="similar-item">
-                                <a href="<?php echo get_permalink($similar->ID); ?>">
-                                    <?php if (has_post_thumbnail($similar->ID)): ?>
-                                        <?php echo get_the_post_thumbnail($similar->ID, 'medium', array('class' => 'similar-image')); ?>
+                            <div class="similar-parfume-item">
+                                <a href="<?php echo get_permalink($similar); ?>">
+                                    <?php if (has_post_thumbnail($similar)): ?>
+                                        <?php echo get_the_post_thumbnail($similar, 'medium', array('class' => 'similar-parfume-image')); ?>
                                     <?php else: ?>
-                                        <div class="similar-placeholder">
+                                        <div class="similar-parfume-placeholder">
                                             <span class="dashicons dashicons-format-image"></span>
                                         </div>
                                     <?php endif; ?>
-                                    <h4 class="similar-title"><?php echo esc_html($similar->post_title); ?></h4>
+                                    <h4 class="similar-parfume-title"><?php echo get_the_title($similar); ?></h4>
                                 </a>
                             </div>
                         <?php endforeach; ?>
@@ -383,39 +430,65 @@ $comments_settings = Parfume_Admin_Comments::get_comments_settings();
             
             <!-- Recently Viewed -->
             <?php
-            $recent_count = get_option('parfume_recent_count', 4);
-            $recent_columns = get_option('parfume_recent_columns', 4);
-            ?>
-            <div class="parfume-recent" id="recent-parfumes">
-                <h3><?php _e('Наскоро разгледани', 'parfume-catalog'); ?></h3>
-                <div class="recent-grid" style="grid-template-columns: repeat(<?php echo $recent_columns; ?>, 1fr);">
-                    <!-- Will be populated by JavaScript -->
-                </div>
-            </div>
+            $recently_viewed_count = isset($plugin_options['recently_viewed_count']) ? intval($plugin_options['recently_viewed_count']) : 4;
+            $recently_viewed = Parfume_Catalog_Template_Loader::get_recently_viewed($recently_viewed_count);
             
-            <!-- Same Brand -->
-            <?php
-            if ($parfume_marki):
-                $brand_count = get_option('parfume_brand_count', 4);
-                $brand_columns = get_option('parfume_brand_columns', 4);
-                $brand_parfumes = $this->get_brand_parfumes($post_id, $parfume_marki[0]->term_id, $brand_count);
-                
-                if (!empty($brand_parfumes)):
+            if ($recently_viewed):
             ?>
-                <div class="parfume-brand">
-                    <h3><?php printf(__('Други парфюми от %s', 'parfume-catalog'), esc_html($parfume_marki[0]->name)); ?></h3>
-                    <div class="brand-grid" style="grid-template-columns: repeat(<?php echo $brand_columns; ?>, 1fr);">
-                        <?php foreach ($brand_parfumes as $brand_parfume): ?>
-                            <div class="brand-item">
-                                <a href="<?php echo get_permalink($brand_parfume->ID); ?>">
-                                    <?php if (has_post_thumbnail($brand_parfume->ID)): ?>
-                                        <?php echo get_the_post_thumbnail($brand_parfume->ID, 'medium', array('class' => 'brand-image')); ?>
+                <div class="parfume-recently-viewed">
+                    <h3><?php _e('Наскоро разгледани', 'parfume-catalog'); ?></h3>
+                    <div class="recently-viewed-grid">
+                        <?php foreach ($recently_viewed as $recent): ?>
+                            <div class="recent-parfume-item">
+                                <a href="<?php echo get_permalink($recent); ?>">
+                                    <?php if (has_post_thumbnail($recent)): ?>
+                                        <?php echo get_the_post_thumbnail($recent, 'medium', array('class' => 'recent-parfume-image')); ?>
                                     <?php else: ?>
-                                        <div class="brand-placeholder">
+                                        <div class="recent-parfume-placeholder">
                                             <span class="dashicons dashicons-format-image"></span>
                                         </div>
                                     <?php endif; ?>
-                                    <h4 class="brand-title"><?php echo esc_html($brand_parfume->post_title); ?></h4>
+                                    <h4 class="recent-parfume-title"><?php echo get_the_title($recent); ?></h4>
+                                </a>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+            
+            <!-- Brand Parfumes -->
+            <?php
+            if ($parfume_marki):
+                $brand_count = isset($plugin_options['brand_parfumes_count']) ? intval($plugin_options['brand_parfumes_count']) : 4;
+                $brand_parfumes = get_posts(array(
+                    'post_type' => 'parfumes',
+                    'posts_per_page' => $brand_count,
+                    'post__not_in' => array($post_id),
+                    'tax_query' => array(
+                        array(
+                            'taxonomy' => 'parfume_marki',
+                            'field' => 'term_id',
+                            'terms' => $parfume_marki[0]->term_id
+                        )
+                    )
+                ));
+                
+                if ($brand_parfumes):
+            ?>
+                <div class="parfume-from-brand">
+                    <h3><?php printf(__('Други парфюми от %s', 'parfume-catalog'), esc_html($parfume_marki[0]->name)); ?></h3>
+                    <div class="brand-parfumes-grid">
+                        <?php foreach ($brand_parfumes as $brand_parfume): ?>
+                            <div class="brand-parfume-item">
+                                <a href="<?php echo get_permalink($brand_parfume); ?>">
+                                    <?php if (has_post_thumbnail($brand_parfume)): ?>
+                                        <?php echo get_the_post_thumbnail($brand_parfume, 'medium', array('class' => 'brand-parfume-image')); ?>
+                                    <?php else: ?>
+                                        <div class="brand-parfume-placeholder">
+                                            <span class="dashicons dashicons-format-image"></span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <h4 class="brand-parfume-title"><?php echo get_the_title($brand_parfume); ?></h4>
                                 </a>
                             </div>
                         <?php endforeach; ?>
@@ -428,290 +501,263 @@ $comments_settings = Parfume_Admin_Comments::get_comments_settings();
             
             <!-- Comments Section -->
             <?php if ($comments_settings['enabled']): ?>
-                <div class="parfume-comments">
+                <div class="parfume-comments-section">
                     <h3><?php _e('Потребителски мнения и оценка', 'parfume-catalog'); ?></h3>
                     
-                    <!-- Comments Form -->
-                    <div class="comments-form-section">
-                        <form id="parfume-comment-form" class="comment-form">
-                            <?php wp_nonce_field('parfume_comment_nonce', 'parfume_comment_nonce_field'); ?>
+                    <!-- Comments display -->
+                    <div id="parfume-comments-list">
+                        <?php Parfume_Catalog_Comments::display_comments($post_id); ?>
+                    </div>
+                    
+                    <!-- Add comment form -->
+                    <div class="parfume-comment-form">
+                        <h4><?php _e('Споделете вашето мнение', 'parfume-catalog'); ?></h4>
+                        <form id="parfume-comment-form" method="post">
+                            <?php wp_nonce_field('parfume_add_comment', 'parfume_comment_nonce'); ?>
                             <input type="hidden" name="post_id" value="<?php echo $post_id; ?>">
                             
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="comment-author"><?php _e('Име', 'parfume-catalog'); ?></label>
+                            <div class="comment-form-fields">
+                                <div class="comment-field">
+                                    <label for="comment-author-name"><?php _e('Име', 'parfume-catalog'); ?></label>
                                     <input type="text" 
-                                           id="comment-author" 
+                                           id="comment-author-name" 
                                            name="author_name" 
-                                           placeholder="<?php _e('Вашето име (или оставете празно за Анонимен)', 'parfume-catalog'); ?>" 
-                                           class="form-control" />
+                                           placeholder="<?php _e('Оставете празно за „Анонимен"', 'parfume-catalog'); ?>">
                                 </div>
                                 
-                                <?php if ($comments_settings['require_email']): ?>
-                                    <div class="form-group">
-                                        <label for="comment-email"><?php _e('Имейл', 'parfume-catalog'); ?> *</label>
-                                        <input type="email" 
-                                               id="comment-email" 
-                                               name="author_email" 
-                                               required 
-                                               class="form-control" />
+                                <div class="comment-field">
+                                    <label for="comment-rating"><?php _e('Оценка', 'parfume-catalog'); ?></label>
+                                    <div class="rating-stars">
+                                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                                            <span class="star" data-rating="<?php echo $i; ?>">★</span>
+                                        <?php endfor; ?>
+                                    </div>
+                                    <input type="hidden" id="comment-rating" name="rating" value="">
+                                </div>
+                                
+                                <div class="comment-field">
+                                    <label for="comment-content"><?php _e('Мнение', 'parfume-catalog'); ?></label>
+                                    <textarea id="comment-content" 
+                                              name="content" 
+                                              rows="4" 
+                                              placeholder="<?php _e('Споделете вашето мнение за този парфюм...', 'parfume-catalog'); ?>" 
+                                              required></textarea>
+                                </div>
+                                
+                                <?php if ($comments_settings['captcha_enabled']): ?>
+                                    <div class="comment-field">
+                                        <label for="comment-captcha"><?php _e('Проверка', 'parfume-catalog'); ?></label>
+                                        <div class="captcha-question">
+                                            <span><?php echo $comments_settings['captcha_question']; ?></span>
+                                            <input type="text" id="comment-captcha" name="captcha" required>
+                                        </div>
                                     </div>
                                 <?php endif; ?>
                             </div>
                             
-                            <div class="form-group">
-                                <label for="comment-rating"><?php _e('Оценка', 'parfume-catalog'); ?> *</label>
-                                <div class="rating-input">
-                                    <?php for ($i = 1; $i <= 5; $i++): ?>
-                                        <input type="radio" 
-                                               id="rating-<?php echo $i; ?>" 
-                                               name="rating" 
-                                               value="<?php echo $i; ?>" 
-                                               required />
-                                        <label for="rating-<?php echo $i; ?>" class="star-label">⭐</label>
-                                    <?php endfor; ?>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="comment-content"><?php _e('Вашето мнение', 'parfume-catalog'); ?> *</label>
-                                <textarea id="comment-content" 
-                                          name="content" 
-                                          rows="4" 
-                                          required 
-                                          placeholder="<?php _e('Споделете вашето мнение за този парфюм...', 'parfume-catalog'); ?>" 
-                                          class="form-control"></textarea>
-                            </div>
-                            
-                            <?php if ($comments_settings['enable_captcha']): ?>
-                                <div class="form-group">
-                                    <label for="captcha-answer"><?php echo esc_html($comments_settings['captcha_question']); ?> *</label>
-                                    <input type="text" 
-                                           id="captcha-answer" 
-                                           name="captcha_answer" 
-                                           required 
-                                           class="form-control" />
-                                </div>
-                            <?php endif; ?>
-                            
-                            <div class="form-actions">
-                                <button type="submit" class="submit-comment-btn">
-                                    <?php _e('Публикувай мнение', 'parfume-catalog'); ?>
-                                </button>
-                            </div>
+                            <button type="submit" class="submit-comment-btn">
+                                <?php _e('Публикувай мнение', 'parfume-catalog'); ?>
+                            </button>
                         </form>
-                    </div>
-                    
-                    <!-- Comments List -->
-                    <div class="comments-list" id="comments-list">
-                        <?php $this->render_comments_list($post_id); ?>
                     </div>
                 </div>
             <?php endif; ?>
         </div>
         
-        <!-- Right Column (30%) - Stores -->
-        <div class="parfume-right-column" id="stores-column">
-            <?php if (!empty($parfume_stores)): ?>
-                <div class="stores-section">
-                    <h3><?php _e('Сравни цените', 'parfume-catalog'); ?></h3>
-                    <p class="stores-intro">
-                        <?php printf(__('Купи %s на най‑изгодната цена:', 'parfume-catalog'), get_the_title()); ?>
-                    </p>
-                    
+        <!-- Right Column (30%) -->
+        <div class="parfume-right-column">
+            <div class="parfume-stores-sidebar">
+                <h3><?php _e('Сравни цените', 'parfume-catalog'); ?></h3>
+                <p class="stores-intro"><?php printf(__('Купи %s на най‑изгодната цена:', 'parfume-catalog'), get_the_title()); ?></p>
+                
+                <?php if ($parfume_stores && !empty($parfume_stores)): ?>
                     <div class="stores-list">
-                        <?php foreach ($parfume_stores as $store_id => $store): ?>
-                            <?php $this->render_store_item($store); ?>
+                        <?php foreach ($parfume_stores as $store): ?>
+                            <div class="store-item">
+                                <div class="store-header">
+                                    <div class="store-logo">
+                                        <?php if ($store['logo_url']): ?>
+                                            <img src="<?php echo esc_url($store['logo_url']); ?>" alt="<?php echo esc_attr($store['name']); ?>">
+                                        <?php else: ?>
+                                            <span class="store-name"><?php echo esc_html($store['name']); ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <div class="store-price">
+                                        <?php if ($store['old_price'] && $store['old_price'] > $store['price']): ?>
+                                            <span class="old-price"><?php echo esc_html($store['old_price'] . ' ' . $store['currency']); ?></span>
+                                        <?php endif; ?>
+                                        <span class="current-price"><?php echo esc_html($store['price'] . ' ' . $store['currency']); ?></span>
+                                        <?php if ($store['old_price'] && $store['old_price'] > $store['price']): ?>
+                                            <?php
+                                            $discount_percent = round((($store['old_price'] - $store['price']) / $store['old_price']) * 100);
+                                            ?>
+                                            <span class="discount-percent"><?php printf(__('По-изгодно с %d%%', 'parfume-catalog'), $discount_percent); ?></span>
+                                        <?php endif; ?>
+                                        <span class="price-update-info">
+                                            <i class="update-icon">ℹ</i>
+                                            <span class="tooltip"><?php _e('Цената се актуализира на всеки 12 часа', 'parfume-catalog'); ?></span>
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="store-details">
+                                    <?php if (count($store['variants']) == 1): ?>
+                                        <div class="store-variant">
+                                            <span class="variant-size"><?php echo esc_html($store['variants'][0]['size']); ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($store['availability']): ?>
+                                        <div class="store-availability">
+                                            <span class="availability-status available">
+                                                <span class="status-icon">✓</span>
+                                                <?php echo esc_html($store['availability']); ?>
+                                            </span>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($store['delivery_info']): ?>
+                                        <div class="store-delivery">
+                                            <span class="delivery-info"><?php echo esc_html($store['delivery_info']); ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                
+                                <?php if (count($store['variants']) > 1): ?>
+                                    <div class="store-variants">
+                                        <?php foreach ($store['variants'] as $variant): ?>
+                                            <a href="<?php echo esc_url($store['affiliate_url']); ?>" 
+                                               class="variant-btn<?php echo $variant['on_sale'] ? ' on-sale' : ''; ?>" 
+                                               target="_blank" 
+                                               rel="nofollow">
+                                                <?php if ($variant['on_sale']): ?>
+                                                    <span class="sale-badge">%</span>
+                                                <?php endif; ?>
+                                                <span class="variant-size"><?php echo esc_html($variant['size']); ?></span>
+                                                <span class="variant-price"><?php echo esc_html($variant['price'] . ' ' . $store['currency']); ?></span>
+                                            </a>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <div class="store-actions">
+                                    <a href="<?php echo esc_url($store['affiliate_url']); ?>" 
+                                       class="store-btn primary" 
+                                       target="_blank" 
+                                       rel="nofollow">
+                                        <?php _e('Към магазина', 'parfume-catalog'); ?>
+                                    </a>
+                                    
+                                    <?php if ($store['promo_code']): ?>
+                                        <div class="promo-code-btn" data-promo-code="<?php echo esc_attr($store['promo_code']); ?>">
+                                            <?php if ($store['promo_code_info']): ?>
+                                                <span class="promo-info"><?php echo esc_html($store['promo_code_info']); ?></span>
+                                            <?php endif; ?>
+                                            <span class="promo-code"><?php echo esc_html($store['promo_code']); ?></span>
+                                            <span class="copy-icon">📋</span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                         <?php endforeach; ?>
                     </div>
                     
-                    <p class="stores-note">
-                        <?php printf(__('Цените ни се актуализират на всеки %d ч.', 'parfume-catalog'), get_option('parfume_scraper_interval', 12)); ?>
-                    </p>
-                </div>
-            <?php endif; ?>
+                    <div class="price-update-note">
+                        <small><?php _e('Цените ни се актуализират на всеки 12 ч.', 'parfume-catalog'); ?></small>
+                    </div>
+                <?php else: ?>
+                    <div class="no-stores">
+                        <p><?php _e('В момента няма налични оферти за този парфюм.', 'parfume-catalog'); ?></p>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 </div>
 
-<?php
-// Add recent parfume to localStorage
-?>
 <script>
 jQuery(document).ready(function($) {
-    // Add current parfume to recently viewed
-    var recentParfumes = JSON.parse(localStorage.getItem('recentParfumes') || '[]');
-    var currentParfume = {
-        id: <?php echo $post_id; ?>,
-        title: <?php echo json_encode(get_the_title()); ?>,
-        url: <?php echo json_encode(get_permalink()); ?>,
-        image: <?php echo json_encode(get_the_post_thumbnail_url($post_id, 'thumbnail')); ?>,
-        timestamp: Date.now()
-    };
-    
-    // Remove if already exists
-    recentParfumes = recentParfumes.filter(function(parfume) {
-        return parfume.id !== currentParfume.id;
+    // Rating stars functionality
+    $('.rating-stars .star').on('click', function() {
+        var rating = $(this).data('rating');
+        $('#comment-rating').val(rating);
+        
+        $('.rating-stars .star').removeClass('active');
+        for (var i = 1; i <= rating; i++) {
+            $('.rating-stars .star[data-rating="' + i + '"]').addClass('active');
+        }
     });
     
-    // Add to beginning
-    recentParfumes.unshift(currentParfume);
-    
-    // Keep only last 10
-    recentParfumes = recentParfumes.slice(0, 10);
-    
-    // Save back to localStorage
-    localStorage.setItem('recentParfumes', JSON.stringify(recentParfumes));
-    
-    // Display recent parfumes (excluding current)
-    var recentToShow = recentParfumes.filter(function(parfume) {
-        return parfume.id !== currentParfume.id;
-    }).slice(0, <?php echo $recent_count; ?>);
-    
-    if (recentToShow.length > 0) {
-        var recentHtml = '';
-        recentToShow.forEach(function(parfume) {
-            recentHtml += '<div class="recent-item">' +
-                '<a href="' + parfume.url + '">' +
-                (parfume.image ? '<img src="' + parfume.image + '" alt="" class="recent-image">' : '<div class="recent-placeholder"><span class="dashicons dashicons-format-image"></span></div>') +
-                '<h4 class="recent-title">' + parfume.title + '</h4>' +
-                '</a>' +
-                '</div>';
+    // Promo code copy functionality
+    $('.promo-code-btn').on('click', function() {
+        var promoCode = $(this).data('promo-code');
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(promoCode).then(function() {
+            // Show success message
+            $(this).addClass('copied');
+            setTimeout(function() {
+                $(this).removeClass('copied');
+            }, 2000);
         });
-        $('#recent-parfumes .recent-grid').html(recentHtml);
-    } else {
-        $('#recent-parfumes').hide();
-    }
-    
-    // Comment form submission
-    $('#parfume-comment-form').on('submit', function(e) {
-        e.preventDefault();
         
-        var formData = $(this).serialize();
-        formData += '&action=parfume_submit_comment';
-        
-        var submitBtn = $('.submit-comment-btn');
-        submitBtn.prop('disabled', true).text('<?php _e('Изпраща...', 'parfume-catalog'); ?>');
-        
-        $.post('<?php echo admin_url('admin-ajax.php'); ?>', formData, function(response) {
-            if (response.success) {
-                $('#parfume-comment-form')[0].reset();
-                $('.rating-input input').prop('checked', false);
-                
-                if (response.data.message) {
-                    alert(response.data.message);
-                }
-                
-                // Reload comments if needed
-                if (response.data.reload_comments) {
-                    location.reload();
-                }
-            } else {
-                alert(response.data.message || '<?php _e('Грешка при изпращане на коментара', 'parfume-catalog'); ?>');
-            }
-            
-            submitBtn.prop('disabled', false).text('<?php _e('Публикувай мнение', 'parfume-catalog'); ?>');
-        });
+        // Open affiliate URL
+        var affiliateUrl = $(this).closest('.store-item').find('.store-btn.primary').attr('href');
+        if (affiliateUrl) {
+            window.open(affiliateUrl, '_blank');
+        }
     });
     
     // Comparison functionality
-    <?php if ($comparison_settings['enabled']): ?>
     $('.comparison-btn').on('click', function() {
         var parfumeId = $(this).data('parfume-id');
         var parfumeTitle = $(this).data('parfume-title');
         var parfumeImage = $(this).data('parfume-image');
         
-        // Add to comparison (would integrate with comparison module)
-        console.log('Adding to comparison:', parfumeId, parfumeTitle);
+        // Add to comparison logic here
+        console.log('Add to comparison:', parfumeId, parfumeTitle, parfumeImage);
     });
-    <?php endif; ?>
+    
+    // Comment form submission
+    $('#parfume-comment-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Basic validation
+        if (!$('#comment-content').val().trim()) {
+            alert('Моля, въведете вашето мнение.');
+            return;
+        }
+        
+        if (!$('#comment-rating').val()) {
+            alert('Моля, поставете оценка.');
+            return;
+        }
+        
+        // Submit comment via AJAX
+        var formData = $(this).serialize();
+        
+        $.ajax({
+            url: parfume_catalog_config.ajaxUrl,
+            type: 'POST',
+            data: formData + '&action=parfume_add_comment',
+            success: function(response) {
+                if (response.success) {
+                    alert('Благодарим за вашето мнение! То ще бъде публикувано след одобрение.');
+                    $('#parfume-comment-form')[0].reset();
+                    $('.rating-stars .star').removeClass('active');
+                    $('#comment-rating').val('');
+                } else {
+                    alert('Грешка при изпращане на мнението. Моля, опитайте отново.');
+                }
+            },
+            error: function() {
+                alert('Грешка при изпращане на мнението. Моля, опитайте отново.');
+            }
+        });
+    });
 });
 </script>
-
-<?php
-get_footer();
-
-// Helper methods
-function get_similar_parfumes($current_id, $count) {
-    // Get parfumes with similar notes
-    $current_notes = Parfume_Meta_Notes::get_all_parfume_notes($current_id);
-    
-    if (empty($current_notes)) {
-        return array();
-    }
-    
-    $args = array(
-        'post_type' => 'parfumes',
-        'post_status' => 'publish',
-        'posts_per_page' => $count,
-        'post__not_in' => array($current_id),
-        'tax_query' => array(
-            array(
-                'taxonomy' => 'parfume_notes',
-                'field' => 'term_id',
-                'terms' => $current_notes,
-                'operator' => 'IN'
-            )
-        ),
-        'meta_query' => array(
-            array(
-                'key' => '_thumbnail_id',
-                'compare' => 'EXISTS'
-            )
-        )
-    );
-    
-    return get_posts($args);
-}
-
-function get_brand_parfumes($current_id, $brand_id, $count) {
-    $args = array(
-        'post_type' => 'parfumes',
-        'post_status' => 'publish',
-        'posts_per_page' => $count,
-        'post__not_in' => array($current_id),
-        'tax_query' => array(
-            array(
-                'taxonomy' => 'parfume_marki',
-                'field' => 'term_id',
-                'terms' => $brand_id
-            )
-        ),
-        'meta_query' => array(
-            array(
-                'key' => '_thumbnail_id',
-                'compare' => 'EXISTS'
-            )
-        )
-    );
-    
-    return get_posts($args);
-}
-
-function render_store_item($store) {
-    // Implementation for rendering individual store item
-    // Would display store logo, prices, variants, availability, etc.
-    ?>
-    <div class="store-item">
-        <div class="store-header">
-            <?php if ($store['logo_url']): ?>
-                <img src="<?php echo esc_url($store['logo_url']); ?>" alt="" class="store-logo">
-            <?php endif; ?>
-            <div class="store-price">
-                <!-- Price display logic -->
-            </div>
-        </div>
-        <!-- Store content -->
-    </div>
-    <?php
-}
-
-function render_comments_list($post_id) {
-    // Implementation for rendering comments list
-    // Would display approved comments with ratings
-    echo '<div class="no-comments">' . __('Все още няма оценки', 'parfume-catalog') . '</div>';
-}
-?>
 
 <style>
 .parfume-single-container {
@@ -722,52 +768,46 @@ function render_comments_list($post_id) {
 
 .parfume-content-wrapper {
     display: grid;
-    grid-template-columns: 70% 30%;
-    gap: 30px;
+    grid-template-columns: 1fr 350px;
+    gap: 40px;
+    align-items: flex-start;
 }
 
 .parfume-left-column {
-    background: #fff;
-    padding: 0;
-}
-
-.parfume-right-column {
-    background: #f9f9f9;
-    padding: 20px;
+    background: white;
+    padding: 30px;
     border-radius: 8px;
-    position: sticky;
-    top: 20px;
-    height: fit-content;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
 .parfume-header {
     display: flex;
-    gap: 20px;
+    gap: 30px;
     margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #eee;
 }
 
 .parfume-image {
-    flex: 0 0 200px;
+    flex: 0 0 250px;
+    height: 300px;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 .parfume-featured-image {
     width: 100%;
-    height: auto;
-    border-radius: 8px;
+    height: 100%;
+    object-fit: cover;
 }
 
 .parfume-placeholder-image {
-    width: 200px;
-    height: 200px;
-    background: #f0f0f0;
-    border-radius: 8px;
+    width: 100%;
+    height: 100%;
+    background: #f5f5f5;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: #999;
     font-size: 48px;
-    color: #ccc;
 }
 
 .parfume-header-info {
@@ -775,95 +815,107 @@ function render_comments_list($post_id) {
 }
 
 .parfume-title {
-    margin: 0 0 15px 0;
-    font-size: 28px;
+    font-size: 2.5em;
+    margin: 0 0 20px 0;
+    color: #333;
     line-height: 1.2;
 }
 
 .parfume-meta {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 .parfume-meta > div {
-    margin-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+.parfume-brand a {
+    color: #007cba;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.parfume-brand a:hover {
+    text-decoration: underline;
 }
 
 .comparison-btn {
-    background: #0073aa;
+    background: #28a745;
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
+    padding: 12px 24px;
+    border-radius: 25px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
 }
 
 .comparison-btn:hover {
-    background: #005a87;
+    background: #218838;
+    transform: translateY(-2px);
 }
 
-.parfume-main-notes {
-    margin-top: 15px;
-}
-
-.main-notes-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-}
-
-.main-note {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    background: #f0f8ff;
-    padding: 5px 10px;
-    border-radius: 15px;
-    font-size: 13px;
-    border: 1px solid #b3d9ff;
-}
-
-.note-icon {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-}
-
-.parfume-suitable-for {
-    margin: 20px 0;
+.parfume-basic-notes {
+    background: #f8f9fa;
     padding: 15px;
-    background: #f9f9f9;
     border-radius: 8px;
+    margin-top: 20px;
+}
+
+.basic-notes-list {
+    margin-top: 10px;
+    color: #666;
+}
+
+.parfume-suitable-conditions {
+    background: #e3f2fd;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
 }
 
 .suitable-icons {
     display: flex;
-    flex-wrap: wrap;
     gap: 15px;
+    margin-top: 15px;
+    flex-wrap: wrap;
 }
 
 .suitable-item {
     display: flex;
     align-items: center;
-    gap: 5px;
-    font-size: 14px;
+    gap: 8px;
+    background: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .suitable-icon {
     font-size: 18px;
 }
 
+.suitable-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
 .parfume-content {
-    margin: 30px 0;
+    font-size: 1.1em;
     line-height: 1.6;
+    color: #555;
+    margin-bottom: 40px;
 }
 
 .parfume-composition {
-    margin: 40px 0;
+    margin-bottom: 40px;
+}
+
+.parfume-composition h3 {
+    font-size: 1.8em;
+    margin-bottom: 25px;
+    color: #333;
 }
 
 .composition-pyramid {
@@ -872,107 +924,121 @@ function render_comments_list($post_id) {
 }
 
 .notes-section {
+    background: #f8f9fa;
     padding: 20px;
     border-radius: 8px;
-    border-left: 4px solid;
-}
-
-.notes-section.top-notes {
-    background: #fffde7;
-    border-left-color: #ffeb3b;
-}
-
-.notes-section.heart-notes {
-    background: #fff3e0;
-    border-left-color: #ff5722;
-}
-
-.notes-section.base-notes {
-    background: #efebe9;
-    border-left-color: #795548;
+    border-left: 4px solid #007cba;
 }
 
 .notes-section h4 {
-    margin: 0 0 10px 0;
+    margin: 0 0 15px 0;
     color: #333;
+    font-size: 1.2em;
 }
 
 .notes-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
 }
 
 .note-item {
+    background: white;
+    padding: 8px 12px;
+    border-radius: 15px;
+    border: 1px solid #ddd;
     display: flex;
     align-items: center;
-    gap: 5px;
-    background: white;
-    padding: 5px 10px;
-    border-radius: 15px;
-    font-size: 13px;
-    border: 1px solid #ddd;
+    gap: 8px;
     text-decoration: none;
     color: #333;
+    font-size: 14px;
+    transition: all 0.3s ease;
 }
 
 .note-item:hover {
-    border-color: #0073aa;
+    background: #007cba;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.note-item a {
+    color: inherit;
     text-decoration: none;
 }
 
-.parfume-graphics {
-    margin: 40px 0;
+.note-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: cover;
+    border-radius: 2px;
 }
 
-.graphics-grid {
+.parfume-graphics {
+    margin-bottom: 40px;
+}
+
+.parfume-graphics h3 {
+    font-size: 1.8em;
+    margin-bottom: 25px;
+    color: #333;
+}
+
+.graphics-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 30px;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
 }
 
-.graphics-column h4 {
+.graphic-section h4 {
     margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.1em;
     text-align: center;
-    font-size: 14px;
-    font-weight: 600;
-    color: #555;
 }
 
 .progress-bars {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 
 .progress-bar {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 5px 0;
 }
 
 .progress-label {
-    flex: 0 0 120px;
+    min-width: 120px;
     font-size: 12px;
     color: #666;
 }
 
-.progress-fill {
+.progress-track {
     flex: 1;
-    height: 6px;
+    height: 8px;
     background: #e0e0e0;
-    border-radius: 3px;
-    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
 }
 
-.progress-bar.active .progress-fill {
-    background: #0073aa;
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #007cba, #28a745);
+    border-radius: 4px;
+    transition: width 0.3s ease;
 }
 
 .parfume-pros-cons {
-    margin: 40px 0;
+    margin-bottom: 40px;
+}
+
+.parfume-pros-cons h3 {
+    font-size: 1.8em;
+    margin-bottom: 25px;
+    color: #333;
 }
 
 .pros-cons-grid {
@@ -981,13 +1047,13 @@ function render_comments_list($post_id) {
     gap: 30px;
 }
 
-.pros-column h4 {
-    color: #46b450;
+.pros-section h4 {
+    color: #28a745;
     margin-bottom: 15px;
 }
 
-.cons-column h4 {
-    color: #dc3232;
+.cons-section h4 {
+    color: #dc3545;
     margin-bottom: 15px;
 }
 
@@ -1001,172 +1067,420 @@ function render_comments_list($post_id) {
 .pro-item,
 .con-item {
     display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    margin-bottom: 8px;
-    font-size: 14px;
-    line-height: 1.4;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
 }
 
-.pro-icon,
+.pro-icon {
+    color: #28a745;
+    font-weight: bold;
+}
+
 .con-icon {
-    flex-shrink: 0;
-    margin-top: 2px;
+    color: #dc3545;
+    font-weight: bold;
 }
 
-.similar-grid,
-.recent-grid,
-.brand-grid {
+.parfume-similar,
+.parfume-recently-viewed,
+.parfume-from-brand {
+    margin-bottom: 40px;
+}
+
+.parfume-similar h3,
+.parfume-recently-viewed h3,
+.parfume-from-brand h3 {
+    font-size: 1.8em;
+    margin-bottom: 25px;
+    color: #333;
+}
+
+.similar-parfumes-grid,
+.recently-viewed-grid,
+.brand-parfumes-grid {
     display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 20px;
-    margin-top: 20px;
 }
 
-.similar-item,
-.recent-item,
-.brand-item {
+.similar-parfume-item,
+.recent-parfume-item,
+.brand-parfume-item {
     text-align: center;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
 }
 
-.similar-image,
-.recent-image,
-.brand-image {
+.similar-parfume-item:hover,
+.recent-parfume-item:hover,
+.brand-parfume-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.similar-parfume-item a,
+.recent-parfume-item a,
+.brand-parfume-item a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.similar-parfume-image,
+.recent-parfume-image,
+.brand-parfume-image {
     width: 100%;
-    height: auto;
-    border-radius: 8px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 5px;
     margin-bottom: 10px;
 }
 
-.similar-placeholder,
-.recent-placeholder,
-.brand-placeholder {
+.similar-parfume-placeholder,
+.recent-parfume-placeholder,
+.brand-parfume-placeholder {
     width: 100%;
-    height: 200px;
-    background: #f0f0f0;
-    border-radius: 8px;
+    height: 120px;
+    background: #e9ecef;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: #999;
     font-size: 24px;
-    color: #ccc;
+    border-radius: 5px;
     margin-bottom: 10px;
 }
 
-.similar-title,
-.recent-title,
-.brand-title {
-    margin: 0;
+.similar-parfume-title,
+.recent-parfume-title,
+.brand-parfume-title {
     font-size: 14px;
     line-height: 1.3;
+    margin: 0;
 }
 
-.parfume-comments {
-    margin: 40px 0;
+.parfume-comments-section {
+    margin-top: 40px;
+    border-top: 2px solid #eee;
+    padding-top: 40px;
 }
 
-.comment-form {
-    background: #f9f9f9;
-    padding: 20px;
+.parfume-comments-section h3 {
+    font-size: 1.8em;
+    margin-bottom: 25px;
+    color: #333;
+}
+
+.parfume-comment-form {
+    background: #f8f9fa;
+    padding: 25px;
     border-radius: 8px;
     margin-bottom: 30px;
 }
 
-.form-row {
+.parfume-comment-form h4 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.comment-form-fields {
     display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
 
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-group label {
+.comment-field label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
     font-weight: 500;
+    color: #333;
 }
 
-.form-control {
+.comment-field input,
+.comment-field textarea {
     width: 100%;
-    padding: 10px;
+    padding: 10px 15px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 5px;
     font-size: 14px;
 }
 
-.rating-input {
+.rating-stars {
     display: flex;
     gap: 5px;
+    margin-bottom: 10px;
 }
 
-.rating-input input[type="radio"] {
-    display: none;
-}
-
-.star-label {
+.rating-stars .star {
     font-size: 24px;
     color: #ddd;
     cursor: pointer;
-    transition: color 0.2s;
+    transition: color 0.3s ease;
 }
 
-.rating-input input[type="radio"]:checked ~ .star-label,
-.rating-input input[type="radio"]:checked + .star-label {
-    color: #ffb900;
-}
-
-.rating-input .star-label:hover,
-.rating-input input[type="radio"]:hover + .star-label {
-    color: #ffb900;
+.rating-stars .star:hover,
+.rating-stars .star.active {
+    color: #ffc107;
 }
 
 .submit-comment-btn {
-    background: #0073aa;
+    background: #007cba;
     color: white;
     border: none;
-    padding: 12px 30px;
-    border-radius: 4px;
+    padding: 12px 25px;
+    border-radius: 5px;
     cursor: pointer;
-    font-size: 14px;
     font-weight: 500;
+    margin-top: 20px;
 }
 
 .submit-comment-btn:hover {
     background: #005a87;
 }
 
-.submit-comment-btn:disabled {
-    background: #ccc;
-    cursor: not-allowed;
+.parfume-right-column {
+    position: sticky;
+    top: 20px;
 }
 
-.stores-section h3 {
-    margin: 0 0 10px 0;
+.parfume-stores-sidebar {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.parfume-stores-sidebar h3 {
+    font-size: 1.5em;
+    margin-bottom: 15px;
     color: #333;
 }
 
 .stores-intro {
+    color: #666;
     margin-bottom: 20px;
     font-size: 14px;
+}
+
+.stores-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.store-item {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    background: #fafafa;
+}
+
+.store-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.store-logo {
+    flex: 0 0 80px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+.store-logo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.store-name {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.store-price {
+    text-align: right;
+    position: relative;
+}
+
+.old-price {
+    text-decoration: line-through;
+    color: #999;
+    font-size: 12px;
+    display: block;
+}
+
+.current-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: #007cba;
+    display: block;
+}
+
+.discount-percent {
+    font-size: 12px;
+    color: #28a745;
+    font-weight: 500;
+    display: block;
+}
+
+.price-update-info {
+    position: relative;
+    margin-top: 5px;
+}
+
+.update-icon {
+    color: #999;
+    cursor: help;
+}
+
+.store-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.availability-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #28a745;
+}
+
+.status-icon {
+    font-size: 12px;
+}
+
+.store-variants {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.variant-btn {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: #333;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.variant-btn:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+}
+
+.variant-btn.on-sale {
+    border-color: #28a745;
+    background: #f8fff8;
+}
+
+.sale-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #28a745;
+    color: white;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.store-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.store-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    text-align: center;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.store-btn.primary {
+    background: #ff6b35;
+    color: white;
+}
+
+.store-btn.primary:hover {
+    background: #e55a2e;
+}
+
+.promo-code-btn {
+    flex: 1;
+    border: 2px dashed #dc3545;
+    border-radius: 5px;
+    padding: 8px 12px;
+    cursor: pointer;
+    text-align: center;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.promo-code-btn:hover {
+    background: #fff5f5;
+}
+
+.promo-info {
+    font-size: 10px;
+    color: #666;
+    display: block;
+    margin-bottom: 3px;
+}
+
+.promo-code {
+    font-weight: 700;
+    color: #dc3545;
+    font-size: 14px;
+    display: block;
+}
+
+.copy-icon {
+    font-size: 12px;
+    color: #999;
+    margin-left: 5px;
+}
+
+.price-update-note {
+    text-align: center;
+    margin-top: 20px;
     color: #666;
 }
 
-.stores-note {
-    margin-top: 20px;
-    font-size: 12px;
-    color: #999;
+.no-stores {
     text-align: center;
+    color: #666;
+    font-style: italic;
 }
 
 @media (max-width: 768px) {
     .parfume-content-wrapper {
         grid-template-columns: 1fr;
-    }
-    
-    .parfume-right-column {
-        position: static;
-        order: -1;
+        gap: 20px;
     }
     
     .parfume-header {
@@ -1176,16 +1490,41 @@ function render_comments_list($post_id) {
     
     .parfume-image {
         flex: none;
-        align-self: center;
+        width: 250px;
+        margin: 0 auto;
     }
     
-    .graphics-grid,
+    .parfume-title {
+        font-size: 2em;
+    }
+    
+    .graphics-row {
+        grid-template-columns: 1fr;
+    }
+    
     .pros-cons-grid {
         grid-template-columns: 1fr;
     }
     
-    .form-row {
-        grid-template-columns: 1fr;
+    .similar-parfumes-grid,
+    .recently-viewed-grid,
+    .brand-parfumes-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    
+    .parfume-right-column {
+        position: static;
+    }
+    
+    .store-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .store-actions {
+        flex-direction: column;
     }
 }
 </style>
+
+<?php get_footer(); ?>

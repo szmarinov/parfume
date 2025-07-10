@@ -86,6 +86,26 @@ class Parfume_Catalog_Admin {
             'post-new.php?post_type=parfume_blog'
         );
 
+        // Подменю "Магазини" - премести от stores класа тук
+        add_submenu_page(
+            'parfume-catalog',
+            __('Магазини', 'parfume-catalog'),
+            __('Магазини', 'parfume-catalog'),
+            'manage_options',
+            'parfume-catalog-stores',
+            array($this, 'stores_redirect')
+        );
+
+        // Подменю "Scraper Settings"
+        add_submenu_page(
+            'parfume-catalog',
+            __('Scraper Settings', 'parfume-catalog'),
+            __('Scraper Settings', 'parfume-catalog'),
+            'manage_options',
+            'parfume-catalog-scraper',
+            array($this, 'scraper_settings_page')
+        );
+
         // Подменю "Настройки"
         add_submenu_page(
             'parfume-catalog',
@@ -222,6 +242,35 @@ class Parfume_Catalog_Admin {
     }
 
     /**
+     * Пренасочване към страницата за магазини
+     */
+    public function stores_redirect() {
+        wp_redirect(admin_url('edit.php?post_type=parfumes&page=parfume-stores'));
+        exit;
+    }
+
+    /**
+     * Страница за scraper настройки
+     */
+    public function scraper_settings_page() {
+        ?>
+        <div class="wrap">
+            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+            
+            <div class="scraper-settings">
+                <form method="post" action="options.php">
+                    <?php
+                    settings_fields('parfume_catalog_scraper_settings');
+                    do_settings_sections('parfume_catalog_scraper_settings');
+                    submit_button();
+                    ?>
+                </form>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
      * Главна админ страница
      */
     public function admin_page() {
@@ -268,7 +317,7 @@ class Parfume_Catalog_Admin {
                             <a href="<?php echo admin_url('post-new.php?post_type=parfumes'); ?>" class="button button-primary">
                                 <?php _e('Добави парфюм', 'parfume-catalog'); ?>
                             </a>
-                            <a href="<?php echo admin_url('admin.php?page=parfume-stores'); ?>" class="button">
+                            <a href="<?php echo admin_url('edit.php?post_type=parfumes&page=parfume-stores'); ?>" class="button">
                                 <?php _e('Управление на магазини', 'parfume-catalog'); ?>
                             </a>
                             <a href="<?php echo admin_url('admin.php?page=parfume-catalog-settings'); ?>" class="button">
@@ -452,35 +501,50 @@ class Parfume_Catalog_Admin {
     public function archive_slug_field() {
         $options = get_option('parfume_catalog_options');
         $value = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+        $archive_url = home_url($value);
+        
         echo '<input type="text" name="parfume_catalog_options[archive_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo ' <a href="' . esc_url($archive_url) . '" target="_blank" class="button button-small">' . __('Виж архива', 'parfume-catalog') . '</a>';
         echo '<p class="description">' . __('URL за архивната страница с парфюми (по подразбиране: parfiumi)', 'parfume-catalog') . '</p>';
     }
 
     public function type_slug_field() {
         $options = get_option('parfume_catalog_options');
         $value = isset($options['type_slug']) ? $options['type_slug'] : 'parfiumi';
+        $type_url = home_url($value);
+        
         echo '<input type="text" name="parfume_catalog_options[type_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo ' <a href="' . esc_url($type_url) . '" target="_blank" class="button button-small">' . __('Виж типове', 'parfume-catalog') . '</a>';
         echo '<p class="description">' . __('URL за типовете парфюми', 'parfume-catalog') . '</p>';
     }
 
     public function marki_slug_field() {
         $options = get_option('parfume_catalog_options');
         $value = isset($options['marki_slug']) ? $options['marki_slug'] : 'parfiumi/marki';
+        $marki_url = home_url($value);
+        
         echo '<input type="text" name="parfume_catalog_options[marki_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo ' <a href="' . esc_url($marki_url) . '" target="_blank" class="button button-small">' . __('Виж марки', 'parfume-catalog') . '</a>';
         echo '<p class="description">' . __('URL за марките парфюми', 'parfume-catalog') . '</p>';
     }
 
     public function season_slug_field() {
         $options = get_option('parfume_catalog_options');
         $value = isset($options['season_slug']) ? $options['season_slug'] : 'parfiumi/season';
+        $season_url = home_url($value);
+        
         echo '<input type="text" name="parfume_catalog_options[season_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo ' <a href="' . esc_url($season_url) . '" target="_blank" class="button button-small">' . __('Виж сезони', 'parfume-catalog') . '</a>';
         echo '<p class="description">' . __('URL за сезоните', 'parfume-catalog') . '</p>';
     }
 
     public function notes_slug_field() {
         $options = get_option('parfume_catalog_options');
         $value = isset($options['notes_slug']) ? $options['notes_slug'] : 'notes';
+        $notes_url = home_url($value);
+        
         echo '<input type="text" name="parfume_catalog_options[notes_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo ' <a href="' . esc_url($notes_url) . '" target="_blank" class="button button-small">' . __('Виж нотки', 'parfume-catalog') . '</a>';
         echo '<p class="description">' . __('URL за нотките', 'parfume-catalog') . '</p>';
     }
 
