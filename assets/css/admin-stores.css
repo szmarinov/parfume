@@ -1,0 +1,459 @@
+/**
+ * Admin Stores Management Styles
+ */
+
+/* ================================
+   STORES CONTAINER & GRID
+================================ */
+.stores-container {
+    margin-top: 20px;
+}
+
+.no-stores-message {
+    text-align: center;
+    padding: 40px 20px;
+    background: #f9f9f9;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+}
+
+.no-stores-message p {
+    font-size: 16px;
+    color: #666;
+    margin: 0;
+}
+
+.stores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+/* ================================
+   STORE CARD
+================================ */
+.store-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.store-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.store-card.inactive {
+    opacity: 0.7;
+    background: #f9f9f9;
+}
+
+.store-card-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 15px;
+}
+
+.store-logo {
+    flex-shrink: 0;
+    width: 60px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.store-logo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.store-logo .no-logo {
+    font-size: 11px;
+    color: #999;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.store-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.store-info h3 {
+    margin: 0 0 5px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #23282d;
+    word-wrap: break-word;
+}
+
+.store-status {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.store-status.status-active {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.store-status.status-inactive {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.store-card-body {
+    margin-bottom: 15px;
+}
+
+.store-description {
+    margin: 0 0 10px 0;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.store-url {
+    margin: 0 0 10px 0;
+}
+
+.store-url a {
+    color: #0073aa;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.store-url a:hover {
+    color: #005177;
+    text-decoration: underline;
+}
+
+.store-meta {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+    color: #888;
+}
+
+.store-meta span {
+    display: block;
+}
+
+.store-card-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.store-card-actions .button {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+}
+
+.edit-store {
+    background: #0073aa;
+    color: white !important;
+    border-color: #0073aa;
+}
+
+.edit-store:hover {
+    background: #005177;
+    border-color: #005177;
+}
+
+.delete-store {
+    background: #dc3545;
+    color: white !important;
+    border-color: #dc3545;
+}
+
+.delete-store:hover {
+    background: #c82333;
+    border-color: #c82333;
+}
+
+/* ================================
+   STORE MODAL
+================================ */
+.store-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.store-modal-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.store-modal-header {
+    padding: 20px 25px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+}
+
+.store-modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: #23282d;
+}
+
+.store-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.store-modal-close:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+.store-modal-body {
+    padding: 25px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.store-modal-footer {
+    padding: 20px 25px;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: #f8f9fa;
+}
+
+/* ================================
+   FORM STYLES
+================================ */
+.form-table th {
+    vertical-align: top;
+    padding-top: 12px;
+    width: 150px;
+}
+
+.form-table td {
+    vertical-align: top;
+    padding-bottom: 20px;
+}
+
+.form-table input[type="text"],
+.form-table input[type="url"],
+.form-table input[type="number"],
+.form-table select,
+.form-table textarea {
+    width: 100%;
+    max-width: 400px;
+}
+
+.form-table textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-table .description {
+    margin-top: 5px;
+    font-style: italic;
+    color: #666;
+    font-size: 13px;
+}
+
+/* ================================
+   LOGO UPLOAD
+================================ */
+.logo-upload-container {
+    max-width: 400px;
+}
+
+.logo-preview {
+    margin-bottom: 10px;
+}
+
+.logo-preview img {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 5px;
+    background: white;
+}
+
+.logo-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.logo-buttons .button {
+    flex: none;
+}
+
+/* ================================
+   LOADING OVERLAY
+================================ */
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.8);
+    z-index: 100001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ================================
+   NOTIFICATIONS
+================================ */
+.parfume-notification {
+    margin: 15px 0;
+    position: relative;
+}
+
+.parfume-notification.is-dismissible {
+    padding-right: 38px;
+}
+
+/* ================================
+   RESPONSIVE
+================================ */
+@media (max-width: 768px) {
+    .stores-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .store-modal {
+        padding: 10px;
+    }
+    
+    .store-modal-content {
+        max-height: 95vh;
+    }
+    
+    .store-modal-header,
+    .store-modal-body,
+    .store-modal-footer {
+        padding: 15px 20px;
+    }
+    
+    .store-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .store-logo {
+        align-self: center;
+    }
+    
+    .store-meta {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .form-table th,
+    .form-table td {
+        display: block;
+        width: 100%;
+        padding: 5px 0;
+    }
+    
+    .form-table th {
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+    
+    .form-table input,
+    .form-table select,
+    .form-table textarea {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .store-modal-footer {
+        flex-direction: column;
+    }
+    
+    .store-modal-footer .button {
+        width: 100%;
+        margin: 0;
+    }
+    
+    .store-card-actions {
+        flex-direction: column;
+    }
+    
+    .logo-buttons {
+        flex-direction: column;
+    }
+}

@@ -2,7 +2,7 @@
 /**
  * Parfume Catalog Admin Class
  * 
- * Управлява административния панел и главните настройки на плъгина
+ * Управлява администраторския панел на плъгина
  * 
  * @package Parfume_Catalog
  * @since 1.0.0
@@ -20,16 +20,16 @@ class Parfume_Catalog_Admin {
      */
     public function __construct() {
         add_action('admin_menu', array($this, 'add_admin_menu'));
-        add_action('admin_init', array($this, 'register_settings'));
+        add_action('admin_init', array($this, 'admin_init'));
         add_action('admin_notices', array($this, 'admin_notices'));
-        add_filter('plugin_action_links_' . PARFUME_CATALOG_PLUGIN_BASENAME, array($this, 'add_action_links'));
+        add_filter('parent_file', array($this, 'set_current_menu'));
     }
 
     /**
-     * Добавяне на админ меню
+     * Добавяне на администраторско меню
      */
     public function add_admin_menu() {
-        // Главно меню
+        // Главно меню за плъгина
         add_menu_page(
             __('Parfume Catalog', 'parfume-catalog'),
             __('Parfume Catalog', 'parfume-catalog'),
@@ -40,24 +40,16 @@ class Parfume_Catalog_Admin {
             30
         );
 
-        // Подменюта
+        // Подменю "Всички парфюми"
         add_submenu_page(
             'parfume-catalog',
-            __('Настройки', 'parfume-catalog'),
-            __('Настройки', 'parfume-catalog'),
-            'manage_options',
-            'parfume-catalog',
-            array($this, 'admin_page')
-        );
-
-        add_submenu_page(
-            'parfume-catalog',
-            __('Парфюми', 'parfume-catalog'),
-            __('Парфюми', 'parfume-catalog'),
+            __('Всички парфюми', 'parfume-catalog'),
+            __('Всички парфюми', 'parfume-catalog'),
             'edit_posts',
             'edit.php?post_type=parfumes'
         );
 
+        // Подменю "Добави парфюм"
         add_submenu_page(
             'parfume-catalog',
             __('Добави парфюм', 'parfume-catalog'),
@@ -66,216 +58,166 @@ class Parfume_Catalog_Admin {
             'post-new.php?post_type=parfumes'
         );
 
+        // Подменю "Категории"
         add_submenu_page(
             'parfume-catalog',
-            __('Stores', 'parfume-catalog'),
-            __('Stores', 'parfume-catalog'),
-            'manage_options',
-            'parfume-catalog-stores',
-            array($this, 'stores_page')
+            __('Категории', 'parfume-catalog'),
+            __('Категории', 'parfume-catalog'),
+            'manage_categories',
+            'parfume-catalog-categories',
+            array($this, 'categories_page')
         );
 
+        // Подменю "Блог"
         add_submenu_page(
             'parfume-catalog',
-            __('Product Scraper', 'parfume-catalog'),
-            __('Product Scraper', 'parfume-catalog'),
-            'manage_options',
-            'parfume-catalog-scraper',
-            array($this, 'scraper_page')
-        );
-
-        add_submenu_page(
-            'parfume-catalog',
-            __('Comparison', 'parfume-catalog'),
-            __('Comparison', 'parfume-catalog'),
-            'manage_options',
-            'parfume-catalog-comparison',
-            array($this, 'comparison_page')
-        );
-
-        add_submenu_page(
-            'parfume-catalog',
-            __('Comments', 'parfume-catalog'),
-            __('Comments', 'parfume-catalog'),
-            'manage_options',
-            'parfume-catalog-comments',
-            array($this, 'comments_page')
-        );
-
-        add_submenu_page(
-            'parfume-catalog',
-            __('Blog', 'parfume-catalog'),
-            __('Blog', 'parfume-catalog'),
+            __('Блог постове', 'parfume-catalog'),
+            __('Блог', 'parfume-catalog'),
             'edit_posts',
             'edit.php?post_type=parfume_blog'
         );
 
+        // Подменю "Добави блог пост"
         add_submenu_page(
             'parfume-catalog',
-            __('Add Blog', 'parfume-catalog'),
-            __('Add Blog', 'parfume-catalog'),
+            __('Добави блог пост', 'parfume-catalog'),
+            __('Добави блог', 'parfume-catalog'),
             'edit_posts',
             'post-new.php?post_type=parfume_blog'
         );
 
+        // Подменю "Настройки"
+        add_submenu_page(
+            'parfume-catalog',
+            __('Настройки', 'parfume-catalog'),
+            __('Настройки', 'parfume-catalog'),
+            'manage_options',
+            'parfume-catalog-settings',
+            array($this, 'settings_page')
+        );
+
+        // Подменю "Документация"
         add_submenu_page(
             'parfume-catalog',
             __('Документация', 'parfume-catalog'),
             __('Документация', 'parfume-catalog'),
             'manage_options',
             'parfume-catalog-docs',
-            array($this, 'docs_page')
+            array($this, 'documentation_page')
         );
     }
 
     /**
-     * Регистриране на настройките
+     * Инициализация на админ панела
      */
-    public function register_settings() {
-        // Група за основни настройки
+    public function admin_init() {
+        // Регистриране на настройки
         register_setting('parfume_catalog_settings', 'parfume_catalog_options', array(
             'sanitize_callback' => array($this, 'sanitize_options')
         ));
 
-        // Секция за URL структури
-        add_settings_section(
-            'parfume_catalog_urls',
-            __('URL Структури', 'parfume-catalog'),
-            array($this, 'urls_section_callback'),
-            'parfume_catalog_settings'
-        );
+        // Добавяне на секции и полета
+        $this->add_settings_sections();
+    }
 
-        // Поле за архивен slug
-        add_settings_field(
-            'archive_slug',
-            __('Архивен URL (/parfiumi/)', 'parfume-catalog'),
-            array($this, 'archive_slug_callback'),
-            'parfume_catalog_settings',
-            'parfume_catalog_urls'
-        );
-
-        // Поле за тип URL
-        add_settings_field(
-            'type_slug',
-            __('Тип URL структура', 'parfume-catalog'),
-            array($this, 'type_slug_callback'),
-            'parfume_catalog_settings',
-            'parfume_catalog_urls'
-        );
-
-        // Поле за вид аромат URL
-        add_settings_field(
-            'vid_slug',
-            __('Вид аромат URL структура', 'parfume-catalog'),
-            array($this, 'vid_slug_callback'),
-            'parfume_catalog_settings',
-            'parfume_catalog_urls'
-        );
-
-        // Поле за марка URL
-        add_settings_field(
-            'marki_slug',
-            __('Марка URL структура', 'parfume-catalog'),
-            array($this, 'marki_slug_callback'),
-            'parfume_catalog_settings',
-            'parfume_catalog_urls'
-        );
-
-        // Поле за сезон URL
-        add_settings_field(
-            'season_slug',
-            __('Сезон URL структура', 'parfume-catalog'),
-            array($this, 'season_slug_callback'),
-            'parfume_catalog_settings',
-            'parfume_catalog_urls'
-        );
-
-        // Поле за нотки URL
-        add_settings_field(
-            'notes_slug',
-            __('Нотки URL структура', 'parfume-catalog'),
-            array($this, 'notes_slug_callback'),
-            'parfume_catalog_settings',
-            'parfume_catalog_urls'
-        );
-
-        // Секция за общи настройки
+    /**
+     * Добавяне на секции за настройки
+     */
+    private function add_settings_sections() {
+        // Основни настройки
         add_settings_section(
             'parfume_catalog_general',
-            __('Общи настройки', 'parfume-catalog'),
+            __('Основни настройки', 'parfume-catalog'),
             array($this, 'general_section_callback'),
             'parfume_catalog_settings'
         );
 
-        // Поле за брой подобни парфюми
-        add_settings_field(
-            'related_count',
-            __('Брой подобни парфюми', 'parfume-catalog'),
-            array($this, 'related_count_callback'),
-            'parfume_catalog_settings',
-            'parfume_catalog_general'
-        );
-
-        // Поле за брой наскоро разгледани
-        add_settings_field(
-            'recent_count',
-            __('Брой наскоро разгледани', 'parfume-catalog'),
-            array($this, 'recent_count_callback'),
-            'parfume_catalog_settings',
-            'parfume_catalog_general'
-        );
-
-        // Поле за брой парфюми от марка
-        add_settings_field(
-            'brand_count',
-            __('Брой парфюми от марка', 'parfume-catalog'),
-            array($this, 'brand_count_callback'),
-            'parfume_catalog_settings',
-            'parfume_catalog_general'
-        );
-
-        // Секция за мобилни настройки
+        // URL настройки
         add_settings_section(
-            'parfume_catalog_mobile',
-            __('Мобилни настройки', 'parfume-catalog'),
-            array($this, 'mobile_section_callback'),
+            'parfume_catalog_urls',
+            __('URL структури', 'parfume-catalog'),
+            array($this, 'urls_section_callback'),
             'parfume_catalog_settings'
         );
 
-        // Поле за фиксиран панел
+        // Добавяне на полета
+        $this->add_settings_fields();
+    }
+
+    /**
+     * Добавяне на полета за настройки
+     */
+    private function add_settings_fields() {
+        // Архивен slug
         add_settings_field(
-            'mobile_fixed_panel',
-            __('Фиксиран панел на мобилни', 'parfume-catalog'),
-            array($this, 'mobile_fixed_panel_callback'),
+            'archive_slug',
+            __('Архивен URL', 'parfume-catalog'),
+            array($this, 'archive_slug_field'),
             'parfume_catalog_settings',
-            'parfume_catalog_mobile'
+            'parfume_catalog_urls'
         );
 
-        // Поле за бутон X
+        // Типове slug
         add_settings_field(
-            'mobile_show_x',
-            __('Показвай бутон "X"', 'parfume-catalog'),
-            array($this, 'mobile_show_x_callback'),
+            'type_slug',
+            __('URL за типове', 'parfume-catalog'),
+            array($this, 'type_slug_field'),
             'parfume_catalog_settings',
-            'parfume_catalog_mobile'
+            'parfume_catalog_urls'
         );
 
-        // Поле за Z-index
+        // Марки slug
         add_settings_field(
-            'mobile_z_index',
-            __('Z-index за фиксиран панел', 'parfume-catalog'),
-            array($this, 'mobile_z_index_callback'),
+            'marki_slug',
+            __('URL за марки', 'parfume-catalog'),
+            array($this, 'marki_slug_field'),
             'parfume_catalog_settings',
-            'parfume_catalog_mobile'
+            'parfume_catalog_urls'
         );
 
-        // Поле за вертикален offset
+        // Сезони slug
         add_settings_field(
-            'mobile_offset',
-            __('Вертикален offset (px)', 'parfume-catalog'),
-            array($this, 'mobile_offset_callback'),
+            'season_slug',
+            __('URL за сезони', 'parfume-catalog'),
+            array($this, 'season_slug_field'),
             'parfume_catalog_settings',
-            'parfume_catalog_mobile'
+            'parfume_catalog_urls'
+        );
+
+        // Нотки slug
+        add_settings_field(
+            'notes_slug',
+            __('URL за нотки', 'parfume-catalog'),
+            array($this, 'notes_slug_field'),
+            'parfume_catalog_settings',
+            'parfume_catalog_urls'
+        );
+
+        // Брой подобни парфюми
+        add_settings_field(
+            'similar_parfumes_count',
+            __('Брой подобни парфюми', 'parfume-catalog'),
+            array($this, 'similar_parfumes_count_field'),
+            'parfume_catalog_settings',
+            'parfume_catalog_general'
+        );
+
+        // Брой наскоро разгледани
+        add_settings_field(
+            'recently_viewed_count',
+            __('Брой наскоро разгледани', 'parfume-catalog'),
+            array($this, 'recently_viewed_count_field'),
+            'parfume_catalog_settings',
+            'parfume_catalog_general'
+        );
+
+        // Брой парфюми от марка
+        add_settings_field(
+            'brand_parfumes_count',
+            __('Брой парфюми от марка', 'parfume-catalog'),
+            array($this, 'brand_parfumes_count_field'),
+            'parfume_catalog_settings',
+            'parfume_catalog_general'
         );
     }
 
@@ -283,13 +225,143 @@ class Parfume_Catalog_Admin {
      * Главна админ страница
      */
     public function admin_page() {
+        $stats = $this->get_dashboard_stats();
+        ?>
+        <div class="wrap">
+            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+            
+            <div class="parfume-dashboard">
+                <div class="dashboard-widgets">
+                    <!-- Статистики -->
+                    <div class="dashboard-widget">
+                        <h2><?php _e('Статистики', 'parfume-catalog'); ?></h2>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-number"><?php echo esc_html($stats['parfumes_count']); ?></span>
+                                <span class="stat-label"><?php _e('Парфюми', 'parfume-catalog'); ?></span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number"><?php echo esc_html($stats['stores_count']); ?></span>
+                                <span class="stat-label"><?php _e('Магазини', 'parfume-catalog'); ?></span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number"><?php echo esc_html($stats['brands_count']); ?></span>
+                                <span class="stat-label"><?php _e('Марки', 'parfume-catalog'); ?></span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number"><?php echo esc_html($stats['comments_count']); ?></span>
+                                <span class="stat-label"><?php _e('Коментари', 'parfume-catalog'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Последни парфюми -->
+                    <div class="dashboard-widget">
+                        <h2><?php _e('Последни парфюми', 'parfume-catalog'); ?></h2>
+                        <?php $this->render_recent_parfumes(); ?>
+                    </div>
+
+                    <!-- Бързи действия -->
+                    <div class="dashboard-widget">
+                        <h2><?php _e('Бързи действия', 'parfume-catalog'); ?></h2>
+                        <div class="quick-actions">
+                            <a href="<?php echo admin_url('post-new.php?post_type=parfumes'); ?>" class="button button-primary">
+                                <?php _e('Добави парфюм', 'parfume-catalog'); ?>
+                            </a>
+                            <a href="<?php echo admin_url('admin.php?page=parfume-stores'); ?>" class="button">
+                                <?php _e('Управление на магазини', 'parfume-catalog'); ?>
+                            </a>
+                            <a href="<?php echo admin_url('admin.php?page=parfume-catalog-settings'); ?>" class="button">
+                                <?php _e('Настройки', 'parfume-catalog'); ?>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Системна информация -->
+                    <div class="dashboard-widget">
+                        <h2><?php _e('Системна информация', 'parfume-catalog'); ?></h2>
+                        <div class="system-info">
+                            <p><strong><?php _e('Версия на плъгина:', 'parfume-catalog'); ?></strong> <?php echo PARFUME_CATALOG_VERSION; ?></p>
+                            <p><strong><?php _e('WordPress версия:', 'parfume-catalog'); ?></strong> <?php echo get_bloginfo('version'); ?></p>
+                            <p><strong><?php _e('PHP версия:', 'parfume-catalog'); ?></strong> <?php echo PHP_VERSION; ?></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Страница за категории
+     */
+    public function categories_page() {
+        ?>
+        <div class="wrap">
+            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+            
+            <div class="parfume-categories">
+                <div class="categories-grid">
+                    <div class="category-section">
+                        <h2><?php _e('Типове парфюми', 'parfume-catalog'); ?></h2>
+                        <p><?php _e('Управление на типовете парфюми (Дамски, Мъжки, Унисекс и др.)', 'parfume-catalog'); ?></p>
+                        <a href="<?php echo admin_url('edit-tags.php?taxonomy=parfume_type&post_type=parfumes'); ?>" class="button button-primary">
+                            <?php _e('Управление на типове', 'parfume-catalog'); ?>
+                        </a>
+                    </div>
+
+                    <div class="category-section">
+                        <h2><?php _e('Видове аромат', 'parfume-catalog'); ?></h2>
+                        <p><?php _e('Управление на видовете аромат (Тоалетна вода, Парфюмна вода и др.)', 'parfume-catalog'); ?></p>
+                        <a href="<?php echo admin_url('edit-tags.php?taxonomy=parfume_vid&post_type=parfumes'); ?>" class="button button-primary">
+                            <?php _e('Управление на видове', 'parfume-catalog'); ?>
+                        </a>
+                    </div>
+
+                    <div class="category-section">
+                        <h2><?php _e('Марки', 'parfume-catalog'); ?></h2>
+                        <p><?php _e('Управление на марките на парфюми', 'parfume-catalog'); ?></p>
+                        <a href="<?php echo admin_url('edit-tags.php?taxonomy=parfume_marki&post_type=parfumes'); ?>" class="button button-primary">
+                            <?php _e('Управление на марки', 'parfume-catalog'); ?>
+                        </a>
+                    </div>
+
+                    <div class="category-section">
+                        <h2><?php _e('Сезони', 'parfume-catalog'); ?></h2>
+                        <p><?php _e('Управление на сезоните (Пролет, Лято, Есен, Зима)', 'parfume-catalog'); ?></p>
+                        <a href="<?php echo admin_url('edit-tags.php?taxonomy=parfume_season&post_type=parfumes'); ?>" class="button button-primary">
+                            <?php _e('Управление на сезони', 'parfume-catalog'); ?>
+                        </a>
+                    </div>
+
+                    <div class="category-section">
+                        <h2><?php _e('Интензивност', 'parfume-catalog'); ?></h2>
+                        <p><?php _e('Управление на интензивността на парфюмите', 'parfume-catalog'); ?></p>
+                        <a href="<?php echo admin_url('edit-tags.php?taxonomy=parfume_intensity&post_type=parfumes'); ?>" class="button button-primary">
+                            <?php _e('Управление на интензивност', 'parfume-catalog'); ?>
+                        </a>
+                    </div>
+
+                    <div class="category-section">
+                        <h2><?php _e('Нотки', 'parfume-catalog'); ?></h2>
+                        <p><?php _e('Управление на ароматните нотки', 'parfume-catalog'); ?></p>
+                        <a href="<?php echo admin_url('edit-tags.php?taxonomy=parfume_notes&post_type=parfumes'); ?>" class="button button-primary">
+                            <?php _e('Управление на нотки', 'parfume-catalog'); ?>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Страница за настройки
+     */
+    public function settings_page() {
         if (isset($_GET['settings-updated'])) {
-            add_settings_error(
-                'parfume_catalog_messages',
-                'parfume_catalog_message',
-                __('Настройките са запазени успешно.', 'parfume-catalog'),
-                'updated'
-            );
+            flush_rewrite_rules();
+            add_settings_error('parfume_catalog_messages', 'parfume_catalog_message', __('Настройките са запазени', 'parfume-catalog'), 'updated');
         }
 
         settings_errors('parfume_catalog_messages');
@@ -297,146 +369,66 @@ class Parfume_Catalog_Admin {
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
             
-            <div class="parfume-catalog-admin-header">
-                <h2><?php _e('Добре дошли в Parfume Catalog', 'parfume-catalog'); ?></h2>
-                <p><?php _e('Управлявайте вашия каталог с парфюми, магазини, настройки и още много.', 'parfume-catalog'); ?></p>
-            </div>
-
-            <div class="parfume-catalog-admin-content">
-                <div class="parfume-catalog-quick-stats">
-                    <div class="quick-stat">
-                        <h3><?php echo $this->get_parfumes_count(); ?></h3>
-                        <p><?php _e('Парфюми', 'parfume-catalog'); ?></p>
-                    </div>
-                    <div class="quick-stat">
-                        <h3><?php echo $this->get_stores_count(); ?></h3>
-                        <p><?php _e('Магазини', 'parfume-catalog'); ?></p>
-                    </div>
-                    <div class="quick-stat">
-                        <h3><?php echo $this->get_pending_comments_count(); ?></h3>
-                        <p><?php _e('Чакащи ревюта', 'parfume-catalog'); ?></p>
-                    </div>
-                    <div class="quick-stat">
-                        <h3><?php echo $this->get_scraper_data_count(); ?></h3>
-                        <p><?php _e('Скрейпнати данни', 'parfume-catalog'); ?></p>
-                    </div>
-                </div>
-
-                <form action="options.php" method="post">
-                    <?php
-                    settings_fields('parfume_catalog_settings');
-                    do_settings_sections('parfume_catalog_settings');
-                    submit_button(__('Запази настройки', 'parfume-catalog'));
-                    ?>
-                </form>
-            </div>
+            <form method="post" action="options.php">
+                <?php
+                settings_fields('parfume_catalog_settings');
+                do_settings_sections('parfume_catalog_settings');
+                submit_button();
+                ?>
+            </form>
         </div>
         <?php
     }
 
     /**
-     * Stores страница
+     * Страница за документация
      */
-    public function stores_page() {
+    public function documentation_page() {
         ?>
         <div class="wrap">
-            <h1><?php _e('Stores', 'parfume-catalog'); ?></h1>
-            <p><?php _e('Управление на магазини ще бъде добавено в модула class-stores.php', 'parfume-catalog'); ?></p>
-        </div>
-        <?php
-    }
-
-    /**
-     * Scraper страница
-     */
-    public function scraper_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Product Scraper', 'parfume-catalog'); ?></h1>
-            <p><?php _e('Настройки и мониторинг на скрейпъра ще бъдат добавени в модула class-scraper.php', 'parfume-catalog'); ?></p>
-        </div>
-        <?php
-    }
-
-    /**
-     * Comparison страница
-     */
-    public function comparison_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Comparison', 'parfume-catalog'); ?></h1>
-            <p><?php _e('Настройки за сравняване ще бъдат добавени в модула class-comparison.php', 'parfume-catalog'); ?></p>
-        </div>
-        <?php
-    }
-
-    /**
-     * Comments страница
-     */
-    public function comments_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Comments', 'parfume-catalog'); ?></h1>
-        <p><?php _e('Управление на коментари ще бъде добавено в модула class-comments.php', 'parfume-catalog'); ?></p>
-        </div>
-        <?php
-    }
-
-    /**
-     * Документация страница
-     */
-    public function docs_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Документация', 'parfume-catalog'); ?></h1>
+            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
             
-            <div class="parfume-catalog-docs">
-                <h2><?php _e('Шорткодове', 'parfume-catalog'); ?></h2>
-                <div class="shortcode-section">
-                    <h3><?php _e('Основни шорткодове', 'parfume-catalog'); ?></h3>
-                    <ul>
-                        <li><code>[parfume_list]</code> - <?php _e('Показва списък с парфюми', 'parfume-catalog'); ?></li>
-                        <li><code>[parfume_filters]</code> - <?php _e('Показва филтри за парфюми', 'parfume-catalog'); ?></li>
-                        <li><code>[parfume_search]</code> - <?php _e('Показва търсачка за парфюми', 'parfume-catalog'); ?></li>
-                        <li><code>[parfume_comparison]</code> - <?php _e('Показва бутон за сравняване', 'parfume-catalog'); ?></li>
-                    </ul>
+            <div class="parfume-docs">
+                <div class="docs-section">
+                    <h2><?php _e('Шорткодове', 'parfume-catalog'); ?></h2>
+                    <div class="shortcodes-list">
+                        <div class="shortcode-item">
+                            <code>[parfume_filters]</code>
+                            <p><?php _e('Показва филтри за парфюми', 'parfume-catalog'); ?></p>
+                        </div>
+                        <div class="shortcode-item">
+                            <code>[parfume_comparison]</code>
+                            <p><?php _e('Показва бутон за сравнение на парфюми', 'parfume-catalog'); ?></p>
+                        </div>
+                        <div class="shortcode-item">
+                            <code>[parfume_list category="damski" limit="8"]</code>
+                            <p><?php _e('Показва списък с парфюми от определена категория', 'parfume-catalog'); ?></p>
+                        </div>
+                        <div class="shortcode-item">
+                            <code>[parfume_brands]</code>
+                            <p><?php _e('Показва списък с марки парфюми', 'parfume-catalog'); ?></p>
+                        </div>
+                        <div class="shortcode-item">
+                            <code>[parfume_notes group="цветни"]</code>
+                            <p><?php _e('Показва нотки от определена група', 'parfume-catalog'); ?></p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="shortcode-section">
-                    <h3><?php _e('Филтри по таксономии', 'parfume-catalog'); ?></h3>
-                    <ul>
-                        <li><code>[parfume_filter_type]</code> - <?php _e('Филтър по тип', 'parfume-catalog'); ?></li>
-                        <li><code>[parfume_filter_marki]</code> - <?php _e('Филтър по марка', 'parfume-catalog'); ?></li>
-                        <li><code>[parfume_filter_vid]</code> - <?php _e('Филтър по вид аромат', 'parfume-catalog'); ?></li>
-                        <li><code>[parfume_filter_season]</code> - <?php _e('Филтър по сезон', 'parfume-catalog'); ?></li>
-                        <li><code>[parfume_filter_intensity]</code> - <?php _e('Филтър по интензивност', 'parfume-catalog'); ?></li>
-                        <li><code>[parfume_filter_notes]</code> - <?php _e('Филтър по нотки', 'parfume-catalog'); ?></li>
-                    </ul>
+                <div class="docs-section">
+                    <h2><?php _e('Начални стъпки', 'parfume-catalog'); ?></h2>
+                    <ol>
+                        <li><?php _e('Конфигурирайте основните настройки от секция "Настройки"', 'parfume-catalog'); ?></li>
+                        <li><?php _e('Добавете магазини от секция "Магазини"', 'parfume-catalog'); ?></li>
+                        <li><?php _e('Създайте необходимите категории (типове, марки, нотки)', 'parfume-catalog'); ?></li>
+                        <li><?php _e('Добавете първите парфюми', 'parfume-catalog'); ?></li>
+                        <li><?php _e('Конфигурирайте скрейпъра за автоматично обновяване на цени', 'parfume-catalog'); ?></li>
+                    </ol>
                 </div>
 
-                <h2><?php _e('URL Структури', 'parfume-catalog'); ?></h2>
-                <div class="url-section">
-                    <ul>
-                        <li><?php _e('Архив парфюми:', 'parfume-catalog'); ?> <code>/parfiumi/</code></li>
-                        <li><?php _e('Тип парфюми:', 'parfume-catalog'); ?> <code>/parfiumi/damski/</code></li>
-                        <li><?php _e('Марки:', 'parfume-catalog'); ?> <code>/parfiumi/marki/chanel/</code></li>
-                        <li><?php _e('Сезон:', 'parfume-catalog'); ?> <code>/parfiumi/season/lqto/</code></li>
-                        <li><?php _e('Нотки:', 'parfume-catalog'); ?> <code>/notes/roza/</code></li>
-                    </ul>
-                </div>
-
-                <h2><?php _e('Функционалности', 'parfume-catalog'); ?></h2>
-                <div class="features-section">
-                    <ul>
-                        <li><?php _e('Custom Post Type "Parfumes" с пълна SEO поддръжка', 'parfume-catalog'); ?></li>
-                        <li><?php _e('6 таксономии за категоризиране', 'parfume-catalog'); ?></li>
-                        <li><?php _e('Product Scraper за автоматично извличане на цени', 'parfume-catalog'); ?></li>
-                        <li><?php _e('Система за сравняване без регистрация', 'parfume-catalog'); ?></li>
-                        <li><?php _e('Ревюта и рейтинги от гости', 'parfume-catalog'); ?></li>
-                        <li><?php _e('Мобилен фиксиран панел за магазини', 'parfume-catalog'); ?></li>
-                        <li><?php _e('Schema.org markup за SEO', 'parfume-catalog'); ?></li>
-                        <li><?php _e('Интегрирана блог функционалност', 'parfume-catalog'); ?></li>
-                    </ul>
+                <div class="docs-section">
+                    <h2><?php _e('Поддръжка', 'parfume-catalog'); ?></h2>
+                    <p><?php _e('За въпроси и поддръжка се свържете с разработчика на плъгина.', 'parfume-catalog'); ?></p>
                 </div>
             </div>
         </div>
@@ -444,114 +436,77 @@ class Parfume_Catalog_Admin {
     }
 
     /**
-     * Callback функции за настройките
+     * Callback функции за настройки секции
      */
+    public function general_section_callback() {
+        echo '<p>' . __('Основни настройки за функционирането на плъгина.', 'parfume-catalog') . '</p>';
+    }
 
     public function urls_section_callback() {
-        echo '<p>' . __('Конфигурирайте URL структурите за различните части на каталога.', 'parfume-catalog') . '</p>';
+        echo '<p>' . __('Настройки за URL структурите. След промяна ще е необходимо да посетите Настройки > Постоянни връзки.', 'parfume-catalog') . '</p>';
     }
 
-    public function general_section_callback() {
-        echo '<p>' . __('Общи настройки за показване на съдържание.', 'parfume-catalog') . '</p>';
-    }
-
-    public function mobile_section_callback() {
-        echo '<p>' . __('Настройки за мобилни устройства и фиксирания панел.', 'parfume-catalog') . '</p>';
-    }
-
-    public function archive_slug_callback() {
+    /**
+     * Полета за настройки
+     */
+    public function archive_slug_field() {
         $options = get_option('parfume_catalog_options');
         $value = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
-        echo '<input type="text" name="parfume_catalog_options[archive_slug]" value="' . esc_attr($value) . '" />';
-        echo '<p class="description">' . __('Слъгът за архивната страница (без / в началото и края)', 'parfume-catalog') . '</p>';
+        echo '<input type="text" name="parfume_catalog_options[archive_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo '<p class="description">' . __('URL за архивната страница с парфюми (по подразбиране: parfiumi)', 'parfume-catalog') . '</p>';
     }
 
-    public function type_slug_callback() {
+    public function type_slug_field() {
         $options = get_option('parfume_catalog_options');
         $value = isset($options['type_slug']) ? $options['type_slug'] : 'parfiumi';
-        echo '<input type="text" name="parfume_catalog_options[type_slug]" value="' . esc_attr($value) . '" />';
-        echo '<p class="description">' . __('URL за типове парфюми (/parfiumi/{slug}/)', 'parfume-catalog') . '</p>';
+        echo '<input type="text" name="parfume_catalog_options[type_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo '<p class="description">' . __('URL за типовете парфюми', 'parfume-catalog') . '</p>';
     }
 
-    public function vid_slug_callback() {
+    public function marki_slug_field() {
         $options = get_option('parfume_catalog_options');
-        $value = isset($options['vid_slug']) ? $options['vid_slug'] : 'parfiumi';
-        echo '<input type="text" name="parfume_catalog_options[vid_slug]" value="' . esc_attr($value) . '" />';
-        echo '<p class="description">' . __('URL за видове аромат (/parfiumi/{slug}/)', 'parfume-catalog') . '</p>';
+        $value = isset($options['marki_slug']) ? $options['marki_slug'] : 'parfiumi/marki';
+        echo '<input type="text" name="parfume_catalog_options[marki_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo '<p class="description">' . __('URL за марките парфюми', 'parfume-catalog') . '</p>';
     }
 
-    public function marki_slug_callback() {
+    public function season_slug_field() {
         $options = get_option('parfume_catalog_options');
-        $value = isset($options['marki_slug']) ? $options['marki_slug'] : 'marki';
-        echo '<input type="text" name="parfume_catalog_options[marki_slug]" value="' . esc_attr($value) . '" />';
-        echo '<p class="description">' . __('URL за марки (/parfiumi/marki/{slug}/)', 'parfume-catalog') . '</p>';
+        $value = isset($options['season_slug']) ? $options['season_slug'] : 'parfiumi/season';
+        echo '<input type="text" name="parfume_catalog_options[season_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo '<p class="description">' . __('URL за сезоните', 'parfume-catalog') . '</p>';
     }
 
-    public function season_slug_callback() {
-        $options = get_option('parfume_catalog_options');
-        $value = isset($options['season_slug']) ? $options['season_slug'] : 'season';
-        echo '<input type="text" name="parfume_catalog_options[season_slug]" value="' . esc_attr($value) . '" />';
-        echo '<p class="description">' . __('URL за сезони (/parfiumi/season/{slug}/)', 'parfume-catalog') . '</p>';
-    }
-
-    public function notes_slug_callback() {
+    public function notes_slug_field() {
         $options = get_option('parfume_catalog_options');
         $value = isset($options['notes_slug']) ? $options['notes_slug'] : 'notes';
-        echo '<input type="text" name="parfume_catalog_options[notes_slug]" value="' . esc_attr($value) . '" />';
-        echo '<p class="description">' . __('URL за нотки (/notes/{slug}/)', 'parfume-catalog') . '</p>';
+        echo '<input type="text" name="parfume_catalog_options[notes_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo '<p class="description">' . __('URL за нотките', 'parfume-catalog') . '</p>';
     }
 
-    public function related_count_callback() {
+    public function similar_parfumes_count_field() {
         $options = get_option('parfume_catalog_options');
-        $value = isset($options['related_count']) ? $options['related_count'] : 4;
-        echo '<input type="number" min="1" max="12" name="parfume_catalog_options[related_count]" value="' . esc_attr($value) . '" />';
-        echo '<p class="description">' . __('Брой подобни парфюми за показване', 'parfume-catalog') . '</p>';
+        $value = isset($options['similar_parfumes_count']) ? $options['similar_parfumes_count'] : 4;
+        echo '<input type="number" name="parfume_catalog_options[similar_parfumes_count]" value="' . esc_attr($value) . '" min="1" max="20" />';
+        echo '<p class="description">' . __('Брой подобни парфюми, които да се показват', 'parfume-catalog') . '</p>';
     }
 
-    public function recent_count_callback() {
+    public function recently_viewed_count_field() {
         $options = get_option('parfume_catalog_options');
-        $value = isset($options['recent_count']) ? $options['recent_count'] : 4;
-        echo '<input type="number" min="1" max="12" name="parfume_catalog_options[recent_count]" value="' . esc_attr($value) . '" />';
+        $value = isset($options['recently_viewed_count']) ? $options['recently_viewed_count'] : 4;
+        echo '<input type="number" name="parfume_catalog_options[recently_viewed_count]" value="' . esc_attr($value) . '" min="1" max="20" />';
         echo '<p class="description">' . __('Брой наскоро разгледани парфюми', 'parfume-catalog') . '</p>';
     }
 
-    public function brand_count_callback() {
+    public function brand_parfumes_count_field() {
         $options = get_option('parfume_catalog_options');
-        $value = isset($options['brand_count']) ? $options['brand_count'] : 4;
-        echo '<input type="number" min="1" max="12" name="parfume_catalog_options[brand_count]" value="' . esc_attr($value) . '" />';
-        echo '<p class="description">' . __('Брой парфюми от същата марка', 'parfume-catalog') . '</p>';
-    }
-
-    public function mobile_fixed_panel_callback() {
-        $options = get_option('parfume_catalog_options');
-        $value = isset($options['mobile_fixed_panel']) ? $options['mobile_fixed_panel'] : 1;
-        echo '<input type="checkbox" name="parfume_catalog_options[mobile_fixed_panel]" value="1" ' . checked(1, $value, false) . ' />';
-        echo '<label>' . __('Показвай фиксиран магазин в долната част на мобилни устройства', 'parfume-catalog') . '</label>';
-    }
-
-    public function mobile_show_x_callback() {
-        $options = get_option('parfume_catalog_options');
-        $value = isset($options['mobile_show_x']) ? $options['mobile_show_x'] : 0;
-        echo '<input type="checkbox" name="parfume_catalog_options[mobile_show_x]" value="1" ' . checked(1, $value, false) . ' />';
-        echo '<label>' . __('Позволявай скриване на панела чрез бутон "X"', 'parfume-catalog') . '</label>';
-    }
-
-    public function mobile_z_index_callback() {
-        $options = get_option('parfume_catalog_options');
-        $value = isset($options['mobile_z_index']) ? $options['mobile_z_index'] : 9999;
-        echo '<input type="number" min="1" name="parfume_catalog_options[mobile_z_index]" value="' . esc_attr($value) . '" />';
-        echo '<p class="description">' . __('Z-index за фиксирания панел (по-високо = отгоре)', 'parfume-catalog') . '</p>';
-    }
-
-    public function mobile_offset_callback() {
-        $options = get_option('parfume_catalog_options');
-        $value = isset($options['mobile_offset']) ? $options['mobile_offset'] : 0;
-        echo '<input type="number" min="0" name="parfume_catalog_options[mobile_offset]" value="' . esc_attr($value) . '" />';
-        echo '<p class="description">' . __('Вертикален отместване в пиксели (при други фиксирани елементи)', 'parfume-catalog') . '</p>';
+        $value = isset($options['brand_parfumes_count']) ? $options['brand_parfumes_count'] : 4;
+        echo '<input type="number" name="parfume_catalog_options[brand_parfumes_count]" value="' . esc_attr($value) . '" min="1" max="20" />';
+        echo '<p class="description">' . __('Брой парфюми от същата марка за показване', 'parfume-catalog') . '</p>';
     }
 
     /**
-     * Санитизиране на опциите
+     * Проверка на настройки
      */
     public function sanitize_options($input) {
         $sanitized = array();
@@ -562,10 +517,6 @@ class Parfume_Catalog_Admin {
 
         if (isset($input['type_slug'])) {
             $sanitized['type_slug'] = sanitize_title($input['type_slug']);
-        }
-
-        if (isset($input['vid_slug'])) {
-            $sanitized['vid_slug'] = sanitize_title($input['vid_slug']);
         }
 
         if (isset($input['marki_slug'])) {
@@ -580,113 +531,131 @@ class Parfume_Catalog_Admin {
             $sanitized['notes_slug'] = sanitize_title($input['notes_slug']);
         }
 
-        if (isset($input['related_count'])) {
-            $sanitized['related_count'] = absint($input['related_count']);
+        if (isset($input['similar_parfumes_count'])) {
+            $sanitized['similar_parfumes_count'] = max(1, min(20, absint($input['similar_parfumes_count'])));
         }
 
-        if (isset($input['recent_count'])) {
-            $sanitized['recent_count'] = absint($input['recent_count']);
+        if (isset($input['recently_viewed_count'])) {
+            $sanitized['recently_viewed_count'] = max(1, min(20, absint($input['recently_viewed_count'])));
         }
 
-        if (isset($input['brand_count'])) {
-            $sanitized['brand_count'] = absint($input['brand_count']);
-        }
-
-        if (isset($input['mobile_fixed_panel'])) {
-            $sanitized['mobile_fixed_panel'] = 1;
-        } else {
-            $sanitized['mobile_fixed_panel'] = 0;
-        }
-
-        if (isset($input['mobile_show_x'])) {
-            $sanitized['mobile_show_x'] = 1;
-        } else {
-            $sanitized['mobile_show_x'] = 0;
-        }
-
-        if (isset($input['mobile_z_index'])) {
-            $sanitized['mobile_z_index'] = absint($input['mobile_z_index']);
-        }
-
-        if (isset($input['mobile_offset'])) {
-            $sanitized['mobile_offset'] = absint($input['mobile_offset']);
-        }
-
-        // Flush rewrite rules ако са променени URL структурите
-        if (isset($input['archive_slug']) || isset($input['type_slug']) || 
-            isset($input['vid_slug']) || isset($input['marki_slug']) || 
-            isset($input['season_slug']) || isset($input['notes_slug'])) {
-            flush_rewrite_rules();
+        if (isset($input['brand_parfumes_count'])) {
+            $sanitized['brand_parfumes_count'] = max(1, min(20, absint($input['brand_parfumes_count'])));
         }
 
         return $sanitized;
     }
 
     /**
-     * Admin notices
+     * Админ известия
      */
     public function admin_notices() {
-        // Проверка за flush rewrite rules
-        if (get_transient('parfume_catalog_flush_rewrite_rules')) {
-            delete_transient('parfume_catalog_flush_rewrite_rules');
-            flush_rewrite_rules();
+        $screen = get_current_screen();
+        
+        if (strpos($screen->id, 'parfume-catalog') !== false) {
+            $this->check_system_requirements();
         }
     }
 
     /**
-     * Добавяне на action links
+     * Проверка на системните изисквания
      */
-    public function add_action_links($links) {
-        $settings_link = '<a href="' . admin_url('admin.php?page=parfume-catalog') . '">' . __('Настройки', 'parfume-catalog') . '</a>';
-        array_unshift($links, $settings_link);
-        return $links;
-    }
+    private function check_system_requirements() {
+        $notices = array();
 
-    /**
-     * Helper функции за статистики
-     */
-    
-    /**
-     * Безопасно получаване на брой парфюми
-     */
-    private function get_parfumes_count() {
-        $count_posts = wp_count_posts('parfumes');
-        if (is_object($count_posts) && property_exists($count_posts, 'publish')) {
-            return $count_posts->publish;
+        // Проверка на PHP версия
+        if (version_compare(PHP_VERSION, '7.4', '<')) {
+            $notices[] = sprintf(
+                __('Parfume Catalog изисква PHP версия 7.4 или по-нова. Текущата версия е %s.', 'parfume-catalog'),
+                PHP_VERSION
+            );
         }
-        return 0;
-    }
-    
-    private function get_stores_count() {
-        $stores = get_option('parfume_stores', array());
-        return is_array($stores) ? count($stores) : 0;
+
+        // Проверка на WordPress версия
+        if (version_compare(get_bloginfo('version'), '5.0', '<')) {
+            $notices[] = sprintf(
+                __('Parfume Catalog изисква WordPress версия 5.0 или по-нова. Текущата версия е %s.', 'parfume-catalog'),
+                get_bloginfo('version')
+            );
+        }
+
+        // Показване на известия
+        foreach ($notices as $notice) {
+            echo '<div class="notice notice-error"><p>' . esc_html($notice) . '</p></div>';
+        }
     }
 
-    private function get_pending_comments_count() {
+    /**
+     * Задаване на текущо меню
+     */
+    public function set_current_menu($parent_file) {
+        global $current_screen;
+
+        if ($current_screen->post_type == 'parfumes') {
+            $parent_file = 'parfume-catalog';
+        }
+
+        if ($current_screen->post_type == 'parfume_blog') {
+            $parent_file = 'parfume-catalog';
+        }
+
+        return $parent_file;
+    }
+
+    /**
+     * Получаване на статистики за dashboard
+     */
+    private function get_dashboard_stats() {
+        $stats = array();
+
+        // Брой парфюми
+        $parfumes_count = wp_count_posts('parfumes');
+        $stats['parfumes_count'] = $parfumes_count->publish;
+
+        // Брой магазини
+        $stores = get_option('parfume_catalog_stores', array());
+        $stats['stores_count'] = count($stores);
+
+        // Брой марки
+        $brands_count = wp_count_terms(array(
+            'taxonomy' => 'parfume_marki',
+            'hide_empty' => false
+        ));
+        $stats['brands_count'] = is_wp_error($brands_count) ? 0 : $brands_count;
+
+        // Брой коментари
         global $wpdb;
-        $table = $wpdb->prefix . 'parfume_comments';
-        
-        // Проверка дали таблицата съществува
-        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table'");
-        if (!$table_exists) {
-            return 0;
-        }
-        
-        $count = $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE status = 'pending'");
-        return $count ? $count : 0;
+        $comments_table = $wpdb->prefix . 'parfume_comments';
+        $comments_count = $wpdb->get_var("SELECT COUNT(*) FROM $comments_table WHERE status = 'approved'");
+        $stats['comments_count'] = intval($comments_count);
+
+        return $stats;
     }
 
-    private function get_scraper_data_count() {
-        global $wpdb;
-        $table = $wpdb->prefix . 'parfume_scraper_data';
-        
-        // Проверка дали таблицата съществува
-        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table'");
-        if (!$table_exists) {
-            return 0;
+    /**
+     * Показване на последни парфюми
+     */
+    private function render_recent_parfumes() {
+        $recent_parfumes = get_posts(array(
+            'post_type' => 'parfumes',
+            'posts_per_page' => 5,
+            'post_status' => 'publish',
+            'orderby' => 'date',
+            'order' => 'DESC'
+        ));
+
+        if (empty($recent_parfumes)) {
+            echo '<p>' . __('Все още няма добавени парфюми.', 'parfume-catalog') . '</p>';
+            return;
         }
-        
-        $count = $wpdb->get_var("SELECT COUNT(*) FROM $table");
-        return $count ? $count : 0;
+
+        echo '<ul class="recent-parfumes-list">';
+        foreach ($recent_parfumes as $parfume) {
+            echo '<li>';
+            echo '<a href="' . get_edit_post_link($parfume->ID) . '">' . esc_html($parfume->post_title) . '</a>';
+            echo '<span class="post-date">' . get_the_date('d.m.Y', $parfume) . '</span>';
+            echo '</li>';
+        }
+        echo '</ul>';
     }
 }

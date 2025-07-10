@@ -62,8 +62,8 @@ class Parfume_Catalog {
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
         
-        add_action('init', array($this, 'init'));
         add_action('plugins_loaded', array($this, 'load_textdomain'));
+        add_action('init', array($this, 'init'), 0); // Early init
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
     }
@@ -73,7 +73,11 @@ class Parfume_Catalog {
      */
     public function activate() {
         $this->create_database_tables();
-        $this->create_default_terms();
+        $this->create_default_options();
+        
+        // Зареди post types за flush_rewrite_rules
+        $this->require_file('includes/class-post-types.php');
+        new Parfume_Catalog_Post_Types();
         
         // Обновяване на permalink структурата
         flush_rewrite_rules();
@@ -101,17 +105,18 @@ class Parfume_Catalog {
         
         // Таблица за коментари
         $comments_table = $wpdb->prefix . 'parfume_comments';
-        $comments_sql = "CREATE TABLE $comments_table (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
+        
+        $sql_comments = "CREATE TABLE $comments_table (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
             post_id bigint(20) NOT NULL,
-            author_name varchar(100) NOT NULL DEFAULT 'Анонимен',
-            author_email varchar(100) DEFAULT '',
-            author_ip varchar(100) DEFAULT '',
+            author_name varchar(255) NOT NULL,
+            author_email varchar(255) DEFAULT '',
+            author_ip varchar(100) NOT NULL,
             content text NOT NULL,
-            rating tinyint(1) NOT NULL DEFAULT 5,
+            rating tinyint(1) NOT NULL DEFAULT 0,
             status varchar(20) NOT NULL DEFAULT 'pending',
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            created_at datetime NOT NULL,
+            updated_at datetime DEFAULT NULL,
             PRIMARY KEY (id),
             KEY post_id (post_id),
             KEY status (status),
@@ -120,89 +125,69 @@ class Parfume_Catalog {
         
         // Таблица за scraper данни
         $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
-        $scraper_sql = "CREATE TABLE $scraper_table (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
+        
+        $sql_scraper = "CREATE TABLE $scraper_table (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
             post_id bigint(20) NOT NULL,
             store_id varchar(50) NOT NULL,
             product_url text NOT NULL,
             price decimal(10,2) DEFAULT NULL,
             old_price decimal(10,2) DEFAULT NULL,
             currency varchar(10) DEFAULT 'лв.',
-            ml_variants text DEFAULT NULL,
+            variants text DEFAULT NULL,
             availability varchar(100) DEFAULT NULL,
             delivery_info text DEFAULT NULL,
-            last_scraped datetime DEFAULT CURRENT_TIMESTAMP,
+            last_scraped datetime DEFAULT NULL,
             next_scrape datetime DEFAULT NULL,
             scrape_status varchar(20) DEFAULT 'pending',
-            error_count int(11) DEFAULT 0,
-            error_message text DEFAULT NULL,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            scrape_errors int DEFAULT 0,
+            created_at datetime NOT NULL,
+            updated_at datetime DEFAULT NULL,
             PRIMARY KEY (id),
-            KEY post_id (post_id),
+            UNIQUE KEY post_store (post_id, store_id),
             KEY store_id (store_id),
             KEY last_scraped (last_scraped),
-            KEY scrape_status (scrape_status),
-            UNIQUE KEY unique_post_store (post_id, store_id)
+            KEY scrape_status (scrape_status)
         ) $charset_collate;";
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($comments_sql);
-        dbDelta($scraper_sql);
+        dbDelta($sql_comments);
+        dbDelta($sql_scraper);
     }
     
     /**
-     * Създаване на default термини
+     * Създаване на default настройки
      */
-    private function create_default_terms() {
-        // Ще се добавят default термини за всички таксономии
-        $default_types = array(
-            'Дамски', 'Мъжки', 'Унисекс', 'Младежки', 'Възрастни', 
-            'Луксозни парфюми', 'Нишови парфюми', 'Арабски Парфюми'
+    private function create_default_options() {
+        $default_options = array(
+            'archive_slug' => 'parfiumi',
+            'type_slug' => 'parfiumi',
+            'vid_slug' => 'parfiumi',
+            'marki_slug' => 'parfiumi/marki',
+            'season_slug' => 'parfiumi/season',
+            'intensity_slug' => 'parfiumi/intensity',
+            'notes_slug' => 'notes',
+            'similar_parfumes_count' => 4,
+            'recently_viewed_count' => 4,
+            'brand_parfumes_count' => 4,
+            'comparison_max_items' => 4,
+            'scraper_interval' => 12, // hours
+            'scraper_batch_size' => 10,
+            'scraper_user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         );
         
-        $default_vid = array(
-            'Тоалетна вода', 'Парфюмна вода', 'Парфюм', 'Парфюмен елексир'
-        );
-        
-        $default_seasons = array('Пролет', 'Лято', 'Есен', 'Зима');
-        
-        $default_intensity = array(
-            'Силни', 'Средни', 'Леки', 'Фини/деликатни', 
-            'Интензивни', 'Пудрени (Powdery)', 'Тежки/дълбоки (Heavy/Deep)'
-        );
-        
-        // Създаване на термини за типове
-        foreach ($default_types as $type) {
-            if (!term_exists($type, 'parfume_type')) {
-                wp_insert_term($type, 'parfume_type');
-            }
-        }
-        
-        // Създаване на термини за видове аромат
-        foreach ($default_vid as $vid) {
-            if (!term_exists($vid, 'parfume_vid')) {
-                wp_insert_term($vid, 'parfume_vid');
-            }
-        }
-        
-        // Създаване на термини за сезони
-        foreach ($default_seasons as $season) {
-            if (!term_exists($season, 'parfume_season')) {
-                wp_insert_term($season, 'parfume_season');
-            }
-        }
-        
-        // Създаване на термини за интензивност
-        foreach ($default_intensity as $intensity) {
-            if (!term_exists($intensity, 'parfume_intensity')) {
-                wp_insert_term($intensity, 'parfume_intensity');
-            }
-        }
+        add_option('parfume_catalog_options', $default_options);
+        add_option('parfume_catalog_stores', array());
+        add_option('parfume_catalog_scraper_settings', array(
+            'enabled' => true,
+            'interval' => 12,
+            'batch_size' => 10,
+            'max_errors' => 5
+        ));
     }
     
     /**
-     * Инициализация на плъгина
+     * Главна инициализация
      */
     public function init() {
         $this->load_dependencies();
@@ -214,7 +199,7 @@ class Parfume_Catalog {
      * Зареждане на зависимости
      */
     private function load_dependencies() {
-        // Основни файлове
+        // Основни класове
         $this->require_file('includes/class-admin.php');
         $this->require_file('includes/class-post-types.php');
         $this->require_file('includes/class-meta-fields.php');
@@ -334,8 +319,7 @@ class Parfume_Catalog {
             'parfume-catalog-mobile',
             PARFUME_CATALOG_PLUGIN_URL . 'assets/css/mobile.css',
             array('parfume-catalog-frontend'),
-            PARFUME_CATALOG_VERSION,
-            '(max-width: 768px)'
+            PARFUME_CATALOG_VERSION
         );
         
         wp_enqueue_script(
@@ -362,16 +346,16 @@ class Parfume_Catalog {
             true
         );
         
-        // Локализация на скриптове
-        wp_localize_script('parfume-catalog-frontend', 'parfume_catalog_ajax', array(
-            'ajax_url' => admin_url('admin-ajax.php'),
+        // Локализация за JavaScript
+        wp_localize_script('parfume-catalog-frontend', 'parfumeCatalog', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('parfume_catalog_nonce'),
             'strings' => array(
-                'add_to_comparison' => __('Добави за сравнение', 'parfume-catalog'),
-                'remove_from_comparison' => __('Премахни от сравнение', 'parfume-catalog'),
-                'comparison_max_reached' => __('Достигнат е максималният брой парфюми за сравнение', 'parfume-catalog'),
-                'copied_to_clipboard' => __('Копирано в клипборда', 'parfume-catalog'),
-                'error_occurred' => __('Възникна грешка', 'parfume-catalog')
+                'addToComparison' => __('Добави за сравнение', 'parfume-catalog'),
+                'removeFromComparison' => __('Премахни от сравнение', 'parfume-catalog'),
+                'maxComparisonReached' => __('Максималният брой парфюми за сравнение е достигнат', 'parfume-catalog'),
+                'loadingMore' => __('Зареждане...', 'parfume-catalog'),
+                'noMoreResults' => __('Няма повече резултати', 'parfume-catalog')
             )
         ));
     }
@@ -380,13 +364,10 @@ class Parfume_Catalog {
      * Зареждане на admin скриптове
      */
     public function enqueue_admin_scripts($hook) {
-        // Зареждане само на страниците на плъгина
-        if (strpos($hook, 'parfume-catalog') === false && 
-            !in_array($hook, array('post.php', 'post-new.php', 'edit.php'))) {
+        // Зареди само на страниците на плъгина
+        if (strpos($hook, 'parfume') === false && get_post_type() !== 'parfumes') {
             return;
         }
-        
-        wp_enqueue_media();
         
         wp_enqueue_style(
             'parfume-catalog-admin',
@@ -403,53 +384,24 @@ class Parfume_Catalog {
             true
         );
         
-        wp_enqueue_script(
-            'parfume-catalog-scraper',
-            PARFUME_CATALOG_PLUGIN_URL . 'assets/js/scraper.js',
-            array('jquery'),
-            PARFUME_CATALOG_VERSION,
-            true
-        );
-        
-        // Локализация на админ скриптове
-        wp_localize_script('parfume-catalog-admin', 'parfume_catalog_admin_ajax', array(
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('parfume_catalog_admin_nonce'),
+        // Локализация за admin JavaScript
+        wp_localize_script('parfume-catalog-admin', 'parfumeAdmin', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('parfume_admin_nonce'),
             'strings' => array(
-                'confirm_delete' => __('Сигурни ли сте, че искате да изтриете този елемент?', 'parfume-catalog'),
-                'scraping_in_progress' => __('Скрейпването е в ход...', 'parfume-catalog'),
-                'scraping_completed' => __('Скрейпването е завършено', 'parfume-catalog'),
-                'error_occurred' => __('Възникна грешка', 'parfume-catalog')
+                'confirmDelete' => __('Сигурни ли сте?', 'parfume-catalog'),
+                'saving' => __('Запазване...', 'parfume-catalog'),
+                'saved' => __('Запазено!', 'parfume-catalog'),
+                'error' => __('Грешка!', 'parfume-catalog')
             )
         ));
     }
-    
-    /**
-     * Проверка дали базата данни трябва да се обнови
-     */
-    public function check_database_update() {
-        $installed_version = get_option('parfume_catalog_db_version', '0');
-        
-        if (version_compare($installed_version, $this->db_version, '<')) {
-            $this->create_database_tables();
-            update_option('parfume_catalog_db_version', $this->db_version);
-        }
-    }
 }
 
-/**
- * Връща главния инстанс на плъгина
- */
-function parfume_catalog() {
+// Инициализиране на плъгина
+function parfume_catalog_init() {
     return Parfume_Catalog::get_instance();
 }
 
 // Стартиране на плъгина
-parfume_catalog();
-
-/**
- * Проверка за обновление на базата данни при зареждане на админ панела
- */
-add_action('admin_init', function() {
-    parfume_catalog()->check_database_update();
-});
+parfume_catalog_init();

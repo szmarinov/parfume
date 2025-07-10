@@ -41,7 +41,7 @@ class Parfume_Catalog_Post_Types {
      * Регистриране на CPT "Parfumes"
      */
     private function register_parfumes_cpt() {
-        $options = get_option('parfume_catalog_options');
+        $options = get_option('parfume_catalog_options', array());
         $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
 
         $labels = array(
@@ -100,7 +100,7 @@ class Parfume_Catalog_Post_Types {
      * Регистриране на CPT за блог
      */
     private function register_blog_cpt() {
-        $options = get_option('parfume_catalog_options');
+        $options = get_option('parfume_catalog_options', array());
         $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
 
         $labels = array(
@@ -160,7 +160,7 @@ class Parfume_Catalog_Post_Types {
      * Таксономия "Тип" (Дамски, Мъжки, Унисекс и т.н.)
      */
     private function register_parfume_type_taxonomy() {
-        $options = get_option('parfume_catalog_options');
+        $options = get_option('parfume_catalog_options', array());
         $type_slug = isset($options['type_slug']) ? $options['type_slug'] : 'parfiumi';
 
         $labels = array(
@@ -206,14 +206,13 @@ class Parfume_Catalog_Post_Types {
      * Таксономия "Вид аромат" (Тоалетна вода, Парфюмна вода и т.н.)
      */
     private function register_parfume_vid_taxonomy() {
-        $options = get_option('parfume_catalog_options');
+        $options = get_option('parfume_catalog_options', array());
         $vid_slug = isset($options['vid_slug']) ? $options['vid_slug'] : 'parfiumi';
 
         $labels = array(
             'name'                       => _x('Видове аромат', 'taxonomy general name', 'parfume-catalog'),
             'singular_name'              => _x('Вид аромат', 'taxonomy singular name', 'parfume-catalog'),
             'search_items'               => __('Търси видове аромат', 'parfume-catalog'),
-            'popular_items'              => __('Популярни видове аромат', 'parfume-catalog'),
             'all_items'                  => __('Всички видове аромат', 'parfume-catalog'),
             'edit_item'                  => __('Редактирай вид аромат', 'parfume-catalog'),
             'update_item'                => __('Обнови вид аромат', 'parfume-catalog'),
@@ -246,15 +245,13 @@ class Parfume_Catalog_Post_Types {
      * Таксономия "Марка"
      */
     private function register_parfume_marki_taxonomy() {
-        $options = get_option('parfume_catalog_options');
-        $marki_slug = isset($options['marki_slug']) ? $options['marki_slug'] : 'marki';
-        $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+        $options = get_option('parfume_catalog_options', array());
+        $marki_slug = isset($options['marki_slug']) ? $options['marki_slug'] : 'parfiumi/marki';
 
         $labels = array(
             'name'                       => _x('Марки', 'taxonomy general name', 'parfume-catalog'),
             'singular_name'              => _x('Марка', 'taxonomy singular name', 'parfume-catalog'),
             'search_items'               => __('Търси марки', 'parfume-catalog'),
-            'popular_items'              => __('Популярни марки', 'parfume-catalog'),
             'all_items'                  => __('Всички марки', 'parfume-catalog'),
             'edit_item'                  => __('Редактирай марка', 'parfume-catalog'),
             'update_item'                => __('Обнови марка', 'parfume-catalog'),
@@ -264,13 +261,13 @@ class Parfume_Catalog_Post_Types {
         );
 
         $args = array(
-            'hierarchical'          => true,
+            'hierarchical'          => false,
             'labels'                => $labels,
             'show_ui'               => true,
             'show_admin_column'     => true,
             'query_var'             => true,
             'rewrite'               => array(
-                'slug'         => $archive_slug . '/' . $marki_slug,
+                'slug'         => $marki_slug,
                 'with_front'   => false,
                 'hierarchical' => false,
             ),
@@ -284,15 +281,13 @@ class Parfume_Catalog_Post_Types {
      * Таксономия "Сезон"
      */
     private function register_parfume_season_taxonomy() {
-        $options = get_option('parfume_catalog_options');
-        $season_slug = isset($options['season_slug']) ? $options['season_slug'] : 'season';
-        $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+        $options = get_option('parfume_catalog_options', array());
+        $season_slug = isset($options['season_slug']) ? $options['season_slug'] : 'parfiumi/season';
 
         $labels = array(
             'name'                       => _x('Сезони', 'taxonomy general name', 'parfume-catalog'),
             'singular_name'              => _x('Сезон', 'taxonomy singular name', 'parfume-catalog'),
             'search_items'               => __('Търси сезони', 'parfume-catalog'),
-            'popular_items'              => __('Популярни сезони', 'parfume-catalog'),
             'all_items'                  => __('Всички сезони', 'parfume-catalog'),
             'edit_item'                  => __('Редактирай сезон', 'parfume-catalog'),
             'update_item'                => __('Обнови сезон', 'parfume-catalog'),
@@ -302,13 +297,13 @@ class Parfume_Catalog_Post_Types {
         );
 
         $args = array(
-            'hierarchical'          => true,
+            'hierarchical'          => false,
             'labels'                => $labels,
             'show_ui'               => true,
             'show_admin_column'     => true,
             'query_var'             => true,
             'rewrite'               => array(
-                'slug'         => $archive_slug . '/' . $season_slug,
+                'slug'         => $season_slug,
                 'with_front'   => false,
                 'hierarchical' => false,
             ),
@@ -325,12 +320,14 @@ class Parfume_Catalog_Post_Types {
      * Таксономия "Интензивност"
      */
     private function register_parfume_intensity_taxonomy() {
+        $options = get_option('parfume_catalog_options', array());
+        $intensity_slug = isset($options['intensity_slug']) ? $options['intensity_slug'] : 'parfiumi/intensity';
+
         $labels = array(
             'name'                       => _x('Интензивност', 'taxonomy general name', 'parfume-catalog'),
             'singular_name'              => _x('Интензивност', 'taxonomy singular name', 'parfume-catalog'),
             'search_items'               => __('Търси интензивност', 'parfume-catalog'),
-            'popular_items'              => __('Популярна интензивност', 'parfume-catalog'),
-            'all_items'                  => __('Всяка интензивност', 'parfume-catalog'),
+            'all_items'                  => __('Всички видове интензивност', 'parfume-catalog'),
             'edit_item'                  => __('Редактирай интензивност', 'parfume-catalog'),
             'update_item'                => __('Обнови интензивност', 'parfume-catalog'),
             'add_new_item'               => __('Добави нова интензивност', 'parfume-catalog'),
@@ -339,13 +336,13 @@ class Parfume_Catalog_Post_Types {
         );
 
         $args = array(
-            'hierarchical'          => true,
+            'hierarchical'          => false,
             'labels'                => $labels,
             'show_ui'               => true,
             'show_admin_column'     => true,
             'query_var'             => true,
             'rewrite'               => array(
-                'slug'         => 'intensity',
+                'slug'         => $intensity_slug,
                 'with_front'   => false,
                 'hierarchical' => false,
             ),
@@ -362,14 +359,13 @@ class Parfume_Catalog_Post_Types {
      * Таксономия "Нотки"
      */
     private function register_parfume_notes_taxonomy() {
-        $options = get_option('parfume_catalog_options');
+        $options = get_option('parfume_catalog_options', array());
         $notes_slug = isset($options['notes_slug']) ? $options['notes_slug'] : 'notes';
 
         $labels = array(
             'name'                       => _x('Нотки', 'taxonomy general name', 'parfume-catalog'),
             'singular_name'              => _x('Нотка', 'taxonomy singular name', 'parfume-catalog'),
             'search_items'               => __('Търси нотки', 'parfume-catalog'),
-            'popular_items'              => __('Популярни нотки', 'parfume-catalog'),
             'all_items'                  => __('Всички нотки', 'parfume-catalog'),
             'edit_item'                  => __('Редактирай нотка', 'parfume-catalog'),
             'update_item'                => __('Обнови нотка', 'parfume-catalog'),
@@ -382,7 +378,7 @@ class Parfume_Catalog_Post_Types {
             'hierarchical'          => false,
             'labels'                => $labels,
             'show_ui'               => true,
-            'show_admin_column'     => false, // Премного са за колона
+            'show_admin_column'     => true,
             'query_var'             => true,
             'rewrite'               => array(
                 'slug'         => $notes_slug,
@@ -393,37 +389,27 @@ class Parfume_Catalog_Post_Types {
         );
 
         register_taxonomy('parfume_notes', array('parfumes'), $args);
-
-        // Добавяне на custom поле "Group" за нотките
-        add_action('parfume_notes_add_form_fields', array($this, 'add_notes_group_field'));
-        add_action('parfume_notes_edit_form_fields', array($this, 'edit_notes_group_field'));
-        add_action('edited_parfume_notes', array($this, 'save_notes_group_field'));
-        add_action('create_parfume_notes', array($this, 'save_notes_group_field'));
     }
 
     /**
      * Добавяне на default термини за типове
      */
     private function add_default_type_terms() {
-        if (!get_option('parfume_catalog_type_terms_added')) {
-            $terms = array(
-                'Дамски' => 'damski',
-                'Мъжки' => 'mazhki',
-                'Унисекс' => 'uniseks',
-                'Младежки' => 'mladezhki',
-                'Възрастни' => 'vazrastni',
-                'Луксозни парфюми' => 'luksozni-parfiumi',
-                'Нишови парфюми' => 'nishovi-parfiumi',
-                'Арабски Парфюми' => 'arabski-parfiumi'
-            );
+        $default_types = array(
+            'damski' => 'Дамски',
+            'mazhki' => 'Мъжки',
+            'uniseks' => 'Унисекс',
+            'mladejki' => 'Младежки',
+            'vazrastni' => 'Възрастни',
+            'luksozni-parfiumi' => 'Луксозни парфюми',
+            'nishovi-parfiumi' => 'Нишови парфюми',
+            'arabski-parfiumi' => 'Арабски парфюми'
+        );
 
-            foreach ($terms as $name => $slug) {
-                if (!term_exists($name, 'parfume_type')) {
-                    wp_insert_term($name, 'parfume_type', array('slug' => $slug));
-                }
+        foreach ($default_types as $slug => $name) {
+            if (!term_exists($name, 'parfume_type')) {
+                wp_insert_term($name, 'parfume_type', array('slug' => $slug));
             }
-
-            update_option('parfume_catalog_type_terms_added', true);
         }
     }
 
@@ -431,21 +417,17 @@ class Parfume_Catalog_Post_Types {
      * Добавяне на default термини за видове аромат
      */
     private function add_default_vid_terms() {
-        if (!get_option('parfume_catalog_vid_terms_added')) {
-            $terms = array(
-                'Тоалетна вода' => 'toaletna-voda',
-                'Парфюмна вода' => 'parfiumna-voda',
-                'Парфюм' => 'parfium',
-                'Парфюмен елексир' => 'parfiumen-eleksir'
-            );
+        $default_vids = array(
+            'toaletna-voda' => 'Тоалетна вода',
+            'parfiumna-voda' => 'Парфюмна вода',
+            'parfium' => 'Парфюм',
+            'parfiumeu-eleksir' => 'Парфюмен елексир'
+        );
 
-            foreach ($terms as $name => $slug) {
-                if (!term_exists($name, 'parfume_vid')) {
-                    wp_insert_term($name, 'parfume_vid', array('slug' => $slug));
-                }
+        foreach ($default_vids as $slug => $name) {
+            if (!term_exists($name, 'parfume_vid')) {
+                wp_insert_term($name, 'parfume_vid', array('slug' => $slug));
             }
-
-            update_option('parfume_catalog_vid_terms_added', true);
         }
     }
 
@@ -453,21 +435,17 @@ class Parfume_Catalog_Post_Types {
      * Добавяне на default термини за сезони
      */
     private function add_default_season_terms() {
-        if (!get_option('parfume_catalog_season_terms_added')) {
-            $terms = array(
-                'Пролет' => 'prolet',
-                'Лято' => 'lqto',
-                'Есен' => 'esen',
-                'Зима' => 'zima'
-            );
+        $default_seasons = array(
+            'prolet' => 'Пролет',
+            'liato' => 'Лято',
+            'esen' => 'Есен',
+            'zima' => 'Зима'
+        );
 
-            foreach ($terms as $name => $slug) {
-                if (!term_exists($name, 'parfume_season')) {
-                    wp_insert_term($name, 'parfume_season', array('slug' => $slug));
-                }
+        foreach ($default_seasons as $slug => $name) {
+            if (!term_exists($name, 'parfume_season')) {
+                wp_insert_term($name, 'parfume_season', array('slug' => $slug));
             }
-
-            update_option('parfume_catalog_season_terms_added', true);
         }
     }
 
@@ -475,86 +453,20 @@ class Parfume_Catalog_Post_Types {
      * Добавяне на default термини за интензивност
      */
     private function add_default_intensity_terms() {
-        if (!get_option('parfume_catalog_intensity_terms_added')) {
-            $terms = array(
-                'Силни' => 'silni',
-                'Средни' => 'sredni',
-                'Леки' => 'leki',
-                'Фини/деликатни' => 'fini-delikatni',
-                'Интензивни' => 'intenzivni',
-                'Пудрени (Powdery)' => 'pudreni-powdery',
-                'Тежки/дълбоки (Heavy/Deep)' => 'tezhki-daloki-heavy-deep'
-            );
+        $default_intensities = array(
+            'silni' => 'Силни',
+            'sredni' => 'Средни',
+            'leki' => 'Леки',
+            'fini-delikatni' => 'Фини/деликатни',
+            'intenzivni' => 'Интензивни',
+            'pudreni-powdery' => 'Пудрени (Powdery)',
+            'tejki-dalboky-heavy-deep' => 'Тежки/дълбоки (Heavy/Deep)'
+        );
 
-            foreach ($terms as $name => $slug) {
-                if (!term_exists($name, 'parfume_intensity')) {
-                    wp_insert_term($name, 'parfume_intensity', array('slug' => $slug));
-                }
+        foreach ($default_intensities as $slug => $name) {
+            if (!term_exists($name, 'parfume_intensity')) {
+                wp_insert_term($name, 'parfume_intensity', array('slug' => $slug));
             }
-
-            update_option('parfume_catalog_intensity_terms_added', true);
-        }
-    }
-
-    /**
-     * Добавяне на поле "Group" за нотки при създаване
-     */
-    public function add_notes_group_field() {
-        ?>
-        <div class="form-field">
-            <label for="note_group"><?php _e('Група нотка', 'parfume-catalog'); ?></label>
-            <select name="note_group" id="note_group">
-                <option value=""><?php _e('Избери група', 'parfume-catalog'); ?></option>
-                <option value="дървесни"><?php _e('Дървесни', 'parfume-catalog'); ?></option>
-                <option value="ароматни"><?php _e('Ароматни', 'parfume-catalog'); ?></option>
-                <option value="зелени"><?php _e('Зелени', 'parfume-catalog'); ?></option>
-                <option value="ориенталски"><?php _e('Ориенталски', 'parfume-catalog'); ?></option>
-                <option value="цветни"><?php _e('Цветни', 'parfume-catalog'); ?></option>
-                <option value="гурме"><?php _e('Гурме', 'parfume-catalog'); ?></option>
-                <option value="плодови"><?php _e('Плодови', 'parfume-catalog'); ?></option>
-                <option value="морски"><?php _e('Морски', 'parfume-catalog'); ?></option>
-            </select>
-            <p class="description"><?php _e('Изберете към коя група спада тази нотка.', 'parfume-catalog'); ?></p>
-        </div>
-        <?php
-    }
-
-    /**
-     * Редактиране на поле "Group" за нотки
-     */
-    public function edit_notes_group_field($term) {
-        $note_group = get_term_meta($term->term_id, 'note_group', true);
-        ?>
-        <tr class="form-field">
-            <th scope="row" valign="top">
-                <label for="note_group"><?php _e('Група нотка', 'parfume-catalog'); ?></label>
-            </th>
-            <td>
-                <select name="note_group" id="note_group">
-                    <option value=""><?php _e('Избери група', 'parfume-catalog'); ?></option>
-                    <option value="дървесни" <?php selected($note_group, 'дървесни'); ?>><?php _e('Дървесни', 'parfume-catalog'); ?></option>
-                    <option value="ароматни" <?php selected($note_group, 'ароматни'); ?>><?php _e('Ароматни', 'parfume-catalog'); ?></option>
-                    <option value="зелени" <?php selected($note_group, 'зелени'); ?>><?php _e('Зелени', 'parfume-catalog'); ?></option>
-                    <option value="ориенталски" <?php selected($note_group, 'ориенталски'); ?>><?php _e('Ориенталски', 'parfume-catalog'); ?></option>
-                    <option value="цветни" <?php selected($note_group, 'цветни'); ?>><?php _e('Цветни', 'parfume-catalog'); ?></option>
-                    <option value="гурме" <?php selected($note_group, 'гурме'); ?>><?php _e('Гурме', 'parfume-catalog'); ?></option>
-                    <option value="плодови" <?php selected($note_group, 'плодови'); ?>><?php _e('Плодови', 'parfume-catalog'); ?></option>
-                    <option value="морски" <?php selected($note_group, 'морски'); ?>><?php _e('Морски', 'parfume-catalog'); ?></option>
-                </select>
-                <p class="description"><?php _e('Изберете към коя група спада тази нотка.', 'parfume-catalog'); ?></p>
-            </td>
-        </tr>
-        <?php
-    }
-
-    /**
-     * Запазване на поле "Group" за нотки
-     */
-    public function save_notes_group_field($term_id) {
-        if (isset($_POST['note_group']) && !empty($_POST['note_group'])) {
-            update_term_meta($term_id, 'note_group', sanitize_text_field($_POST['note_group']));
-        } else {
-            delete_term_meta($term_id, 'note_group');
         }
     }
 
@@ -562,7 +474,21 @@ class Parfume_Catalog_Post_Types {
      * Регистриране на rewrite rules
      */
     public function register_rewrite_rules() {
-        // Това ще се обработи от модула за филтри
+        $options = get_option('parfume_catalog_options', array());
+        $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
+
+        // Custom rewrite rules за таксономии
+        add_rewrite_rule(
+            '^' . $archive_slug . '/([^/]+)/page/?([0-9]{1,})/?$',
+            'index.php?taxonomy=parfume_type&term=$matches[1]&paged=$matches[2]',
+            'top'
+        );
+
+        add_rewrite_rule(
+            '^' . $archive_slug . '/([^/]+)/?$',
+            'index.php?taxonomy=parfume_type&term=$matches[1]',
+            'top'
+        );
     }
 
     /**
@@ -570,45 +496,54 @@ class Parfume_Catalog_Post_Types {
      */
     public function custom_permalink($permalink, $post) {
         if ($post->post_type == 'parfumes') {
-            // Използване на настроения архивен slug
-            $options = get_option('parfume_catalog_options');
+            $options = get_option('parfume_catalog_options', array());
             $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
             
             $permalink = home_url($archive_slug . '/' . $post->post_name . '/');
         }
+        
         return $permalink;
     }
 
     /**
      * Custom term link за таксономии
      */
-    public function custom_term_link($link, $term, $taxonomy) {
-        $options = get_option('parfume_catalog_options');
+    public function custom_term_link($termlink, $term, $taxonomy) {
+        $options = get_option('parfume_catalog_options', array());
         $archive_slug = isset($options['archive_slug']) ? $options['archive_slug'] : 'parfiumi';
 
         switch ($taxonomy) {
             case 'parfume_type':
-                $type_slug = isset($options['type_slug']) ? $options['type_slug'] : 'parfiumi';
-                $link = home_url($type_slug . '/' . $term->slug . '/');
+                $type_slug = isset($options['type_slug']) ? $options['type_slug'] : $archive_slug;
+                $termlink = home_url($type_slug . '/' . $term->slug . '/');
                 break;
+
             case 'parfume_vid':
-                $vid_slug = isset($options['vid_slug']) ? $options['vid_slug'] : 'parfiumi';
-                $link = home_url($vid_slug . '/' . $term->slug . '/');
+                $vid_slug = isset($options['vid_slug']) ? $options['vid_slug'] : $archive_slug;
+                $termlink = home_url($vid_slug . '/' . $term->slug . '/');
                 break;
+
             case 'parfume_marki':
-                $marki_slug = isset($options['marki_slug']) ? $options['marki_slug'] : 'marki';
-                $link = home_url($archive_slug . '/' . $marki_slug . '/' . $term->slug . '/');
+                $marki_slug = isset($options['marki_slug']) ? $options['marki_slug'] : $archive_slug . '/marki';
+                $termlink = home_url($marki_slug . '/' . $term->slug . '/');
                 break;
+
             case 'parfume_season':
-                $season_slug = isset($options['season_slug']) ? $options['season_slug'] : 'season';
-                $link = home_url($archive_slug . '/' . $season_slug . '/' . $term->slug . '/');
+                $season_slug = isset($options['season_slug']) ? $options['season_slug'] : $archive_slug . '/season';
+                $termlink = home_url($season_slug . '/' . $term->slug . '/');
                 break;
+
+            case 'parfume_intensity':
+                $intensity_slug = isset($options['intensity_slug']) ? $options['intensity_slug'] : $archive_slug . '/intensity';
+                $termlink = home_url($intensity_slug . '/' . $term->slug . '/');
+                break;
+
             case 'parfume_notes':
                 $notes_slug = isset($options['notes_slug']) ? $options['notes_slug'] : 'notes';
-                $link = home_url($notes_slug . '/' . $term->slug . '/');
+                $termlink = home_url($notes_slug . '/' . $term->slug . '/');
                 break;
         }
 
-        return $link;
+        return $termlink;
     }
 }
