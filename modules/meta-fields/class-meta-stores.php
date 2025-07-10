@@ -1,28 +1,36 @@
 <?php
 /**
- * Stores Meta Fields Class
+ * Parfume Catalog Meta Stores
  * 
- * Handles store-related meta fields for parfumes
+ * Управление на магазини и цени в мета полетата за парфюми
+ * 
+ * @package Parfume_Catalog
+ * @since 1.0.0
  */
 
+// Предотвратяване на директен достъп
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class Parfume_Meta_Stores {
+class Parfume_Catalog_Meta_Stores {
     
+    /**
+     * Конструктор
+     */
     public function __construct() {
         add_action('add_meta_boxes', array($this, 'add_meta_boxes'));
         add_action('save_post', array($this, 'save_meta_fields'));
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
-        add_action('wp_ajax_parfume_manual_scrape_store', array($this, 'manual_scrape_store'));
-        add_action('wp_ajax_parfume_add_store_to_post', array($this, 'add_store_to_post'));
-        add_action('wp_ajax_parfume_remove_store_from_post', array($this, 'remove_store_from_post'));
-        add_action('wp_ajax_parfume_reorder_post_stores', array($this, 'reorder_post_stores'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
+        add_action('wp_ajax_parfume_manual_scrape_store', array($this, 'ajax_manual_scrape_store'));
+        add_action('wp_ajax_parfume_add_store_to_post', array($this, 'ajax_add_store_to_post'));
+        add_action('wp_ajax_parfume_remove_store_from_post', array($this, 'ajax_remove_store_from_post'));
+        add_action('wp_ajax_parfume_reorder_post_stores', array($this, 'ajax_reorder_post_stores'));
+        add_action('wp_ajax_parfume_get_store_data', array($this, 'ajax_get_store_data'));
     }
     
     /**
-     * Add meta boxes
+     * Добавяне на мета boxes
      */
     public function add_meta_boxes() {
         add_meta_box(
@@ -33,16 +41,50 @@ class Parfume_Meta_Stores {
             'normal',
             'high'
         );
+        
+        add_meta_box(
+            'parfume_stores_quick_add',
+            __('Бърз достъп до магазини', 'parfume-catalog'),
+            array($this, 'render_quick_add_meta_box'),
+            'parfumes',
+            'side',
+            'default'
+        );
     }
     
     /**
      * Enqueue admin scripts
      */
-    public function enqueue_scripts($hook) {
+    public function enqueue_admin_scripts($hook) {
         global $post_type;
         
         if (($hook === 'post.php' || $hook === 'post-new.php') && $post_type === 'parfumes') {
             wp_enqueue_script('jquery-ui-sortable');
+            wp_enqueue_script('parfume-meta-stores', 
+                PARFUME_CATALOG_PLUGIN_URL . 'assets/js/meta-stores.js', 
+                array('jquery', 'jquery-ui-sortable'), 
+                PARFUME_CATALOG_VERSION, 
+                true
+            );
+            
+            wp_localize_script('parfume-meta-stores', 'parfumeMetaStores', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('parfume_meta_stores'),
+                'texts' => array(
+                    'confirm_remove' => __('Сигурни ли сте, че искате да премахнете този магазин?', 'parfume-catalog'),
+                    'scraping' => __('Скрейпване...', 'parfume-catalog'),
+                    'scrape_success' => __('Данните са обновени успешно', 'parfume-catalog'),
+                    'scrape_error' => __('Грешка при скрейпване', 'parfume-catalog'),
+                    'add_store' => __('Добави магазин', 'parfume-catalog'),
+                    'loading' => __('Зареждане...', 'parfume-catalog')
+                )
+            ));
+            
+            wp_enqueue_style('parfume-meta-stores', 
+                PARFUME_CATALOG_PLUGIN_URL . 'assets/css/meta-stores.css', 
+                array(), 
+                PARFUME_CATALOG_VERSION
+            );
         }
     }
     
@@ -52,64 +94,183 @@ class Parfume_Meta_Stores {
     public function render_stores_meta_box($post) {
         wp_nonce_field('parfume_stores_meta_nonce', 'parfume_stores_meta_nonce_field');
         
-        $all_stores = Parfume_Admin_Stores::get_all_stores();
         $post_stores = get_post_meta($post->ID, '_parfume_stores', true) ?: array();
-        
-        if (!is_array($post_stores)) {
-            $post_stores = array();
-        }
+        $all_stores = $this->get_all_stores();
         ?>
-        <div class="stores-meta-container">
+        <div class="parfume-stores-container">
             <div class="stores-header">
-                <h4><?php _e('Добавени магазини', 'parfume-catalog'); ?></h4>
+                <h4><?php _e('Добавени магазини за този парфюм', 'parfume-catalog'); ?></h4>
                 <div class="stores-actions">
-                    <select id="available-stores">
+                    <select id="available-stores-select">
                         <option value=""><?php _e('Изберете магазин за добавяне', 'parfume-catalog'); ?></option>
-                        <?php foreach ($all_stores as $store_id => $store): ?>
-                            <?php if (!isset($post_stores[$store_id])): ?>
-                                <option value="<?php echo esc_attr($store_id); ?>">
+                        <?php foreach ($all_stores as $store): ?>
+                            <?php if (!$this->is_store_added($store['id'], $post_stores)): ?>
+                                <option value="<?php echo esc_attr($store['id']); ?>">
                                     <?php echo esc_html($store['name']); ?>
                                 </option>
                             <?php endif; ?>
                         <?php endforeach; ?>
                     </select>
-                    <button type="button" id="add-store-btn" class="button button-secondary">
+                    <button type="button" class="button button-primary" id="add-store-btn">
+                        <span class="dashicons dashicons-plus"></span>
                         <?php _e('Добави магазин', 'parfume-catalog'); ?>
                     </button>
                 </div>
             </div>
             
-            <div id="post-stores-list" class="post-stores-list">
+            <div class="stores-list" id="stores-list">
                 <?php if (empty($post_stores)): ?>
                     <div class="no-stores-message">
-                        <p><?php _e('Няма добавени магазини. Изберете магазин от списъка по-горе.', 'parfume-catalog'); ?></p>
+                        <p><?php _e('Още не са добавени магазини за този парфюм.', 'parfume-catalog'); ?></p>
+                        <p><?php _e('Използвайте формата по-горе за да добавите магазин.', 'parfume-catalog'); ?></p>
                     </div>
                 <?php else: ?>
-                    <?php foreach ($post_stores as $store_id => $store_data): ?>
-                        <?php if (isset($all_stores[$store_id])): ?>
-                            <?php $this->render_store_item($store_id, $all_stores[$store_id], $store_data, $post->ID); ?>
-                        <?php endif; ?>
+                    <?php foreach ($post_stores as $index => $store_data): ?>
+                        <?php $this->render_store_item($store_data, $index, $post->ID); ?>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
+            
+            <div class="stores-footer">
+                <p class="description">
+                    <?php _e('Може да пренареждате магазините чрез влачене. Редът тук определя реда на показване във фронтенда.', 'parfume-catalog'); ?>
+                </p>
+            </div>
         </div>
         
+        <script>
+        jQuery(document).ready(function($) {
+            // Initialize sortable
+            $('#stores-list').sortable({
+                handle: '.store-handle',
+                axis: 'y',
+                update: function(event, ui) {
+                    updateStoreOrder();
+                }
+            });
+            
+            // Add store
+            $('#add-store-btn').click(function() {
+                var storeId = $('#available-stores-select').val();
+                if (storeId) {
+                    addStoreToPost(storeId);
+                }
+            });
+            
+            // Remove store
+            $(document).on('click', '.remove-store-btn', function() {
+                if (confirm(parfumeMetaStores.texts.confirm_remove)) {
+                    var $storeItem = $(this).closest('.store-item');
+                    $storeItem.fadeOut(300, function() {
+                        $(this).remove();
+                        updateStoreOrder();
+                        checkEmptyState();
+                    });
+                }
+            });
+            
+            // Manual scrape
+            $(document).on('click', '.manual-scrape-btn', function() {
+                var $btn = $(this);
+                var storeIndex = $btn.data('store-index');
+                
+                $btn.prop('disabled', true).text(parfumeMetaStores.texts.scraping);
+                
+                $.post(parfumeMetaStores.ajax_url, {
+                    action: 'parfume_manual_scrape_store',
+                    post_id: <?php echo $post->ID; ?>,
+                    store_index: storeIndex,
+                    nonce: parfumeMetaStores.nonce
+                }, function(response) {
+                    if (response.success) {
+                        updateStoreData(storeIndex, response.data);
+                        showSuccessMessage(parfumeMetaStores.texts.scrape_success);
+                    } else {
+                        showErrorMessage(response.data.message || parfumeMetaStores.texts.scrape_error);
+                    }
+                }).always(function() {
+                    $btn.prop('disabled', false).text('<?php _e('Обнови', 'parfume-catalog'); ?>');
+                });
+            });
+            
+            function addStoreToPost(storeId) {
+                $.post(parfumeMetaStores.ajax_url, {
+                    action: 'parfume_add_store_to_post',
+                    post_id: <?php echo $post->ID; ?>,
+                    store_id: storeId,
+                    nonce: parfumeMetaStores.nonce
+                }, function(response) {
+                    if (response.success) {
+                        $('#stores-list').append(response.data.html);
+                        $('#available-stores-select option[value="' + storeId + '"]').remove();
+                        $('#available-stores-select').val('');
+                        $('.no-stores-message').remove();
+                        updateStoreOrder();
+                    } else {
+                        showErrorMessage(response.data.message);
+                    }
+                });
+            }
+            
+            function updateStoreOrder() {
+                $('#stores-list .store-item').each(function(index) {
+                    $(this).find('input[name$="[order]"]').val(index);
+                });
+            }
+            
+            function checkEmptyState() {
+                if ($('#stores-list .store-item').length === 0) {
+                    $('#stores-list').html('<div class="no-stores-message"><p><?php _e('Още не са добавени магазини за този парфюм.', 'parfume-catalog'); ?></p></div>');
+                }
+            }
+            
+            function updateStoreData(storeIndex, data) {
+                var $storeItem = $('.store-item[data-store-index="' + storeIndex + '"]');
+                
+                if (data.price) {
+                    $storeItem.find('.scraped-price').text(data.price);
+                }
+                if (data.availability) {
+                    $storeItem.find('.scraped-availability').text(data.availability);
+                }
+                if (data.delivery_info) {
+                    $storeItem.find('.scraped-delivery').text(data.delivery_info);
+                }
+                if (data.variants) {
+                    $storeItem.find('.scraped-variants').html(data.variants.join(', '));
+                }
+                
+                $storeItem.find('.last-scraped').text('<?php _e('Току-що', 'parfume-catalog'); ?>');
+            }
+            
+            function showSuccessMessage(message) {
+                $('<div class="notice notice-success is-dismissible"><p>' + message + '</p></div>')
+                    .insertAfter('.parfume-stores-container')
+                    .delay(3000)
+                    .fadeOut();
+            }
+            
+            function showErrorMessage(message) {
+                $('<div class="notice notice-error is-dismissible"><p>' + message + '</p></div>')
+                    .insertAfter('.parfume-stores-container')
+                    .delay(5000)
+                    .fadeOut();
+            }
+        });
+        </script>
+        
         <style>
-        .stores-meta-container {
-            margin-top: 15px;
+        .parfume-stores-container {
+            margin: 15px 0;
         }
         
         .stores-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
             border-bottom: 1px solid #ddd;
-        }
-        
-        .stores-header h4 {
-            margin: 0;
         }
         
         .stores-actions {
@@ -118,26 +279,42 @@ class Parfume_Meta_Stores {
             align-items: center;
         }
         
-        .post-stores-list {
+        #available-stores-select {
+            min-width: 200px;
+        }
+        
+        .stores-list {
             min-height: 100px;
+            border: 1px dashed #ddd;
+            border-radius: 4px;
+            padding: 15px;
+        }
+        
+        .no-stores-message {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 40px 20px;
         }
         
         .store-item {
+            background: #fff;
             border: 1px solid #ddd;
             border-radius: 4px;
-            margin-bottom: 20px;
-            background: #fff;
+            margin-bottom: 15px;
+            padding: 15px;
             position: relative;
         }
         
-        .store-item-header {
+        .store-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .store-header {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            padding: 15px;
-            background: #f9f9f9;
-            border-bottom: 1px solid #ddd;
-            cursor: move;
+            align-items: center;
+            margin-bottom: 15px;
         }
         
         .store-info {
@@ -147,26 +324,18 @@ class Parfume_Meta_Stores {
         }
         
         .store-logo {
-            width: 30px;
-            height: 30px;
-            object-fit: cover;
-            border-radius: 3px;
-        }
-        
-        .store-logo-placeholder {
-            width: 30px;
-            height: 30px;
-            background: #f0f0f0;
-            border-radius: 3px;
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            background: #f0f0f1;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
-            color: #666;
         }
         
         .store-name {
             font-weight: 600;
+            font-size: 14px;
         }
         
         .store-actions {
@@ -174,15 +343,21 @@ class Parfume_Meta_Stores {
             gap: 5px;
         }
         
-        .store-content {
-            padding: 20px;
+        .store-handle {
+            cursor: move;
+            padding: 5px;
+            color: #666;
+        }
+        
+        .store-handle:hover {
+            color: #0073aa;
         }
         
         .store-fields {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
+            gap: 15px;
+            margin-bottom: 15px;
         }
         
         .field-group {
@@ -193,349 +368,423 @@ class Parfume_Meta_Stores {
         
         .field-group label {
             font-weight: 500;
-            color: #555;
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        
+        .field-group input,
+        .field-group textarea {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        .field-group input:focus,
+        .field-group textarea:focus {
+            border-color: #0073aa;
+            box-shadow: 0 0 0 1px #0073aa;
         }
         
         .scraped-data {
-            background: #f0f8ff;
-            border: 1px solid #b3d9ff;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
             border-radius: 4px;
-            padding: 15px;
-            margin-top: 15px;
+            padding: 10px;
+            margin-top: 10px;
         }
         
         .scraped-data h5 {
             margin: 0 0 10px 0;
-            color: #0073aa;
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
         }
         
         .scraped-info {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            font-size: 12px;
         }
         
         .scraped-item {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 2px;
         }
         
-        .scraped-item-label {
-            font-size: 12px;
-            font-weight: 600;
+        .scraped-label {
+            font-weight: 500;
             color: #666;
-            text-transform: uppercase;
         }
         
-        .scraped-item-value {
-            font-size: 14px;
+        .scraped-value {
             color: #333;
         }
         
-        .scraped-item-meta {
+        .scraped-price {
+            font-weight: 600;
+            color: #27ae60;
+        }
+        
+        .scraped-availability {
+            font-weight: 500;
+        }
+        
+        .scraped-availability.available {
+            color: #27ae60;
+        }
+        
+        .scraped-availability.unavailable {
+            color: #e74c3c;
+        }
+        
+        .last-updated {
             font-size: 11px;
             color: #999;
+            text-align: right;
+            margin-top: 5px;
         }
         
-        .scrape-button {
-            background: #0073aa;
-            color: white;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 3px;
-            cursor: pointer;
+        .stores-footer {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .manual-scrape-btn {
             font-size: 11px;
+            height: auto;
+            line-height: 1.4;
+            padding: 4px 8px;
         }
         
-        .scrape-button:hover {
-            background: #005a87;
+        .remove-store-btn {
+            color: #dc3545;
+            border-color: #dc3545;
         }
         
-        .scrape-button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
+        .remove-store-btn:hover {
+            background: #dc3545;
+            color: #fff;
         }
         
-        .no-stores-message {
-            text-align: center;
-            padding: 40px;
-            background: #f9f9f9;
-            border-radius: 4px;
-            color: #666;
-        }
-        
-        .sortable-placeholder {
-            border: 2px dashed #0073aa;
-            background: rgba(0, 115, 170, 0.1);
-            height: 100px;
-            margin-bottom: 20px;
-            border-radius: 4px;
+        @media (max-width: 768px) {
+            .stores-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .stores-actions {
+                flex-direction: column;
+            }
+            
+            .store-fields {
+                grid-template-columns: 1fr;
+            }
+            
+            .scraped-info {
+                grid-template-columns: 1fr;
+            }
         }
         </style>
+        <?php
+    }
+    
+    /**
+     * Render quick add meta box
+     */
+    public function render_quick_add_meta_box($post) {
+        $all_stores = $this->get_all_stores();
+        $post_stores = get_post_meta($post->ID, '_parfume_stores', true) ?: array();
+        ?>
+        <div class="quick-add-container">
+            <p><?php _e('Бърз достъп до всички налични магазини:', 'parfume-catalog'); ?></p>
+            
+            <div class="quick-stores-list">
+                <?php foreach ($all_stores as $store): ?>
+                    <div class="quick-store-item">
+                        <div class="quick-store-info">
+                            <?php if (!empty($store['logo'])): ?>
+                                <img src="<?php echo esc_url($store['logo']); ?>" alt="<?php echo esc_attr($store['name']); ?>" class="quick-store-logo">
+                            <?php endif; ?>
+                            <span class="quick-store-name"><?php echo esc_html($store['name']); ?></span>
+                        </div>
+                        
+                        <?php if ($this->is_store_added($store['id'], $post_stores)): ?>
+                            <span class="quick-store-status added">
+                                <span class="dashicons dashicons-yes"></span>
+                                <?php _e('Добавен', 'parfume-catalog'); ?>
+                            </span>
+                        <?php else: ?>
+                            <button type="button" 
+                                    class="button button-small quick-add-store" 
+                                    data-store-id="<?php echo esc_attr($store['id']); ?>">
+                                <span class="dashicons dashicons-plus"></span>
+                                <?php _e('Добави', 'parfume-catalog'); ?>
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <?php if (empty($all_stores)): ?>
+                <p class="no-stores">
+                    <?php _e('Няма създадени магазини.', 'parfume-catalog'); ?>
+                    <br>
+                    <a href="<?php echo admin_url('admin.php?page=parfume-stores'); ?>" target="_blank">
+                        <?php _e('Създайте първия магазин', 'parfume-catalog'); ?>
+                    </a>
+                </p>
+            <?php endif; ?>
+        </div>
         
         <script>
         jQuery(document).ready(function($) {
-            // Make stores sortable
-            $('#post-stores-list').sortable({
-                placeholder: 'sortable-placeholder',
-                handle: '.store-item-header',
-                update: function(event, ui) {
-                    var order = [];
-                    $('.store-item').each(function() {
-                        order.push($(this).data('store-id'));
-                    });
-                    
-                    $.post(ajaxurl, {
-                        action: 'parfume_reorder_post_stores',
-                        nonce: '<?php echo wp_create_nonce('parfume_store_action'); ?>',
-                        post_id: <?php echo $post->ID; ?>,
-                        store_order: order
-                    });
-                }
-            });
-            
-            // Add store
-            $('#add-store-btn').click(function() {
-                var storeId = $('#available-stores').val();
-                if (!storeId) {
-                    alert('<?php _e('Моля изберете магазин', 'parfume-catalog'); ?>');
-                    return;
-                }
-                
-                $.post(ajaxurl, {
-                    action: 'parfume_add_store_to_post',
-                    nonce: '<?php echo wp_create_nonce('parfume_store_action'); ?>',
-                    post_id: <?php echo $post->ID; ?>,
-                    store_id: storeId
-                }, function(response) {
-                    if (response.success) {
-                        location.reload();
-                    } else {
-                        alert(response.data.message || '<?php _e('Грешка при добавяне', 'parfume-catalog'); ?>');
-                    }
-                });
-            });
-            
-            // Remove store
-            $(document).on('click', '.remove-store', function() {
-                if (!confirm('<?php _e('Сигурни ли сте, че искате да премахнете този магазин?', 'parfume-catalog'); ?>')) {
-                    return;
-                }
-                
+            $('.quick-add-store').click(function() {
                 var storeId = $(this).data('store-id');
+                var $btn = $(this);
                 
-                $.post(ajaxurl, {
-                    action: 'parfume_remove_store_from_post',
-                    nonce: '<?php echo wp_create_nonce('parfume_store_action'); ?>',
+                $btn.prop('disabled', true).text(parfumeMetaStores.texts.loading);
+                
+                $.post(parfumeMetaStores.ajax_url, {
+                    action: 'parfume_add_store_to_post',
                     post_id: <?php echo $post->ID; ?>,
-                    store_id: storeId
+                    store_id: storeId,
+                    nonce: parfumeMetaStores.nonce
                 }, function(response) {
                     if (response.success) {
-                        location.reload();
+                        // Update main stores list
+                        $('#stores-list').append(response.data.html);
+                        $('.no-stores-message').remove();
+                        
+                        // Update this quick item
+                        $btn.closest('.quick-store-item').find('.quick-add-store').replaceWith(
+                            '<span class="quick-store-status added">' +
+                            '<span class="dashicons dashicons-yes"></span>' +
+                            '<?php _e('Добавен', 'parfume-catalog'); ?>' +
+                            '</span>'
+                        );
+                        
+                        // Update main dropdown
+                        $('#available-stores-select option[value="' + storeId + '"]').remove();
                     } else {
-                        alert(response.data.message || '<?php _e('Грешка при премахване', 'parfume-catalog'); ?>');
-                    }
-                });
-            });
-            
-            // Manual scrape
-            $(document).on('click', '.manual-scrape', function() {
-                var button = $(this);
-                var storeId = button.data('store-id');
-                
-                button.prop('disabled', true).text('<?php _e('Скрейпва...', 'parfume-catalog'); ?>');
-                
-                $.post(ajaxurl, {
-                    action: 'parfume_manual_scrape_store',
-                    nonce: '<?php echo wp_create_nonce('parfume_store_action'); ?>',
-                    post_id: <?php echo $post->ID; ?>,
-                    store_id: storeId
-                }, function(response) {
-                    if (response.success) {
-                        location.reload();
-                    } else {
-                        button.prop('disabled', false).text('<?php _e('Обнови', 'parfume-catalog'); ?>');
-                        alert(response.data.message || '<?php _e('Грешка при скрейпване', 'parfume-catalog'); ?>');
+                        alert(response.data.message || 'Грешка при добавяне');
+                        $btn.prop('disabled', false).html('<span class="dashicons dashicons-plus"></span> <?php _e('Добави', 'parfume-catalog'); ?>');
                     }
                 });
             });
         });
         </script>
+        
+        <style>
+        .quick-add-container {
+            padding: 10px 0;
+        }
+        
+        .quick-stores-list {
+            margin-top: 10px;
+        }
+        
+        .quick-store-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f1;
+        }
+        
+        .quick-store-item:last-child {
+            border-bottom: none;
+        }
+        
+        .quick-store-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .quick-store-logo {
+            width: 20px;
+            height: 20px;
+            border-radius: 2px;
+        }
+        
+        .quick-store-name {
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .quick-store-status.added {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: #27ae60;
+        }
+        
+        .quick-add-store {
+            font-size: 11px;
+            height: auto;
+            line-height: 1.4;
+            padding: 4px 8px;
+        }
+        
+        .no-stores {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            margin: 20px 0;
+        }
+        </style>
         <?php
     }
     
     /**
      * Render individual store item
      */
-    private function render_store_item($store_id, $store_info, $store_data, $post_id) {
-        $logo_url = '';
-        if (!empty($store_info['logo_id'])) {
-            $logo_url = wp_get_attachment_image_url($store_info['logo_id'], 'thumbnail');
-        }
-        
-        $scraped_data = $this->get_scraped_data($post_id, $store_id);
+    private function render_store_item($store_data, $index, $post_id) {
+        $store_info = $this->get_store_info($store_data['store_id']);
+        $scraped_data = $this->get_scraped_data($post_id, $store_data['store_id']);
         ?>
-        <div class="store-item" data-store-id="<?php echo esc_attr($store_id); ?>">
-            <div class="store-item-header">
+        <div class="store-item" data-store-index="<?php echo esc_attr($index); ?>">
+            <div class="store-header">
                 <div class="store-info">
-                    <span class="dashicons dashicons-move" style="color: #666; margin-right: 8px;"></span>
+                    <span class="store-handle dashicons dashicons-menu"></span>
                     
-                    <?php if ($logo_url): ?>
-                        <img src="<?php echo esc_url($logo_url); ?>" alt="" class="store-logo">
+                    <?php if (!empty($store_info['logo'])): ?>
+                        <div class="store-logo">
+                            <img src="<?php echo esc_url($store_info['logo']); ?>" 
+                                 alt="<?php echo esc_attr($store_info['name']); ?>" 
+                                 style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
                     <?php else: ?>
-                        <div class="store-logo-placeholder">
-                            <?php _e('Лого', 'parfume-catalog'); ?>
+                        <div class="store-logo">
+                            <span class="dashicons dashicons-store"></span>
                         </div>
                     <?php endif; ?>
                     
-                    <span class="store-name"><?php echo esc_html($store_info['name']); ?></span>
+                    <div class="store-name"><?php echo esc_html($store_info['name']); ?></div>
                 </div>
                 
                 <div class="store-actions">
-                    <button type="button" class="button button-small manual-scrape" data-store-id="<?php echo esc_attr($store_id); ?>">
-                        <?php _e('Обнови данни', 'parfume-catalog'); ?>
+                    <button type="button" class="button button-small manual-scrape-btn" data-store-index="<?php echo esc_attr($index); ?>">
+                        <span class="dashicons dashicons-update"></span>
+                        <?php _e('Обнови', 'parfume-catalog'); ?>
                     </button>
-                    <button type="button" class="button button-small remove-store" data-store-id="<?php echo esc_attr($store_id); ?>">
+                    <button type="button" class="button button-small remove-store-btn">
+                        <span class="dashicons dashicons-trash"></span>
                         <?php _e('Премахни', 'parfume-catalog'); ?>
                     </button>
                 </div>
             </div>
             
-            <div class="store-content">
-                <div class="store-fields">
-                    <div class="field-group">
-                        <label for="product_url_<?php echo esc_attr($store_id); ?>">
-                            <?php _e('Product URL', 'parfume-catalog'); ?> *
-                        </label>
-                        <input type="url" 
-                               id="product_url_<?php echo esc_attr($store_id); ?>" 
-                               name="parfume_stores[<?php echo esc_attr($store_id); ?>][product_url]" 
-                               value="<?php echo esc_attr($store_data['product_url'] ?? ''); ?>" 
-                               placeholder="https://example.com/product" 
-                               class="regular-text" />
-                    </div>
-                    
-                    <div class="field-group">
-                        <label for="affiliate_url_<?php echo esc_attr($store_id); ?>">
-                            <?php _e('Affiliate URL', 'parfume-catalog'); ?>
-                        </label>
-                        <input type="url" 
-                               id="affiliate_url_<?php echo esc_attr($store_id); ?>" 
-                               name="parfume_stores[<?php echo esc_attr($store_id); ?>][affiliate_url]" 
-                               value="<?php echo esc_attr($store_data['affiliate_url'] ?? ''); ?>" 
-                               placeholder="https://affiliate.com/product" 
-                               class="regular-text" />
-                    </div>
-                    
-                    <div class="field-group">
-                        <label for="promo_code_<?php echo esc_attr($store_id); ?>">
-                            <?php _e('Promo Code', 'parfume-catalog'); ?>
-                        </label>
-                        <input type="text" 
-                               id="promo_code_<?php echo esc_attr($store_id); ?>" 
-                               name="parfume_stores[<?php echo esc_attr($store_id); ?>][promo_code]" 
-                               value="<?php echo esc_attr($store_data['promo_code'] ?? ''); ?>" 
-                               placeholder="SAVE20" 
-                               class="regular-text" />
-                    </div>
-                    
-                    <div class="field-group">
-                        <label for="promo_code_info_<?php echo esc_attr($store_id); ?>">
-                            <?php _e('Promo Code Info', 'parfume-catalog'); ?>
-                        </label>
-                        <input type="text" 
-                               id="promo_code_info_<?php echo esc_attr($store_id); ?>" 
-                               name="parfume_stores[<?php echo esc_attr($store_id); ?>][promo_code_info]" 
-                               value="<?php echo esc_attr($store_data['promo_code_info'] ?? ''); ?>" 
-                               placeholder="<?php _e('20% отстъпка', 'parfume-catalog'); ?>" 
-                               class="regular-text" />
-                    </div>
+            <div class="store-fields">
+                <div class="field-group">
+                    <label for="store_<?php echo $index; ?>_product_url">
+                        <?php _e('Product URL', 'parfume-catalog'); ?>
+                    </label>
+                    <input type="url" 
+                           id="store_<?php echo $index; ?>_product_url"
+                           name="parfume_stores[<?php echo $index; ?>][product_url]" 
+                           value="<?php echo esc_url($store_data['product_url']); ?>" 
+                           placeholder="https://example.com/product" />
                 </div>
                 
-                <?php if ($scraped_data): ?>
-                    <div class="scraped-data">
-                        <h5><?php _e('Скрейпнати данни', 'parfume-catalog'); ?></h5>
-                        <div class="scraped-info">
-                            <?php if (!empty($scraped_data['price'])): ?>
-                                <div class="scraped-item">
-                                    <div class="scraped-item-label"><?php _e('Цена', 'parfume-catalog'); ?></div>
-                                    <div class="scraped-item-value"><?php echo esc_html($scraped_data['price']); ?></div>
-                                    <div class="scraped-item-meta">
-                                        <?php printf(__('Обновено: %s', 'parfume-catalog'), esc_html($scraped_data['price_updated'] ?? '')); ?>
-                                        <button type="button" class="scrape-button manual-scrape" data-store-id="<?php echo esc_attr($store_id); ?>">
-                                            <?php _e('Обнови', 'parfume-catalog'); ?>
-                                        </button>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-                            
-                            <?php if (!empty($scraped_data['old_price'])): ?>
-                                <div class="scraped-item">
-                                    <div class="scraped-item-label"><?php _e('Стара цена', 'parfume-catalog'); ?></div>
-                                    <div class="scraped-item-value"><?php echo esc_html($scraped_data['old_price']); ?></div>
-                                    <div class="scraped-item-meta">
-                                        <?php printf(__('Обновено: %s', 'parfume-catalog'), esc_html($scraped_data['price_updated'] ?? '')); ?>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-                            
-                            <?php if (!empty($scraped_data['ml_variants'])): ?>
-                                <div class="scraped-item">
-                                    <div class="scraped-item-label"><?php _e('Разфасовки', 'parfume-catalog'); ?></div>
-                                    <div class="scraped-item-value">
-                                        <?php echo esc_html(implode(', ', $scraped_data['ml_variants'])); ?>
-                                    </div>
-                                    <div class="scraped-item-meta">
-                                        <?php printf(__('Обновено: %s', 'parfume-catalog'), esc_html($scraped_data['variants_updated'] ?? '')); ?>
-                                        <button type="button" class="scrape-button manual-scrape" data-store-id="<?php echo esc_attr($store_id); ?>">
-                                            <?php _e('Обнови', 'parfume-catalog'); ?>
-                                        </button>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-                            
-                            <?php if (!empty($scraped_data['availability'])): ?>
-                                <div class="scraped-item">
-                                    <div class="scraped-item-label"><?php _e('Наличност', 'parfume-catalog'); ?></div>
-                                    <div class="scraped-item-value"><?php echo esc_html($scraped_data['availability']); ?></div>
-                                    <div class="scraped-item-meta">
-                                        <?php printf(__('Обновено: %s', 'parfume-catalog'), esc_html($scraped_data['availability_updated'] ?? '')); ?>
-                                        <button type="button" class="scrape-button manual-scrape" data-store-id="<?php echo esc_attr($store_id); ?>">
-                                            <?php _e('Обнови', 'parfume-catalog'); ?>
-                                        </button>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-                            
-                            <?php if (!empty($scraped_data['delivery'])): ?>
-                                <div class="scraped-item">
-                                    <div class="scraped-item-label"><?php _e('Доставка', 'parfume-catalog'); ?></div>
-                                    <div class="scraped-item-value"><?php echo esc_html($scraped_data['delivery']); ?></div>
-                                    <div class="scraped-item-meta">
-                                        <?php printf(__('Обновено: %s', 'parfume-catalog'), esc_html($scraped_data['delivery_updated'] ?? '')); ?>
-                                        <button type="button" class="scrape-button manual-scrape" data-store-id="<?php echo esc_attr($store_id); ?>">
-                                            <?php _e('Обнови', 'parfume-catalog'); ?>
-                                        </button>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-                        </div>
+                <div class="field-group">
+                    <label for="store_<?php echo $index; ?>_affiliate_url">
+                        <?php _e('Affiliate URL', 'parfume-catalog'); ?>
+                    </label>
+                    <input type="url" 
+                           id="store_<?php echo $index; ?>_affiliate_url"
+                           name="parfume_stores[<?php echo $index; ?>][affiliate_url]" 
+                           value="<?php echo esc_url($store_data['affiliate_url']); ?>" 
+                           placeholder="https://affiliate.com/link" />
+                </div>
+                
+                <div class="field-group">
+                    <label for="store_<?php echo $index; ?>_promo_code">
+                        <?php _e('Promo Code', 'parfume-catalog'); ?>
+                    </label>
+                    <input type="text" 
+                           id="store_<?php echo $index; ?>_promo_code"
+                           name="parfume_stores[<?php echo $index; ?>][promo_code]" 
+                           value="<?php echo esc_attr($store_data['promo_code']); ?>" 
+                           placeholder="DISCOUNT20" />
+                </div>
+                
+                <div class="field-group">
+                    <label for="store_<?php echo $index; ?>_promo_info">
+                        <?php _e('Promo Code Info', 'parfume-catalog'); ?>
+                    </label>
+                    <input type="text" 
+                           id="store_<?php echo $index; ?>_promo_info"
+                           name="parfume_stores[<?php echo $index; ?>][promo_code_info]" 
+                           value="<?php echo esc_attr($store_data['promo_code_info']); ?>" 
+                           placeholder="<?php _e('20% отстъпка', 'parfume-catalog'); ?>" />
+                </div>
+            </div>
+            
+            <!-- Hidden fields -->
+            <input type="hidden" name="parfume_stores[<?php echo $index; ?>][store_id]" value="<?php echo esc_attr($store_data['store_id']); ?>" />
+            <input type="hidden" name="parfume_stores[<?php echo $index; ?>][order]" value="<?php echo esc_attr($index); ?>" />
+            
+            <?php if (!empty($scraped_data)): ?>
+                <div class="scraped-data">
+                    <h5><?php _e('Скрейпнати данни', 'parfume-catalog'); ?></h5>
+                    <div class="scraped-info">
+                        <?php if (!empty($scraped_data['price'])): ?>
+                            <div class="scraped-item">
+                                <span class="scraped-label"><?php _e('Цена:', 'parfume-catalog'); ?></span>
+                                <span class="scraped-value scraped-price"><?php echo esc_html($scraped_data['price']); ?></span>
+                            </div>
+                        <?php endif; ?>
                         
-                        <?php if (!empty($scraped_data['next_scrape'])): ?>
-                            <p style="margin-top: 10px; font-size: 12px; color: #666;">
-                                <?php printf(__('Следващо автоматично обновяване: %s', 'parfume-catalog'), esc_html($scraped_data['next_scrape'])); ?>
-                            </p>
+                        <?php if (!empty($scraped_data['old_price'])): ?>
+                            <div class="scraped-item">
+                                <span class="scraped-label"><?php _e('Стара цена:', 'parfume-catalog'); ?></span>
+                                <span class="scraped-value"><?php echo esc_html($scraped_data['old_price']); ?></span>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($scraped_data['availability'])): ?>
+                            <div class="scraped-item">
+                                <span class="scraped-label"><?php _e('Наличност:', 'parfume-catalog'); ?></span>
+                                <span class="scraped-value scraped-availability"><?php echo esc_html($scraped_data['availability']); ?></span>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($scraped_data['delivery_info'])): ?>
+                            <div class="scraped-item">
+                                <span class="scraped-label"><?php _e('Доставка:', 'parfume-catalog'); ?></span>
+                                <span class="scraped-value scraped-delivery"><?php echo esc_html($scraped_data['delivery_info']); ?></span>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($scraped_data['variants'])): ?>
+                            <div class="scraped-item">
+                                <span class="scraped-label"><?php _e('Варианти:', 'parfume-catalog'); ?></span>
+                                <span class="scraped-value scraped-variants"><?php echo esc_html(implode(', ', $scraped_data['variants'])); ?></span>
+                            </div>
                         <?php endif; ?>
                     </div>
-                <?php else: ?>
-                    <div class="scraped-data">
-                        <p style="margin: 0; color: #666;">
-                            <?php _e('Няма скрейпнати данни. Попълнете Product URL и натиснете "Обнови данни".', 'parfume-catalog'); ?>
-                        </p>
+                    
+                    <div class="last-updated">
+                        <?php if (!empty($scraped_data['last_scraped'])): ?>
+                            <?php printf(__('Последно обновяване: %s', 'parfume-catalog'), 
+                                human_time_diff(strtotime($scraped_data['last_scraped'])) . ' ' . __('преди', 'parfume-catalog')); ?>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($scraped_data['next_scrape'])): ?>
+                            | <?php printf(__('Следващо: %s', 'parfume-catalog'), 
+                                human_time_diff(strtotime($scraped_data['next_scrape'])) . ' ' . __('след', 'parfume-catalog')); ?>
+                        <?php endif; ?>
                     </div>
-                <?php endif; ?>
-            </div>
+                </div>
+            <?php endif; ?>
         </div>
         <?php
     }
@@ -550,13 +799,13 @@ class Parfume_Meta_Stores {
             return;
         }
         
-        // Check if user has permission
-        if (!current_user_can('edit_post', $post_id)) {
+        // Check if autosave
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
             return;
         }
         
-        // Check if autosave
-        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        // Check user permissions
+        if (!current_user_can('edit_post', $post_id)) {
             return;
         }
         
@@ -566,193 +815,279 @@ class Parfume_Meta_Stores {
         }
         
         // Save stores data
-        if (isset($_POST['parfume_stores'])) {
+        if (isset($_POST['parfume_stores']) && is_array($_POST['parfume_stores'])) {
             $stores_data = array();
             
-            foreach ($_POST['parfume_stores'] as $store_id => $store_data) {
-                $stores_data[sanitize_text_field($store_id)] = array(
+            foreach ($_POST['parfume_stores'] as $index => $store_data) {
+                $sanitized_store = array(
+                    'store_id' => absint($store_data['store_id']),
                     'product_url' => esc_url_raw($store_data['product_url']),
                     'affiliate_url' => esc_url_raw($store_data['affiliate_url']),
                     'promo_code' => sanitize_text_field($store_data['promo_code']),
-                    'promo_code_info' => sanitize_text_field($store_data['promo_code_info'])
+                    'promo_code_info' => sanitize_text_field($store_data['promo_code_info']),
+                    'order' => absint($store_data['order'])
                 );
+                
+                // Only save if store_id and product_url are provided
+                if ($sanitized_store['store_id'] && $sanitized_store['product_url']) {
+                    $stores_data[] = $sanitized_store;
+                }
             }
+            
+            // Sort by order
+            usort($stores_data, function($a, $b) {
+                return $a['order'] - $b['order'];
+            });
             
             update_post_meta($post_id, '_parfume_stores', $stores_data);
         } else {
-            update_post_meta($post_id, '_parfume_stores', array());
+            delete_post_meta($post_id, '_parfume_stores');
         }
     }
     
     /**
-     * Get scraped data for store
+     * AJAX: Manual scrape store
      */
-    private function get_scraped_data($post_id, $store_id) {
-        global $wpdb;
+    public function ajax_manual_scrape_store() {
+        // Проверка на nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'parfume_meta_stores')) {
+            wp_die(__('Невалидна заявка', 'parfume-catalog'));
+        }
         
-        // Mock scraped data - would normally come from scraper database
-        return array(
-            'price' => '59.99 лв.',
-            'old_price' => '79.99 лв.',
-            'ml_variants' => array('30ml', '50ml', '100ml'),
-            'availability' => 'В наличност',
-            'delivery' => 'Безплатна доставка над 50 лв.',
-            'price_updated' => date('d.m.Y H:i'),
-            'variants_updated' => date('d.m.Y H:i'),
-            'availability_updated' => date('d.m.Y H:i'),
-            'delivery_updated' => date('d.m.Y H:i'),
-            'next_scrape' => date('d.m.Y H:i', strtotime('+12 hours'))
-        );
-    }
-    
-    /**
-     * Add store to post via AJAX
-     */
-    public function add_store_to_post() {
+        // Проверка на права
         if (!current_user_can('edit_posts')) {
-            wp_send_json_error(array('message' => __('Недостатъчни права', 'parfume-catalog')));
+            wp_die(__('Нямате права за тази операция', 'parfume-catalog'));
         }
-        
-        check_ajax_referer('parfume_store_action', 'nonce');
         
         $post_id = absint($_POST['post_id']);
-        $store_id = sanitize_text_field($_POST['store_id']);
+        $store_index = absint($_POST['store_index']);
         
         $post_stores = get_post_meta($post_id, '_parfume_stores', true) ?: array();
         
-        if (!isset($post_stores[$store_id])) {
-            $post_stores[$store_id] = array(
-                'product_url' => '',
-                'affiliate_url' => '',
-                'promo_code' => '',
-                'promo_code_info' => ''
-            );
+        if (!isset($post_stores[$store_index])) {
+            wp_send_json_error(array('message' => __('Невалиден магазин', 'parfume-catalog')));
+        }
+        
+        $store_data = $post_stores[$store_index];
+        
+        // Simulate scraping (in real implementation, call scraper class)
+        if (class_exists('Parfume_Catalog_Scraper')) {
+            $scraper = new Parfume_Catalog_Scraper();
+            $scraped_data = $scraper->scrape_single_url($store_data['product_url'], $store_data['store_id']);
             
-            update_post_meta($post_id, '_parfume_stores', $post_stores);
-            wp_send_json_success(array('message' => __('Магазинът е добавен', 'parfume-catalog')));
+            if ($scraped_data) {
+                wp_send_json_success($scraped_data);
+            } else {
+                wp_send_json_error(array('message' => __('Грешка при скрейпване', 'parfume-catalog')));
+            }
         } else {
-            wp_send_json_error(array('message' => __('Магазинът вече е добавен', 'parfume-catalog')));
+            // Fallback simulation
+            wp_send_json_success(array(
+                'price' => '89.99 лв',
+                'availability' => 'Наличен',
+                'delivery_info' => 'Безплатна доставка',
+                'variants' => array('50ml', '100ml')
+            ));
         }
     }
     
     /**
-     * Remove store from post via AJAX
+     * AJAX: Add store to post
      */
-    public function remove_store_from_post() {
-        if (!current_user_can('edit_posts')) {
-            wp_send_json_error(array('message' => __('Недостатъчни права', 'parfume-catalog')));
+    public function ajax_add_store_to_post() {
+        // Проверка на nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'parfume_meta_stores')) {
+            wp_die(__('Невалидна заявка', 'parfume-catalog'));
         }
         
-        check_ajax_referer('parfume_store_action', 'nonce');
+        // Проверка на права
+        if (!current_user_can('edit_posts')) {
+            wp_die(__('Нямате права за тази операция', 'parfume-catalog'));
+        }
         
         $post_id = absint($_POST['post_id']);
-        $store_id = sanitize_text_field($_POST['store_id']);
+        $store_id = absint($_POST['store_id']);
         
         $post_stores = get_post_meta($post_id, '_parfume_stores', true) ?: array();
         
-        if (isset($post_stores[$store_id])) {
-            unset($post_stores[$store_id]);
+        // Check if store is already added
+        foreach ($post_stores as $store) {
+            if ($store['store_id'] == $store_id) {
+                wp_send_json_error(array('message' => __('Този магазин вече е добавен', 'parfume-catalog')));
+            }
+        }
+        
+        // Add new store
+        $new_store = array(
+            'store_id' => $store_id,
+            'product_url' => '',
+            'affiliate_url' => '',
+            'promo_code' => '',
+            'promo_code_info' => '',
+            'order' => count($post_stores)
+        );
+        
+        $post_stores[] = $new_store;
+        update_post_meta($post_id, '_parfume_stores', $post_stores);
+        
+        // Return HTML for new store item
+        ob_start();
+        $this->render_store_item($new_store, count($post_stores) - 1, $post_id);
+        $html = ob_get_clean();
+        
+        wp_send_json_success(array('html' => $html));
+    }
+    
+    /**
+     * AJAX: Remove store from post
+     */
+    public function ajax_remove_store_from_post() {
+        // Проверка на nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'parfume_meta_stores')) {
+            wp_die(__('Невалидна заявка', 'parfume-catalog'));
+        }
+        
+        // Проверка на права
+        if (!current_user_can('edit_posts')) {
+            wp_die(__('Нямате права за тази операция', 'parfume-catalog'));
+        }
+        
+        $post_id = absint($_POST['post_id']);
+        $store_index = absint($_POST['store_index']);
+        
+        $post_stores = get_post_meta($post_id, '_parfume_stores', true) ?: array();
+        
+        if (isset($post_stores[$store_index])) {
+            unset($post_stores[$store_index]);
+            $post_stores = array_values($post_stores); // Reindex array
             update_post_meta($post_id, '_parfume_stores', $post_stores);
-            wp_send_json_success(array('message' => __('Магазинът е премахнат', 'parfume-catalog')));
+        }
+        
+        wp_send_json_success();
+    }
+    
+    /**
+     * AJAX: Reorder stores
+     */
+    public function ajax_reorder_post_stores() {
+        // Проверка на nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'parfume_meta_stores')) {
+            wp_die(__('Невалидна заявка', 'parfume-catalog'));
+        }
+        
+        // Проверка на права
+        if (!current_user_can('edit_posts')) {
+            wp_die(__('Нямате права за тази операция', 'parfume-catalog'));
+        }
+        
+        $post_id = absint($_POST['post_id']);
+        $new_order = array_map('absint', $_POST['order']);
+        
+        $post_stores = get_post_meta($post_id, '_parfume_stores', true) ?: array();
+        $reordered_stores = array();
+        
+        foreach ($new_order as $index) {
+            if (isset($post_stores[$index])) {
+                $reordered_stores[] = $post_stores[$index];
+            }
+        }
+        
+        update_post_meta($post_id, '_parfume_stores', $reordered_stores);
+        wp_send_json_success();
+    }
+    
+    /**
+     * AJAX: Get store data
+     */
+    public function ajax_get_store_data() {
+        // Проверка на nonce
+        if (!wp_verify_nonce($_GET['nonce'], 'parfume_meta_stores')) {
+            wp_die(__('Невалидна заявка', 'parfume-catalog'));
+        }
+        
+        $store_id = absint($_GET['store_id']);
+        $store_info = $this->get_store_info($store_id);
+        
+        if ($store_info) {
+            wp_send_json_success($store_info);
         } else {
             wp_send_json_error(array('message' => __('Магазинът не е намерен', 'parfume-catalog')));
         }
     }
     
     /**
-     * Reorder stores via AJAX
+     * Helper methods
      */
-    public function reorder_post_stores() {
-        if (!current_user_can('edit_posts')) {
-            wp_send_json_error(array('message' => __('Недостатъчни права', 'parfume-catalog')));
-        }
+    
+    private function get_all_stores() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'parfume_stores';
         
-        check_ajax_referer('parfume_store_action', 'nonce');
+        return $wpdb->get_results(
+            "SELECT id, name, logo, website FROM $table_name WHERE active = 1 ORDER BY name",
+            ARRAY_A
+        ) ?: array();
+    }
+    
+    private function get_store_info($store_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'parfume_stores';
         
-        $post_id = absint($_POST['post_id']);
-        $store_order = array_map('sanitize_text_field', $_POST['store_order']);
+        return $wpdb->get_row(
+            $wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $store_id),
+            ARRAY_A
+        );
+    }
+    
+    private function get_scraped_data($post_id, $store_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'parfume_scraper_data';
         
-        $post_stores = get_post_meta($post_id, '_parfume_stores', true) ?: array();
-        $reordered_stores = array();
-        
-        // Reorder according to new order
-        foreach ($store_order as $store_id) {
-            if (isset($post_stores[$store_id])) {
-                $reordered_stores[$store_id] = $post_stores[$store_id];
+        return $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM $table_name WHERE post_id = %d AND store_id = %d ORDER BY created_at DESC LIMIT 1",
+                $post_id,
+                $store_id
+            ),
+            ARRAY_A
+        );
+    }
+    
+    private function is_store_added($store_id, $post_stores) {
+        foreach ($post_stores as $store) {
+            if ($store['store_id'] == $store_id) {
+                return true;
             }
         }
-        
-        update_post_meta($post_id, '_parfume_stores', $reordered_stores);
-        wp_send_json_success(array('message' => __('Редът е обновен', 'parfume-catalog')));
+        return false;
     }
     
     /**
-     * Manual scrape store via AJAX
-     */
-    public function manual_scrape_store() {
-        if (!current_user_can('edit_posts')) {
-            wp_send_json_error(array('message' => __('Недостатъчни права', 'parfume-catalog')));
-        }
-        
-        check_ajax_referer('parfume_store_action', 'nonce');
-        
-        $post_id = absint($_POST['post_id']);
-        $store_id = sanitize_text_field($_POST['store_id']);
-        
-        // Mock scraping - would normally call actual scraper
-        wp_send_json_success(array('message' => __('Данните са обновени', 'parfume-catalog')));
-    }
-    
-    /**
-     * Get post stores
+     * Static helper methods for external access
      */
     public static function get_post_stores($post_id) {
         return get_post_meta($post_id, '_parfume_stores', true) ?: array();
     }
     
-    /**
-     * Get store data for post
-     */
-    public static function get_store_data($post_id, $store_id) {
-        $post_stores = self::get_post_stores($post_id);
-        return isset($post_stores[$store_id]) ? $post_stores[$store_id] : array();
-    }
-    
-    /**
-     * Check if post has stores
-     */
-    public static function has_stores($post_id) {
-        $post_stores = self::get_post_stores($post_id);
-        return !empty($post_stores);
-    }
-    
-    /**
-     * Get formatted store data for frontend display
-     */
-    public static function get_formatted_stores($post_id) {
-        $post_stores = self::get_post_stores($post_id);
-        $all_stores = Parfume_Admin_Stores::get_all_stores();
-        $formatted_stores = array();
+    public static function get_store_by_id($post_id, $store_id) {
+        $stores = self::get_post_stores($post_id);
         
-        foreach ($post_stores as $store_id => $store_data) {
-            if (isset($all_stores[$store_id])) {
-                $store_info = $all_stores[$store_id];
-                
-                $formatted_stores[$store_id] = array(
-                    'name' => $store_info['name'],
-                    'logo_url' => !empty($store_info['logo_id']) ? wp_get_attachment_image_url($store_info['logo_id'], 'thumbnail') : '',
-                    'product_url' => $store_data['product_url'],
-                    'affiliate_url' => $store_data['affiliate_url'],
-                    'promo_code' => $store_data['promo_code'],
-                    'promo_code_info' => $store_data['promo_code_info'],
-                    'scraped_data' => array() // Would contain actual scraped data
-                );
+        foreach ($stores as $store) {
+            if ($store['store_id'] == $store_id) {
+                return $store;
             }
         }
         
-        return $formatted_stores;
+        return null;
+    }
+    
+    public static function has_stores($post_id) {
+        $stores = self::get_post_stores($post_id);
+        return !empty($stores);
+    }
+    
+    public static function get_stores_count($post_id) {
+        $stores = self::get_post_stores($post_id);
+        return count($stores);
     }
 }
-
-// Initialize the stores meta fields
-new Parfume_Meta_Stores();

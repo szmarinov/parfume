@@ -19,6 +19,23 @@ if (!current_user_can('delete_plugins')) {
 }
 
 /**
+ * Check if we should skip uninstall (for debugging or testing)
+ */
+function parfume_catalog_should_skip_uninstall() {
+    // Skip uninstall if constant is defined (useful for development)
+    if (defined('PARFUME_CATALOG_SKIP_UNINSTALL') && PARFUME_CATALOG_SKIP_UNINSTALL) {
+        return true;
+    }
+    
+    // Skip if specific option is set
+    if (get_option('parfume_catalog_skip_uninstall', false)) {
+        return true;
+    }
+    
+    return false;
+}
+
+/**
  * Main uninstall function
  */
 function parfume_catalog_uninstall() {
@@ -57,6 +74,7 @@ function parfume_catalog_remove_options() {
     $options_to_remove = array(
         // Main plugin settings
         'parfume_catalog_settings',
+        'parfume_catalog_options',
         'parfume_catalog_version',
         'parfume_catalog_db_version',
         
@@ -77,6 +95,11 @@ function parfume_catalog_remove_options() {
         'parfume_catalog_comparison_settings',
         'parfume_catalog_comparison_criteria',
         'parfume_catalog_comparison_max_items',
+        'parfume_comparison_enabled',
+        'parfume_comparison_max_items',
+        'parfume_comparison_popup_width',
+        'parfume_comparison_popup_position',
+        'parfume_comparison_show_undo',
         
         // Comments settings
         'parfume_catalog_comments_settings',
@@ -85,14 +108,20 @@ function parfume_catalog_remove_options() {
         
         // URL settings
         'parfume_catalog_url_settings',
-        'parfume_catalog_archive_slug',
-        'parfume_catalog_category_slugs',
+        'parfume_archive_slug',
+        'parfume_type_base',
+        'parfume_vid_base',
+        'parfume_marki_base',
+        'parfume_season_base',
+        'parfume_intensity_base',
+        'parfume_notes_base',
         
         // Mobile settings
         'parfume_catalog_mobile_settings',
-        'parfume_catalog_mobile_enabled',
-        'parfume_catalog_mobile_z_index',
-        'parfume_catalog_mobile_offset',
+        'parfume_mobile_fixed_panel',
+        'parfume_mobile_show_close_button',
+        'parfume_mobile_z_index',
+        'parfume_mobile_offset',
         
         // Import/Export settings
         'parfume_catalog_import_settings',
@@ -104,6 +133,7 @@ function parfume_catalog_remove_options() {
         
         // Blog settings
         'parfume_catalog_blog_settings',
+        'parfume_blog_settings',
         
         // SEO settings
         'parfume_catalog_seo_settings',
@@ -112,8 +142,10 @@ function parfume_catalog_remove_options() {
         // Other settings
         'parfume_catalog_activation_time',
         'parfume_catalog_first_install',
+        'parfume_catalog_flush_rewrite_rules',
         'parfume_catalog_upgrade_notices',
-        'parfume_catalog_admin_notices'
+        'parfume_catalog_admin_notices',
+        'parfume_catalog_skip_uninstall'
     );
     
     foreach ($options_to_remove as $option) {
@@ -121,18 +153,20 @@ function parfume_catalog_remove_options() {
         delete_site_option($option); // For multisite
     }
     
-    // Remove any options that start with parfume_catalog_
+    // Remove any options that start with parfume_catalog_ or parfume_
     global $wpdb;
     $wpdb->query($wpdb->prepare(
-        "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-        'parfume_catalog_%'
+        "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+        'parfume_catalog_%',
+        'parfume_%'
     ));
     
     // For multisite
     if (is_multisite()) {
         $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s",
-            'parfume_catalog_%'
+            "DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s OR meta_key LIKE %s",
+            'parfume_catalog_%',
+            'parfume_%'
         ));
     }
 }
@@ -143,9 +177,9 @@ function parfume_catalog_remove_options() {
 function parfume_catalog_remove_posts_and_taxonomies() {
     global $wpdb;
     
-    // Get all parfume posts
+    // Get all parfume posts (corrected post type name)
     $parfume_posts = get_posts(array(
-        'post_type' => array('parfumes', 'blog'),
+        'post_type' => array('parfumes', 'parfume_blog'),
         'post_status' => 'any',
         'numberposts' => -1,
         'fields' => 'ids'
@@ -155,6 +189,12 @@ function parfume_catalog_remove_posts_and_taxonomies() {
     foreach ($parfume_posts as $post_id) {
         // Delete post meta
         $wpdb->delete($wpdb->postmeta, array('post_id' => $post_id));
+        
+        // Delete comments for this post
+        $comments = get_comments(array('post_id' => $post_id));
+        foreach ($comments as $comment) {
+            wp_delete_comment($comment->comment_ID, true);
+        }
         
         // Delete the post
         wp_delete_post($post_id, true);
@@ -177,7 +217,7 @@ function parfume_catalog_remove_posts_and_taxonomies() {
             'fields' => 'ids'
         ));
         
-        if (!is_wp_error($terms)) {
+        if (!is_wp_error($terms) && !empty($terms)) {
             foreach ($terms as $term_id) {
                 // Delete term meta
                 $wpdb->delete($wpdb->termmeta, array('term_id' => $term_id));
@@ -226,12 +266,16 @@ function parfume_catalog_remove_custom_tables() {
         $wpdb->prefix . 'parfume_scraper_data',
         $wpdb->prefix . 'parfume_scraper_log',
         $wpdb->prefix . 'parfume_scraper_queue',
+        $wpdb->prefix . 'parfume_scraper_schemas',
         $wpdb->prefix . 'parfume_comments',
         $wpdb->prefix . 'parfume_ratings',
         $wpdb->prefix . 'parfume_store_schemas',
+        $wpdb->prefix . 'parfume_stores',
         $wpdb->prefix . 'parfume_comparison_data',
         $wpdb->prefix . 'parfume_import_log',
-        $wpdb->prefix . 'parfume_analytics'
+        $wpdb->prefix . 'parfume_analytics',
+        $wpdb->prefix . 'parfume_views',
+        $wpdb->prefix . 'parfume_favorites'
     );
     
     foreach ($custom_tables as $table) {
@@ -244,28 +288,45 @@ function parfume_catalog_remove_custom_tables() {
  */
 function parfume_catalog_remove_uploaded_files() {
     $upload_dir = wp_upload_dir();
-    $plugin_upload_dir = $upload_dir['basedir'] . '/parfume-catalog/';
     
+    // Plugin main upload directory
+    $plugin_upload_dir = $upload_dir['basedir'] . '/parfume-catalog/';
     if (is_dir($plugin_upload_dir)) {
         parfume_catalog_remove_directory($plugin_upload_dir);
     }
     
-    // Remove store logos and other plugin-specific uploads
+    // Store logos directory
     $store_logos_dir = $upload_dir['basedir'] . '/parfume-store-logos/';
     if (is_dir($store_logos_dir)) {
         parfume_catalog_remove_directory($store_logos_dir);
     }
     
-    // Remove import/export files
+    // Import/export files directory
     $import_dir = $upload_dir['basedir'] . '/parfume-imports/';
     if (is_dir($import_dir)) {
         parfume_catalog_remove_directory($import_dir);
     }
     
-    // Remove cached images
+    // Cached images directory
     $cache_dir = $upload_dir['basedir'] . '/parfume-cache/';
     if (is_dir($cache_dir)) {
         parfume_catalog_remove_directory($cache_dir);
+    }
+    
+    // Backup files directory
+    $backup_dir = $upload_dir['basedir'] . '/parfume-backups/';
+    if (is_dir($backup_dir)) {
+        parfume_catalog_remove_directory($backup_dir);
+    }
+    
+    // Remove any parfume-related files from main uploads
+    $upload_files = glob($upload_dir['basedir'] . '/parfume*');
+    foreach ($upload_files as $file) {
+        if (is_file($file)) {
+            unlink($file);
+        } elseif (is_dir($file)) {
+            parfume_catalog_remove_directory($file);
+        }
     }
 }
 
@@ -302,7 +363,10 @@ function parfume_catalog_remove_cron_jobs() {
         'parfume_catalog_cleanup_cron',
         'parfume_catalog_analytics_cron',
         'parfume_catalog_backup_cron',
-        'parfume_catalog_maintenance_cron'
+        'parfume_catalog_maintenance_cron',
+        'parfume_scraper_daily',
+        'parfume_scraper_hourly',
+        'parfume_cleanup_daily'
     );
     
     foreach ($cron_jobs as $job) {
@@ -315,7 +379,7 @@ function parfume_catalog_remove_cron_jobs() {
         foreach ($cron_array as $timestamp => $cron) {
             if (is_array($cron)) {
                 foreach ($cron as $hook => $data) {
-                    if (strpos($hook, 'parfume_catalog_') === 0) {
+                    if (strpos($hook, 'parfume_catalog_') === 0 || strpos($hook, 'parfume_') === 0) {
                         wp_unschedule_event($timestamp, $hook);
                     }
                 }
@@ -338,17 +402,21 @@ function parfume_catalog_remove_user_meta() {
         'parfume_catalog_preferences',
         'parfume_catalog_admin_notices_dismissed',
         'parfume_catalog_tour_completed',
-        'parfume_catalog_dashboard_layout'
+        'parfume_catalog_dashboard_layout',
+        'parfume_recently_viewed',
+        'parfume_favorites',
+        'parfume_comparison_list'
     );
     
     foreach ($user_meta_keys as $meta_key) {
         delete_metadata('user', 0, $meta_key, '', true);
     }
     
-    // Remove any user meta that starts with parfume_catalog_
+    // Remove any user meta that starts with parfume_catalog_ or parfume_
     $wpdb->query($wpdb->prepare(
-        "DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE %s",
-        'parfume_catalog_%'
+        "DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE %s OR meta_key LIKE %s",
+        'parfume_catalog_%',
+        'parfume_%'
     ));
 }
 
@@ -360,17 +428,21 @@ function parfume_catalog_remove_transients() {
     
     // Remove transients
     $wpdb->query($wpdb->prepare(
-        "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+        "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s",
         '_transient_parfume_catalog_%',
-        '_transient_timeout_parfume_catalog_%'
+        '_transient_timeout_parfume_catalog_%',
+        '_transient_parfume_%',
+        '_transient_timeout_parfume_%'
     ));
     
     // Remove site transients for multisite
     if (is_multisite()) {
         $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s OR meta_key LIKE %s",
+            "DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s OR meta_key LIKE %s OR meta_key LIKE %s OR meta_key LIKE %s",
             '_site_transient_parfume_catalog_%',
-            '_site_transient_timeout_parfume_catalog_%'
+            '_site_transient_timeout_parfume_catalog_%',
+            '_site_transient_parfume_%',
+            '_site_transient_timeout_parfume_%'
         ));
     }
     
@@ -380,6 +452,7 @@ function parfume_catalog_remove_transients() {
     // Remove plugin-specific cache files
     if (function_exists('wp_cache_delete_group')) {
         wp_cache_delete_group('parfume_catalog');
+        wp_cache_delete_group('parfume');
     }
 }
 
@@ -440,6 +513,28 @@ function parfume_catalog_final_cleanup() {
         update_option('recently_activated', $recent_plugins);
     }
     
+    // Remove any remaining plugin capabilities
+    $role = get_role('administrator');
+    if ($role) {
+        $capabilities = array(
+            'manage_parfume_catalog',
+            'edit_parfumes',
+            'edit_others_parfumes',
+            'publish_parfumes',
+            'read_private_parfumes',
+            'delete_parfumes',
+            'delete_private_parfumes',
+            'delete_published_parfumes',
+            'delete_others_parfumes',
+            'edit_private_parfumes',
+            'edit_published_parfumes'
+        );
+        
+        foreach ($capabilities as $cap) {
+            $role->remove_cap($cap);
+        }
+    }
+    
     // Log uninstallation (if logging is still available)
     if (function_exists('error_log')) {
         error_log('Parfume Catalog Plugin: Uninstallation completed successfully');
@@ -451,38 +546,58 @@ function parfume_catalog_final_cleanup() {
  * This function can be called if you want to create a backup before uninstalling
  */
 function parfume_catalog_create_backup() {
+    global $wpdb;
+    
     $backup_data = array(
-        'settings' => get_option('parfume_catalog_settings'),
-        'stores' => get_option('parfume_catalog_stores'),
-        'version' => get_option('parfume_catalog_version'),
-        'uninstall_date' => current_time('mysql'),
-        'post_count' => wp_count_posts('parfumes'),
-        'user_count' => count_users()
+        'settings' => array(
+            'main_options' => get_option('parfume_catalog_options'),
+            'stores' => get_option('parfume_catalog_stores'),
+            'scraper_settings' => get_option('parfume_catalog_scraper_settings'),
+            'comparison_settings' => get_option('parfume_catalog_comparison_settings'),
+            'comments_settings' => get_option('parfume_catalog_comments_settings'),
+            'blog_settings' => get_option('parfume_blog_settings')
+        ),
+        'statistics' => array(
+            'parfumes_count' => wp_count_posts('parfumes'),
+            'blog_posts_count' => wp_count_posts('parfume_blog'),
+            'brands_count' => wp_count_terms('parfume_marki'),
+            'notes_count' => wp_count_terms('parfume_notes'),
+            'users_count' => count_users()
+        ),
+        'meta' => array(
+            'version' => get_option('parfume_catalog_version'),
+            'uninstall_date' => current_time('mysql'),
+            'wordpress_version' => get_bloginfo('version'),
+            'php_version' => PHP_VERSION
+        )
     );
     
+    // Add custom table data if tables exist
+    $custom_tables = array(
+        $wpdb->prefix . 'parfume_scraper_data',
+        $wpdb->prefix . 'parfume_comments',
+        $wpdb->prefix . 'parfume_ratings'
+    );
+    
+    foreach ($custom_tables as $table) {
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table'") == $table) {
+            $backup_data['custom_tables'][$table] = $wpdb->get_results("SELECT * FROM $table", ARRAY_A);
+        }
+    }
+    
     $upload_dir = wp_upload_dir();
-    $backup_file = $upload_dir['basedir'] . '/parfume-catalog-backup-' . date('Y-m-d-H-i-s') . '.json';
+    $backup_dir = $upload_dir['basedir'] . '/parfume-backups/';
+    
+    // Create backup directory if it doesn't exist
+    if (!file_exists($backup_dir)) {
+        wp_mkdir_p($backup_dir);
+    }
+    
+    $backup_file = $backup_dir . 'parfume-catalog-backup-' . date('Y-m-d-H-i-s') . '.json';
     
     file_put_contents($backup_file, json_encode($backup_data, JSON_PRETTY_PRINT));
     
     return $backup_file;
-}
-
-/**
- * Check if we should skip uninstall (for debugging or testing)
- */
-function parfume_catalog_should_skip_uninstall() {
-    // Skip uninstall if constant is defined (useful for development)
-    if (defined('PARFUME_CATALOG_SKIP_UNINSTALL') && PARFUME_CATALOG_SKIP_UNINSTALL) {
-        return true;
-    }
-    
-    // Skip if specific option is set
-    if (get_option('parfume_catalog_skip_uninstall', false)) {
-        return true;
-    }
-    
-    return false;
 }
 
 /**

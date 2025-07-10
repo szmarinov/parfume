@@ -1,33 +1,44 @@
 <?php
 /**
- * Admin Comparison Management Class
+ * Parfume Catalog Admin Comparison
  * 
- * Handles comparison functionality settings in admin panel
+ * Управление на функционалността за сравняване в админ панела
+ * 
+ * @package Parfume_Catalog
+ * @since 1.0.0
  */
 
+// Предотвратяване на директен достъп
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class Parfume_Admin_Comparison {
+class Parfume_Catalog_Admin_Comparison {
     
-    private $comparison_option = 'parfume_comparison_settings';
+    /**
+     * Опция за запазване на критерии
+     */
+    private $comparison_option = 'parfume_comparison_criteria';
     
+    /**
+     * Конструктор
+     */
     public function __construct() {
         add_action('admin_menu', array($this, 'add_comparison_page'));
         add_action('admin_init', array($this, 'register_comparison_settings'));
-        add_action('wp_ajax_parfume_save_comparison_criteria', array($this, 'save_comparison_criteria'));
-        add_action('wp_ajax_parfume_reorder_criteria', array($this, 'reorder_criteria'));
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
+        add_action('wp_ajax_parfume_save_comparison_criteria', array($this, 'ajax_save_comparison_criteria'));
+        add_action('wp_ajax_parfume_reorder_criteria', array($this, 'ajax_reorder_criteria'));
+        add_action('wp_ajax_parfume_reset_comparison_settings', array($this, 'ajax_reset_comparison_settings'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
     }
     
     /**
-     * Add comparison management page to admin menu
+     * Добавяне на страница в админ менюто
      */
     public function add_comparison_page() {
         add_submenu_page(
             'edit.php?post_type=parfumes',
-            __('Сравнения', 'parfume-catalog'),
+            __('Настройки за сравнения', 'parfume-catalog'),
             __('Сравнения', 'parfume-catalog'),
             'manage_options',
             'parfume-comparison',
@@ -36,72 +47,141 @@ class Parfume_Admin_Comparison {
     }
     
     /**
-     * Register comparison settings
+     * Регистрация на settings
      */
     public function register_comparison_settings() {
-        register_setting('parfume_catalog_settings', 'parfume_comparison_enabled', array(
+        // Основни настройки
+        register_setting('parfume_comparison_settings', 'parfume_comparison_enabled', array(
             'type' => 'boolean',
-            'default' => true
+            'default' => true,
+            'sanitize_callback' => 'rest_sanitize_boolean'
         ));
         
-        register_setting('parfume_catalog_settings', 'parfume_comparison_max_items', array(
+        register_setting('parfume_comparison_settings', 'parfume_comparison_max_items', array(
             'type' => 'integer',
             'default' => 4,
-            'sanitize_callback' => 'absint'
+            'sanitize_callback' => array($this, 'sanitize_max_items')
         ));
         
-        register_setting('parfume_catalog_settings', 'parfume_comparison_popup_width', array(
+        // Popup настройки
+        register_setting('parfume_comparison_settings', 'parfume_comparison_popup_width', array(
             'type' => 'integer',
             'default' => 90,
+            'sanitize_callback' => array($this, 'sanitize_popup_width')
+        ));
+        
+        register_setting('parfume_comparison_settings', 'parfume_comparison_popup_position', array(
+            'type' => 'string',
+            'default' => 'center',
+            'sanitize_callback' => array($this, 'sanitize_popup_position')
+        ));
+        
+        register_setting('parfume_comparison_settings', 'parfume_comparison_popup_z_index', array(
+            'type' => 'integer',
+            'default' => 9999,
             'sanitize_callback' => 'absint'
         ));
         
-        register_setting('parfume_catalog_settings', 'parfume_comparison_popup_position', array(
+        // UX настройки
+        register_setting('parfume_comparison_settings', 'parfume_comparison_show_undo', array(
+            'type' => 'boolean',
+            'default' => true,
+            'sanitize_callback' => 'rest_sanitize_boolean'
+        ));
+        
+        register_setting('parfume_comparison_settings', 'parfume_comparison_show_clear_all', array(
+            'type' => 'boolean',
+            'default' => true,
+            'sanitize_callback' => 'rest_sanitize_boolean'
+        ));
+        
+        register_setting('parfume_comparison_settings', 'parfume_comparison_auto_hide', array(
+            'type' => 'boolean',
+            'default' => true,
+            'sanitize_callback' => 'rest_sanitize_boolean'
+        ));
+        
+        register_setting('parfume_comparison_settings', 'parfume_comparison_show_search', array(
+            'type' => 'boolean',
+            'default' => true,
+            'sanitize_callback' => 'rest_sanitize_boolean'
+        ));
+        
+        register_setting('parfume_comparison_settings', 'parfume_comparison_show_visuals', array(
+            'type' => 'boolean',
+            'default' => true,
+            'sanitize_callback' => 'rest_sanitize_boolean'
+        ));
+        
+        // Текстове
+        register_setting('parfume_comparison_settings', 'parfume_comparison_add_text', array(
             'type' => 'string',
-            'default' => 'center',
+            'default' => __('Добави за сравнение', 'parfume-catalog'),
             'sanitize_callback' => 'sanitize_text_field'
         ));
         
-        register_setting('parfume_catalog_settings', 'parfume_comparison_show_undo', array(
-            'type' => 'boolean',
-            'default' => true
+        register_setting('parfume_comparison_settings', 'parfume_comparison_remove_text', array(
+            'type' => 'string',
+            'default' => __('Премахни от сравнение', 'parfume-catalog'),
+            'sanitize_callback' => 'sanitize_text_field'
         ));
         
-        register_setting('parfume_catalog_settings', 'parfume_comparison_show_clear_all', array(
-            'type' => 'boolean',
-            'default' => true
+        register_setting('parfume_comparison_settings', 'parfume_comparison_max_reached_text', array(
+            'type' => 'string',
+            'default' => __('Максимален брой достигнат', 'parfume-catalog'),
+            'sanitize_callback' => 'sanitize_text_field'
         ));
         
-        register_setting('parfume_catalog_settings', 'parfume_comparison_auto_hide', array(
-            'type' => 'boolean',
-            'default' => true
+        register_setting('parfume_comparison_settings', 'parfume_comparison_empty_text', array(
+            'type' => 'string',
+            'default' => __('Все още няма избрани парфюми за сравнение', 'parfume-catalog'),
+            'sanitize_callback' => 'sanitize_text_field'
         ));
         
-        register_setting('parfume_catalog_settings', 'parfume_comparison_show_search', array(
-            'type' => 'boolean',
-            'default' => true
-        ));
-        
-        register_setting('parfume_catalog_settings', 'parfume_comparison_show_visuals', array(
-            'type' => 'boolean',
-            'default' => true
+        register_setting('parfume_comparison_settings', 'parfume_comparison_popup_title', array(
+            'type' => 'string',
+            'default' => __('Сравнение на парфюми', 'parfume-catalog'),
+            'sanitize_callback' => 'sanitize_text_field'
         ));
     }
     
     /**
      * Enqueue admin scripts
      */
-    public function enqueue_scripts($hook) {
+    public function enqueue_admin_scripts($hook) {
         if ($hook !== 'parfumes_page_parfume-comparison') {
             return;
         }
         
         wp_enqueue_script('jquery-ui-sortable');
         wp_enqueue_script('jquery-ui-tabs');
+        wp_enqueue_script('parfume-admin-comparison', 
+            PARFUME_CATALOG_PLUGIN_URL . 'assets/js/admin-comparison.js', 
+            array('jquery', 'jquery-ui-sortable', 'jquery-ui-tabs'), 
+            PARFUME_CATALOG_VERSION, 
+            true
+        );
+        
+        wp_localize_script('parfume-admin-comparison', 'parfumeComparisonAdmin', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('parfume_comparison_admin'),
+            'texts' => array(
+                'save_success' => __('Настройките са запазени успешно', 'parfume-catalog'),
+                'save_error' => __('Грешка при запазване на настройките', 'parfume-catalog'),
+                'reset_confirm' => __('Сигурни ли сте, че искате да възстановите настройките по подразбиране?', 'parfume-catalog'),
+                'reset_success' => __('Настройките са възстановени по подразбиране', 'parfume-catalog')
+            )
+        ));
+        
+        wp_enqueue_style('parfume-admin-comparison', 
+            PARFUME_CATALOG_PLUGIN_URL . 'assets/css/admin-comparison.css', 
+            array(), 
+            PARFUME_CATALOG_VERSION
+        );
     }
     
     /**
-     * Render the comparison management page
+     * Render comparison management page
      */
     public function render_comparison_page() {
         $comparison_criteria = $this->get_comparison_criteria();
@@ -120,44 +200,43 @@ class Parfume_Admin_Comparison {
                 
                 <!-- General Settings Tab -->
                 <div id="general-tab">
-                    <h3><?php _e('Основни настройки', 'parfume-catalog'); ?></h3>
-                    
                     <form method="post" action="options.php">
-                        <?php settings_fields('parfume_catalog_settings'); ?>
+                        <?php settings_fields('parfume_comparison_settings'); ?>
                         
+                        <h3><?php _e('Основни настройки', 'parfume-catalog'); ?></h3>
                         <table class="form-table">
                             <tr>
-                                <th scope="row"><?php _e('Активиране на функционалността', 'parfume-catalog'); ?></th>
+                                <th scope="row">
+                                    <label for="parfume_comparison_enabled"><?php _e('Активирай сравнения', 'parfume-catalog'); ?></label>
+                                </th>
                                 <td>
                                     <label>
                                         <input type="checkbox" 
+                                               id="parfume_comparison_enabled" 
                                                name="parfume_comparison_enabled" 
                                                value="1" 
                                                <?php checked(get_option('parfume_comparison_enabled', true)); ?> />
-                                        <?php _e('Разреши сравняване на парфюми', 'parfume-catalog'); ?>
+                                        <?php _e('Включи функционалността за сравняване на парфюми', 'parfume-catalog'); ?>
                                     </label>
-                                    <p class="description">
-                                        <?php _e('При изключване всички бутони за сравнение и pop-up-ът стават невидими', 'parfume-catalog'); ?>
-                                    </p>
                                 </td>
                             </tr>
-                            
                             <tr>
                                 <th scope="row">
-                                    <label for="parfume_comparison_max_items"><?php _e('Максимален брой за сравнение', 'parfume-catalog'); ?></label>
+                                    <label for="parfume_comparison_max_items"><?php _e('Максимален брой парфюми', 'parfume-catalog'); ?></label>
                                 </th>
                                 <td>
                                     <input type="number" 
                                            id="parfume_comparison_max_items" 
                                            name="parfume_comparison_max_items" 
                                            value="<?php echo esc_attr(get_option('parfume_comparison_max_items', 4)); ?>" 
-                                           min="2" max="10" />
-                                    <p class="description"><?php _e('Максимален брой парфюми за едновременно сравнение', 'parfume-catalog'); ?></p>
+                                           min="2" 
+                                           max="10" />
+                                    <p class="description"><?php _e('Максимален брой парфюми за едновременно сравнение (2-10)', 'parfume-catalog'); ?></p>
                                 </td>
                             </tr>
                         </table>
                         
-                        <h4><?php _e('UX Функции', 'parfume-catalog'); ?></h4>
+                        <h3><?php _e('UX настройки', 'parfume-catalog'); ?></h3>
                         <table class="form-table">
                             <tr>
                                 <th scope="row"><?php _e('Undo функционалност', 'parfume-catalog'); ?></th>
@@ -167,24 +246,22 @@ class Parfume_Admin_Comparison {
                                                name="parfume_comparison_show_undo" 
                                                value="1" 
                                                <?php checked(get_option('parfume_comparison_show_undo', true)); ?> />
-                                        <?php _e('Показвай възможност за отмяна на последното премахване', 'parfume-catalog'); ?>
+                                        <?php _e('Показвай бутон "Отмени" за последно премахване', 'parfume-catalog'); ?>
                                     </label>
                                 </td>
                             </tr>
-                            
                             <tr>
-                                <th scope="row"><?php _e('Групово премахване', 'parfume-catalog'); ?></th>
+                                <th scope="row"><?php _e('Изчисти всички', 'parfume-catalog'); ?></th>
                                 <td>
                                     <label>
                                         <input type="checkbox" 
                                                name="parfume_comparison_show_clear_all" 
                                                value="1" 
                                                <?php checked(get_option('parfume_comparison_show_clear_all', true)); ?> />
-                                        <?php _e('Показвай бутон за премахване на всички продукти', 'parfume-catalog'); ?>
+                                        <?php _e('Показвай бутон за изчистване на всички парфюми', 'parfume-catalog'); ?>
                                     </label>
                                 </td>
                             </tr>
-                            
                             <tr>
                                 <th scope="row"><?php _e('Автоматично скриване', 'parfume-catalog'); ?></th>
                                 <td>
@@ -193,33 +270,31 @@ class Parfume_Admin_Comparison {
                                                name="parfume_comparison_auto_hide" 
                                                value="1" 
                                                <?php checked(get_option('parfume_comparison_auto_hide', true)); ?> />
-                                        <?php _e('Автоматично скривай pop-up-а при липса на продукти за сравнение', 'parfume-catalog'); ?>
+                                        <?php _e('Скривай popup автоматично при 0 или 1 парфюм', 'parfume-catalog'); ?>
                                     </label>
                                 </td>
                             </tr>
-                            
                             <tr>
-                                <th scope="row"><?php _e('Търсене в pop-up', 'parfume-catalog'); ?></th>
+                                <th scope="row"><?php _e('Търсене в popup', 'parfume-catalog'); ?></th>
                                 <td>
                                     <label>
                                         <input type="checkbox" 
                                                name="parfume_comparison_show_search" 
                                                value="1" 
                                                <?php checked(get_option('parfume_comparison_show_search', true)); ?> />
-                                        <?php _e('Показвай поле за търсене за добавяне на парфюми в pop-up-а', 'parfume-catalog'); ?>
+                                        <?php _e('Показвай търсачка за добавяне на парфюми в popup-а', 'parfume-catalog'); ?>
                                     </label>
                                 </td>
                             </tr>
-                            
                             <tr>
-                                <th scope="row"><?php _e('Визуални графики', 'parfume-catalog'); ?></th>
+                                <th scope="row"><?php _e('Визуални елементи', 'parfume-catalog'); ?></th>
                                 <td>
                                     <label>
                                         <input type="checkbox" 
                                                name="parfume_comparison_show_visuals" 
                                                value="1" 
                                                <?php checked(get_option('parfume_comparison_show_visuals', true)); ?> />
-                                        <?php _e('Показвай графики и визуални елементи в pop-up-а', 'parfume-catalog'); ?>
+                                        <?php _e('Включи графики и визуални елементи в сравнението', 'parfume-catalog'); ?>
                                     </label>
                                 </td>
                             </tr>
@@ -232,7 +307,7 @@ class Parfume_Admin_Comparison {
                 <!-- Criteria Tab -->
                 <div id="criteria-tab">
                     <h3><?php _e('Критерии за сравнение', 'parfume-catalog'); ?></h3>
-                    <p><?php _e('Изберете и подредете кои характеристики да се показват при сравнение.', 'parfume-catalog'); ?></p>
+                    <p><?php _e('Изберете и подредете критериите, които ще се показват в таблицата за сравнение.', 'parfume-catalog'); ?></p>
                     
                     <div class="criteria-manager">
                         <div class="criteria-columns">
@@ -244,7 +319,9 @@ class Parfume_Admin_Comparison {
                                             <div class="criterion-item" data-key="<?php echo esc_attr($key); ?>">
                                                 <span class="criterion-icon"><?php echo esc_html($criterion['icon']); ?></span>
                                                 <span class="criterion-label"><?php echo esc_html($criterion['label']); ?></span>
-                                                <button type="button" class="button button-small add-criterion"><?php _e('Добави', 'parfume-catalog'); ?></button>
+                                                <button type="button" class="button button-small add-criterion" data-key="<?php echo esc_attr($key); ?>">
+                                                    <?php _e('Добави', 'parfume-catalog'); ?>
+                                                </button>
                                             </div>
                                         <?php endif; ?>
                                     <?php endforeach; ?>
@@ -256,93 +333,74 @@ class Parfume_Admin_Comparison {
                                 <div class="criteria-list sortable" id="active-criteria-list">
                                     <?php foreach ($comparison_criteria as $key => $criterion): ?>
                                         <div class="criterion-item active" data-key="<?php echo esc_attr($key); ?>">
-                                            <span class="criterion-handle">⋮⋮</span>
+                                            <span class="criterion-handle dashicons dashicons-menu"></span>
                                             <span class="criterion-icon"><?php echo esc_html($criterion['icon']); ?></span>
                                             <span class="criterion-label"><?php echo esc_html($criterion['label']); ?></span>
-                                            <button type="button" class="button button-small remove-criterion"><?php _e('Премахни', 'parfume-catalog'); ?></button>
+                                            <button type="button" class="button button-small remove-criterion" data-key="<?php echo esc_attr($key); ?>">
+                                                <?php _e('Премахни', 'parfume-catalog'); ?>
+                                            </button>
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
-                                
-                                <p class="submit">
-                                    <button type="button" id="save-criteria" class="button button-primary">
-                                        <?php _e('Запази критериите', 'parfume-catalog'); ?>
-                                    </button>
-                                </p>
                             </div>
+                        </div>
+                        
+                        <div class="criteria-actions">
+                            <button type="button" class="button button-primary" id="save-criteria"><?php _e('Запази критерии', 'parfume-catalog'); ?></button>
+                            <button type="button" class="button" id="reset-criteria"><?php _e('Възстанови по подразбиране', 'parfume-catalog'); ?></button>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Appearance Tab -->
                 <div id="appearance-tab">
-                    <h3><?php _e('Външен вид на pop-up', 'parfume-catalog'); ?></h3>
-                    
                     <form method="post" action="options.php">
-                        <?php settings_fields('parfume_catalog_settings'); ?>
+                        <?php settings_fields('parfume_comparison_settings'); ?>
                         
+                        <h3><?php _e('Настройки на popup прозореца', 'parfume-catalog'); ?></h3>
                         <table class="form-table">
                             <tr>
                                 <th scope="row">
-                                    <label for="parfume_comparison_popup_width"><?php _e('Ширина на pop-up (%)', 'parfume-catalog'); ?></label>
+                                    <label for="parfume_comparison_popup_width"><?php _e('Ширина на popup (%)', 'parfume-catalog'); ?></label>
                                 </th>
                                 <td>
                                     <input type="range" 
                                            id="parfume_comparison_popup_width" 
                                            name="parfume_comparison_popup_width" 
                                            value="<?php echo esc_attr(get_option('parfume_comparison_popup_width', 90)); ?>" 
-                                           min="50" max="100" 
+                                           min="60" 
+                                           max="95" 
+                                           step="5" 
                                            oninput="updateWidthValue(this.value)" />
-                                    <span id="width-value"><?php echo esc_attr(get_option('parfume_comparison_popup_width', 90)); ?>%</span>
-                                    <p class="description"><?php _e('Ширина на pop-up прозореца в проценти от екрана', 'parfume-catalog'); ?></p>
+                                    <span id="width-value"><?php echo esc_html(get_option('parfume_comparison_popup_width', 90)); ?>%</span>
+                                    <p class="description"><?php _e('Ширина на popup прозореца като процент от екрана', 'parfume-catalog'); ?></p>
                                 </td>
                             </tr>
-                            
                             <tr>
                                 <th scope="row">
-                                    <label for="parfume_comparison_popup_position"><?php _e('Позиция на pop-up', 'parfume-catalog'); ?></label>
+                                    <label for="parfume_comparison_popup_position"><?php _e('Позиция на popup', 'parfume-catalog'); ?></label>
                                 </th>
                                 <td>
                                     <select id="parfume_comparison_popup_position" name="parfume_comparison_popup_position">
-                                        <option value="center" <?php selected(get_option('parfume_comparison_popup_position', 'center'), 'center'); ?>>
-                                            <?php _e('В центъра', 'parfume-catalog'); ?>
-                                        </option>
-                                        <option value="top" <?php selected(get_option('parfume_comparison_popup_position', 'center'), 'top'); ?>>
-                                            <?php _e('Отгоре', 'parfume-catalog'); ?>
-                                        </option>
-                                        <option value="bottom" <?php selected(get_option('parfume_comparison_popup_position', 'center'), 'bottom'); ?>>
-                                            <?php _e('Отдолу', 'parfume-catalog'); ?>
-                                        </option>
+                                        <option value="center" <?php selected(get_option('parfume_comparison_popup_position', 'center'), 'center'); ?>><?php _e('Център', 'parfume-catalog'); ?></option>
+                                        <option value="top" <?php selected(get_option('parfume_comparison_popup_position'), 'top'); ?>><?php _e('Отгоре', 'parfume-catalog'); ?></option>
+                                        <option value="bottom" <?php selected(get_option('parfume_comparison_popup_position'), 'bottom'); ?>><?php _e('Отдолу', 'parfume-catalog'); ?></option>
                                     </select>
+                                    <p class="description"><?php _e('Позиционирайте popup спрямо екрана', 'parfume-catalog'); ?></p>
                                 </td>
                             </tr>
-                        </table>
-                        
-                        <h4><?php _e('Цветова схема', 'parfume-catalog'); ?></h4>
-                        <table class="form-table">
                             <tr>
                                 <th scope="row">
-                                    <label for="parfume_comparison_primary_color"><?php _e('Основен цвят', 'parfume-catalog'); ?></label>
+                                    <label for="parfume_comparison_popup_z_index"><?php _e('Z-index', 'parfume-catalog'); ?></label>
                                 </th>
                                 <td>
-                                    <input type="color" 
-                                           id="parfume_comparison_primary_color" 
-                                           name="parfume_comparison_primary_color" 
-                                           value="<?php echo esc_attr(get_option('parfume_comparison_primary_color', '#0073aa')); ?>" />
-                                    <p class="description"><?php _e('Цвят на бутоните и акцентите', 'parfume-catalog'); ?></p>
-                                </td>
-                            </tr>
-                            
-                            <tr>
-                                <th scope="row">
-                                    <label for="parfume_comparison_background_color"><?php _e('Цвят на фона', 'parfume-catalog'); ?></label>
-                                </th>
-                                <td>
-                                    <input type="color" 
-                                           id="parfume_comparison_background_color" 
-                                           name="parfume_comparison_background_color" 
-                                           value="<?php echo esc_attr(get_option('parfume_comparison_background_color', '#ffffff')); ?>" />
-                                    <p class="description"><?php _e('Цвят на фона на pop-up-а', 'parfume-catalog'); ?></p>
+                                    <input type="number" 
+                                           id="parfume_comparison_popup_z_index" 
+                                           name="parfume_comparison_popup_z_index" 
+                                           value="<?php echo esc_attr(get_option('parfume_comparison_popup_z_index', 9999)); ?>" 
+                                           min="1000" 
+                                           max="999999" />
+                                    <p class="description"><?php _e('Z-index на popup прозореца за правилно позициониране', 'parfume-catalog'); ?></p>
                                 </td>
                             </tr>
                         </table>
@@ -353,16 +411,14 @@ class Parfume_Admin_Comparison {
                 
                 <!-- Texts Tab -->
                 <div id="texts-tab">
-                    <h3><?php _e('Персонализиране на текстове', 'parfume-catalog'); ?></h3>
-                    <p><?php _e('Редактирайте текстовете, които се показват на потребителите.', 'parfume-catalog'); ?></p>
-                    
                     <form method="post" action="options.php">
-                        <?php settings_fields('parfume_catalog_settings'); ?>
+                        <?php settings_fields('parfume_comparison_settings'); ?>
                         
+                        <h3><?php _e('Персонализиране на текстове', 'parfume-catalog'); ?></h3>
                         <table class="form-table">
                             <tr>
                                 <th scope="row">
-                                    <label for="parfume_comparison_add_text"><?php _e('Текст на бутон "Добави"', 'parfume-catalog'); ?></label>
+                                    <label for="parfume_comparison_add_text"><?php _e('Текст за добавяне', 'parfume-catalog'); ?></label>
                                 </th>
                                 <td>
                                     <input type="text" 
@@ -372,10 +428,9 @@ class Parfume_Admin_Comparison {
                                            class="regular-text" />
                                 </td>
                             </tr>
-                            
                             <tr>
                                 <th scope="row">
-                                    <label for="parfume_comparison_remove_text"><?php _e('Текст на бутон "Премахни"', 'parfume-catalog'); ?></label>
+                                    <label for="parfume_comparison_remove_text"><?php _e('Текст за премахване', 'parfume-catalog'); ?></label>
                                 </th>
                                 <td>
                                     <input type="text" 
@@ -385,10 +440,9 @@ class Parfume_Admin_Comparison {
                                            class="regular-text" />
                                 </td>
                             </tr>
-                            
                             <tr>
                                 <th scope="row">
-                                    <label for="parfume_comparison_max_reached_text"><?php _e('Съобщение при достигнат максимум', 'parfume-catalog'); ?></label>
+                                    <label for="parfume_comparison_max_reached_text"><?php _e('Текст при достигнат максимум', 'parfume-catalog'); ?></label>
                                 </th>
                                 <td>
                                     <input type="text" 
@@ -398,10 +452,9 @@ class Parfume_Admin_Comparison {
                                            class="regular-text" />
                                 </td>
                             </tr>
-                            
                             <tr>
                                 <th scope="row">
-                                    <label for="parfume_comparison_empty_text"><?php _e('Съобщение при празен списък', 'parfume-catalog'); ?></label>
+                                    <label for="parfume_comparison_empty_text"><?php _e('Текст при празно сравнение', 'parfume-catalog'); ?></label>
                                 </th>
                                 <td>
                                     <input type="text" 
@@ -411,42 +464,15 @@ class Parfume_Admin_Comparison {
                                            class="regular-text" />
                                 </td>
                             </tr>
-                            
                             <tr>
                                 <th scope="row">
-                                    <label for="parfume_comparison_popup_title"><?php _e('Заглавие на pop-up', 'parfume-catalog'); ?></label>
+                                    <label for="parfume_comparison_popup_title"><?php _e('Заглавие на popup', 'parfume-catalog'); ?></label>
                                 </th>
                                 <td>
                                     <input type="text" 
                                            id="parfume_comparison_popup_title" 
                                            name="parfume_comparison_popup_title" 
                                            value="<?php echo esc_attr(get_option('parfume_comparison_popup_title', __('Сравнение на парфюми', 'parfume-catalog'))); ?>" 
-                                           class="regular-text" />
-                                </td>
-                            </tr>
-                            
-                            <tr>
-                                <th scope="row">
-                                    <label for="parfume_comparison_clear_all_text"><?php _e('Текст на бутон "Изчисти всички"', 'parfume-catalog'); ?></label>
-                                </th>
-                                <td>
-                                    <input type="text" 
-                                           id="parfume_comparison_clear_all_text" 
-                                           name="parfume_comparison_clear_all_text" 
-                                           value="<?php echo esc_attr(get_option('parfume_comparison_clear_all_text', __('Изчисти всички', 'parfume-catalog'))); ?>" 
-                                           class="regular-text" />
-                                </td>
-                            </tr>
-                            
-                            <tr>
-                                <th scope="row">
-                                    <label for="parfume_comparison_undo_text"><?php _e('Текст на бутон "Отмени"', 'parfume-catalog'); ?></label>
-                                </th>
-                                <td>
-                                    <input type="text" 
-                                           id="parfume_comparison_undo_text" 
-                                           name="parfume_comparison_undo_text" 
-                                           value="<?php echo esc_attr(get_option('parfume_comparison_undo_text', __('Отмени', 'parfume-catalog'))); ?>" 
                                            class="regular-text" />
                                 </td>
                             </tr>
@@ -458,151 +484,90 @@ class Parfume_Admin_Comparison {
             </div>
         </div>
         
-        <style>
-        .criteria-manager {
-            margin-top: 20px;
-        }
-        
-        .criteria-columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-        }
-        
-        .criteria-list {
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            min-height: 300px;
-            padding: 15px;
-            background: #fafafa;
-        }
-        
-        .criteria-list.sortable {
-            background: #fff;
-        }
-        
-        .criterion-item {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            margin-bottom: 8px;
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            cursor: default;
-        }
-        
-        .criterion-item.active {
-            cursor: move;
-        }
-        
-        .criterion-handle {
-            margin-right: 10px;
-            color: #666;
-            cursor: move;
-        }
-        
-        .criterion-icon {
-            margin-right: 8px;
-            font-size: 16px;
-        }
-        
-        .criterion-label {
-            flex: 1;
-            font-weight: 500;
-        }
-        
-        .criterion-item .button {
-            margin-left: 10px;
-        }
-        
-        .sortable-placeholder {
-            border: 2px dashed #0073aa;
-            background: rgba(0, 115, 170, 0.1);
-            height: 40px;
-            margin-bottom: 8px;
-            border-radius: 4px;
-        }
-        
-        #width-value {
-            display: inline-block;
-            min-width: 40px;
-            margin-left: 10px;
-            font-weight: bold;
-        }
-        
-        .form-table input[type="color"] {
-            width: 60px;
-            height: 40px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        </style>
-        
         <script>
         jQuery(document).ready(function($) {
             // Initialize tabs
             $('#comparison-tabs').tabs();
             
-            // Make active criteria sortable
+            // Initialize sortable
             $('#active-criteria-list').sortable({
-                placeholder: 'sortable-placeholder',
                 handle: '.criterion-handle',
+                axis: 'y',
                 update: function(event, ui) {
-                    // Reorder is handled when saving
+                    // Auto-save order when changed
+                    var order = [];
+                    $('#active-criteria-list .criterion-item').each(function(index) {
+                        order.push({
+                            key: $(this).data('key'),
+                            order: index
+                        });
+                    });
+                    
+                    $.post(ajaxurl, {
+                        action: 'parfume_reorder_criteria',
+                        order: order,
+                        nonce: '<?php echo wp_create_nonce('parfume_comparison_admin'); ?>'
+                    });
                 }
             });
             
             // Add criterion
             $(document).on('click', '.add-criterion', function() {
-                var item = $(this).closest('.criterion-item');
-                var clone = item.clone();
+                var key = $(this).data('key');
+                var $item = $(this).closest('.criterion-item');
                 
-                // Modify for active list
-                clone.addClass('active');
-                clone.find('.add-criterion').removeClass('add-criterion').addClass('remove-criterion').text('<?php _e('Премахни', 'parfume-catalog'); ?>');
-                clone.prepend('<span class="criterion-handle">⋮⋮</span>');
-                
-                // Add to active list
-                $('#active-criteria-list').append(clone);
-                
-                // Remove from available list
-                item.remove();
+                $item.fadeOut(300, function() {
+                    var $activeList = $('#active-criteria-list');
+                    var $newItem = $item.clone();
+                    
+                    $newItem.removeClass('available').addClass('active');
+                    $newItem.find('.add-criterion').removeClass('add-criterion').addClass('remove-criterion').text('<?php _e('Премахни', 'parfume-catalog'); ?>');
+                    $newItem.prepend('<span class="criterion-handle dashicons dashicons-menu"></span>');
+                    
+                    $activeList.append($newItem);
+                    $newItem.fadeIn(300);
+                    
+                    $item.remove();
+                });
             });
             
             // Remove criterion
             $(document).on('click', '.remove-criterion', function() {
-                var item = $(this).closest('.criterion-item');
-                var clone = item.clone();
+                var key = $(this).data('key');
+                var $item = $(this).closest('.criterion-item');
                 
-                // Modify for available list
-                clone.removeClass('active');
-                clone.find('.criterion-handle').remove();
-                clone.find('.remove-criterion').removeClass('remove-criterion').addClass('add-criterion').text('<?php _e('Добави', 'parfume-catalog'); ?>');
-                
-                // Add to available list
-                $('#available-criteria-list').append(clone);
-                
-                // Remove from active list
-                item.remove();
+                $item.fadeOut(300, function() {
+                    var $availableList = $('#available-criteria-list');
+                    var $newItem = $item.clone();
+                    
+                    $newItem.removeClass('active').addClass('available');
+                    $newItem.find('.remove-criterion').removeClass('remove-criterion').addClass('add-criterion').text('<?php _e('Добави', 'parfume-catalog'); ?>');
+                    $newItem.find('.criterion-handle').remove();
+                    
+                    $availableList.append($newItem);
+                    $newItem.fadeIn(300);
+                    
+                    $item.remove();
+                });
             });
             
             // Save criteria
             $('#save-criteria').click(function() {
-                var criteria = [];
-                $('#active-criteria-list .criterion-item').each(function() {
-                    criteria.push($(this).data('key'));
+                var activeCriteria = [];
+                $('#active-criteria-list .criterion-item').each(function(index) {
+                    activeCriteria.push({
+                        key: $(this).data('key'),
+                        order: index
+                    });
                 });
                 
                 $.post(ajaxurl, {
                     action: 'parfume_save_comparison_criteria',
-                    nonce: '<?php echo wp_create_nonce('parfume_comparison_action'); ?>',
-                    criteria: criteria
+                    criteria: activeCriteria,
+                    nonce: '<?php echo wp_create_nonce('parfume_comparison_admin'); ?>'
                 }, function(response) {
                     if (response.success) {
-                        // Show success message
-                        $('<div class="notice notice-success is-dismissible"><p><?php _e('Критериите са запазени успешно!', 'parfume-catalog'); ?></p></div>')
+                        $('<div class="notice notice-success is-dismissible"><p><?php _e('Критериите са запазени успешно', 'parfume-catalog'); ?></p></div>')
                             .insertAfter('#comparison-tabs')
                             .delay(3000)
                             .fadeOut();
@@ -612,17 +577,224 @@ class Parfume_Admin_Comparison {
                 });
             });
             
+            // Reset criteria
+            $('#reset-criteria').click(function() {
+                if (confirm('<?php _e('Сигурни ли сте, че искате да възстановите критериите по подразбиране?', 'parfume-catalog'); ?>')) {
+                    $.post(ajaxurl, {
+                        action: 'parfume_reset_comparison_settings',
+                        nonce: '<?php echo wp_create_nonce('parfume_comparison_admin'); ?>'
+                    }, function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert(response.data.message || '<?php _e('Грешка при възстановяване', 'parfume-catalog'); ?>');
+                        }
+                    });
+                }
+            });
+            
             // Width slider update
             window.updateWidthValue = function(value) {
                 document.getElementById('width-value').textContent = value + '%';
             };
         });
         </script>
+        
+        <style>
+        .criteria-manager {
+            margin: 20px 0;
+        }
+        
+        .criteria-columns {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .available-criteria,
+        .active-criteria {
+            flex: 1;
+            min-height: 300px;
+        }
+        
+        .criteria-list {
+            border: 1px solid #ddd;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            min-height: 250px;
+        }
+        
+        .criterion-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            margin-bottom: 5px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .criterion-item.active {
+            background: #e7f3ff;
+            border-color: #0073aa;
+        }
+        
+        .criterion-handle {
+            cursor: move;
+            color: #666;
+        }
+        
+        .criterion-icon {
+            font-size: 16px;
+        }
+        
+        .criterion-label {
+            flex: 1;
+            font-weight: 500;
+        }
+        
+        .criteria-actions {
+            text-align: center;
+            padding: 20px 0;
+        }
+        
+        .criteria-actions .button {
+            margin: 0 10px;
+        }
+        
+        .sortable .criterion-item {
+            cursor: move;
+        }
+        
+        .ui-sortable-helper {
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        </style>
         <?php
     }
     
     /**
-     * Get comparison criteria
+     * AJAX: Запазване на критерии за сравнение
+     */
+    public function ajax_save_comparison_criteria() {
+        // Проверка на nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'parfume_comparison_admin')) {
+            wp_die(__('Невалидна заявка', 'parfume-catalog'));
+        }
+        
+        // Проверка на права
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Нямате права за тази операция', 'parfume-catalog'));
+        }
+        
+        $criteria = isset($_POST['criteria']) ? $_POST['criteria'] : array();
+        $available_criteria = $this->get_available_criteria();
+        $formatted_criteria = array();
+        
+        foreach ($criteria as $item) {
+            $key = sanitize_key($item['key']);
+            $order = absint($item['order']);
+            
+            if (isset($available_criteria[$key])) {
+                $formatted_criteria[$key] = array(
+                    'label' => $available_criteria[$key]['label'],
+                    'icon' => $available_criteria[$key]['icon'],
+                    'order' => $order
+                );
+            }
+        }
+        
+        update_option($this->comparison_option, $formatted_criteria);
+        
+        wp_send_json_success(array(
+            'message' => __('Критериите са запазени успешно', 'parfume-catalog')
+        ));
+    }
+    
+    /**
+     * AJAX: Пренареждане на критерии
+     */
+    public function ajax_reorder_criteria() {
+        // Проверка на nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'parfume_comparison_admin')) {
+            wp_die(__('Невалидна заявка', 'parfume-catalog'));
+        }
+        
+        // Проверка на права
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Нямате права за тази операция', 'parfume-catalog'));
+        }
+        
+        $order = isset($_POST['order']) ? $_POST['order'] : array();
+        $current_criteria = $this->get_comparison_criteria();
+        
+        foreach ($order as $item) {
+            $key = sanitize_key($item['key']);
+            $new_order = absint($item['order']);
+            
+            if (isset($current_criteria[$key])) {
+                $current_criteria[$key]['order'] = $new_order;
+            }
+        }
+        
+        update_option($this->comparison_option, $current_criteria);
+        
+        wp_send_json_success(array(
+            'message' => __('Редът е актуализиран', 'parfume-catalog')
+        ));
+    }
+    
+    /**
+     * AJAX: Възстановяване на настройки по подразбиране
+     */
+    public function ajax_reset_comparison_settings() {
+        // Проверка на nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'parfume_comparison_admin')) {
+            wp_die(__('Невалидна заявка', 'parfume-catalog'));
+        }
+        
+        // Проверка на права
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Нямате права за тази операция', 'parfume-catalog'));
+        }
+        
+        // Изтриване на запазени критерии
+        delete_option($this->comparison_option);
+        
+        // Възстановяване на default settings
+        $default_options = array(
+            'parfume_comparison_enabled' => true,
+            'parfume_comparison_max_items' => 4,
+            'parfume_comparison_popup_width' => 90,
+            'parfume_comparison_popup_position' => 'center',
+            'parfume_comparison_popup_z_index' => 9999,
+            'parfume_comparison_show_undo' => true,
+            'parfume_comparison_show_clear_all' => true,
+            'parfume_comparison_auto_hide' => true,
+            'parfume_comparison_show_search' => true,
+            'parfume_comparison_show_visuals' => true,
+            'parfume_comparison_add_text' => __('Добави за сравнение', 'parfume-catalog'),
+            'parfume_comparison_remove_text' => __('Премахни от сравнение', 'parfume-catalog'),
+            'parfume_comparison_max_reached_text' => __('Максимален брой достигнат', 'parfume-catalog'),
+            'parfume_comparison_empty_text' => __('Все още няма избрани парфюми за сравнение', 'parfume-catalog'),
+            'parfume_comparison_popup_title' => __('Сравнение на парфюми', 'parfume-catalog')
+        );
+        
+        foreach ($default_options as $option => $value) {
+            update_option($option, $value);
+        }
+        
+        wp_send_json_success(array(
+            'message' => __('Настройките са възстановени по подразбиране', 'parfume-catalog')
+        ));
+    }
+    
+    /**
+     * Получаване на активни критерии за сравнение
      */
     private function get_comparison_criteria() {
         $default_criteria = array(
@@ -650,7 +822,7 @@ class Parfume_Admin_Comparison {
         
         $saved_criteria = get_option($this->comparison_option, $default_criteria);
         
-        // Sort by order
+        // Сортиране по ред
         uasort($saved_criteria, function($a, $b) {
             return ($a['order'] ?? 0) - ($b['order'] ?? 0);
         });
@@ -659,7 +831,7 @@ class Parfume_Admin_Comparison {
     }
     
     /**
-     * Get all available criteria
+     * Получаване на всички налични критерии
      */
     private function get_available_criteria() {
         return array(
@@ -673,7 +845,7 @@ class Parfume_Admin_Comparison {
             ),
             'type' => array(
                 'label' => __('Тип', 'parfume-catalog'),
-                'icon' => '👤'
+                'icon' => '🎭'
             ),
             'vid' => array(
                 'label' => __('Вид аромат', 'parfume-catalog'),
@@ -687,55 +859,43 @@ class Parfume_Admin_Comparison {
                 'label' => __('Рейтинг', 'parfume-catalog'),
                 'icon' => '⭐'
             ),
-            'durability' => array(
-                'label' => __('Дълготрайност', 'parfume-catalog'),
-                'icon' => '⏱️'
-            ),
-            'sillage' => array(
-                'label' => __('Ароматна следа', 'parfume-catalog'),
-                'icon' => '🌬️'
-            ),
-            'intensity' => array(
-                'label' => __('Интензивност', 'parfume-catalog'),
-                'icon' => '🔥'
-            ),
-            'season' => array(
-                'label' => __('Сезон', 'parfume-catalog'),
-                'icon' => '🌍'
-            ),
             'top_notes' => array(
                 'label' => __('Връхни нотки', 'parfume-catalog'),
-                'icon' => '🌸'
+                'icon' => '🌿'
             ),
-            'heart_notes' => array(
+            'middle_notes' => array(
                 'label' => __('Средни нотки', 'parfume-catalog'),
-                'icon' => '🌹'
+                'icon' => '🌸'
             ),
             'base_notes' => array(
                 'label' => __('Базови нотки', 'parfume-catalog'),
                 'icon' => '🌰'
             ),
+            'longevity' => array(
+                'label' => __('Дълготрайност', 'parfume-catalog'),
+                'icon' => '⏰'
+            ),
+            'sillage' => array(
+                'label' => __('Ароматна следа', 'parfume-catalog'),
+                'icon' => '👃'
+            ),
+            'seasons' => array(
+                'label' => __('Сезони', 'parfume-catalog'),
+                'icon' => '🌤️'
+            ),
+            'intensity' => array(
+                'label' => __('Интензивност', 'parfume-catalog'),
+                'icon' => '🔥'
+            ),
             'year' => array(
-                'label' => __('Година на създаване', 'parfume-catalog'),
+                'label' => __('Година', 'parfume-catalog'),
                 'icon' => '📅'
             ),
-            'concentration' => array(
-                'label' => __('Концентрация', 'parfume-catalog'),
-                'icon' => '💧'
-            ),
-            'gender' => array(
-                'label' => __('Пол', 'parfume-catalog'),
-                'icon' => '⚥'
-            ),
-            'occasion' => array(
-                'label' => __('Повод', 'parfume-catalog'),
-                'icon' => '🎭'
-            ),
-            'pros' => array(
+            'advantages' => array(
                 'label' => __('Предимства', 'parfume-catalog'),
                 'icon' => '✅'
             ),
-            'cons' => array(
+            'disadvantages' => array(
                 'label' => __('Недостатъци', 'parfume-catalog'),
                 'icon' => '❌'
             )
@@ -743,74 +903,55 @@ class Parfume_Admin_Comparison {
     }
     
     /**
-     * Save comparison criteria via AJAX
+     * Sanitization функции
      */
-    public function save_comparison_criteria() {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => __('Недостатъчни права', 'parfume-catalog')));
-        }
-        
-        check_ajax_referer('parfume_comparison_action', 'nonce');
-        
-        $criteria_keys = array_map('sanitize_text_field', $_POST['criteria']);
-        $available_criteria = $this->get_available_criteria();
-        $ordered_criteria = array();
-        
-        foreach ($criteria_keys as $index => $key) {
-            if (isset($available_criteria[$key])) {
-                $ordered_criteria[$key] = $available_criteria[$key];
-                $ordered_criteria[$key]['order'] = $index + 1;
-            }
-        }
-        
-        if (update_option($this->comparison_option, $ordered_criteria)) {
-            wp_send_json_success(array('message' => __('Критериите са запазени успешно', 'parfume-catalog')));
-        } else {
-            wp_send_json_error(array('message' => __('Грешка при запазване', 'parfume-catalog')));
-        }
+    public function sanitize_max_items($value) {
+        $value = absint($value);
+        return ($value >= 2 && $value <= 10) ? $value : 4;
+    }
+    
+    public function sanitize_popup_width($value) {
+        $value = absint($value);
+        return ($value >= 60 && $value <= 95) ? $value : 90;
+    }
+    
+    public function sanitize_popup_position($value) {
+        $allowed = array('center', 'top', 'bottom');
+        return in_array($value, $allowed) ? $value : 'center';
     }
     
     /**
-     * Get comparison settings for frontend use
+     * Static helper методи за external access
      */
+    public static function get_active_criteria() {
+        $instance = new self();
+        return $instance->get_comparison_criteria();
+    }
+    
+    public static function is_comparison_enabled() {
+        return get_option('parfume_comparison_enabled', true);
+    }
+    
     public static function get_comparison_settings() {
         return array(
             'enabled' => get_option('parfume_comparison_enabled', true),
             'max_items' => get_option('parfume_comparison_max_items', 4),
+            'popup_width' => get_option('parfume_comparison_popup_width', 90),
+            'popup_position' => get_option('parfume_comparison_popup_position', 'center'),
+            'popup_z_index' => get_option('parfume_comparison_popup_z_index', 9999),
             'show_undo' => get_option('parfume_comparison_show_undo', true),
             'show_clear_all' => get_option('parfume_comparison_show_clear_all', true),
             'auto_hide' => get_option('parfume_comparison_auto_hide', true),
             'show_search' => get_option('parfume_comparison_show_search', true),
             'show_visuals' => get_option('parfume_comparison_show_visuals', true),
-            'popup_width' => get_option('parfume_comparison_popup_width', 90),
-            'popup_position' => get_option('parfume_comparison_popup_position', 'center'),
-            'primary_color' => get_option('parfume_comparison_primary_color', '#0073aa'),
-            'background_color' => get_option('parfume_comparison_background_color', '#ffffff'),
             'texts' => array(
                 'add' => get_option('parfume_comparison_add_text', __('Добави за сравнение', 'parfume-catalog')),
                 'remove' => get_option('parfume_comparison_remove_text', __('Премахни от сравнение', 'parfume-catalog')),
                 'max_reached' => get_option('parfume_comparison_max_reached_text', __('Максимален брой достигнат', 'parfume-catalog')),
                 'empty' => get_option('parfume_comparison_empty_text', __('Все още няма избрани парфюми за сравнение', 'parfume-catalog')),
-                'popup_title' => get_option('parfume_comparison_popup_title', __('Сравнение на парфюми', 'parfume-catalog')),
-                'clear_all' => get_option('parfume_comparison_clear_all_text', __('Изчисти всички', 'parfume-catalog')),
-                'undo' => get_option('parfume_comparison_undo_text', __('Отмени', 'parfume-catalog'))
+                'popup_title' => get_option('parfume_comparison_popup_title', __('Сравнение на парфюми', 'parfume-catalog'))
             )
         );
-    }
-    
-    /**
-     * Get active comparison criteria
-     */
-    public static function get_active_criteria() {
-        $comparison_admin = new self();
-        return $comparison_admin->get_comparison_criteria();
-    }
-    
-    /**
-     * Check if comparison functionality is enabled
-     */
-    public static function is_comparison_enabled() {
-        return get_option('parfume_comparison_enabled', true);
     }
     
     /**
@@ -825,108 +966,15 @@ class Parfume_Admin_Comparison {
         $add_text = $settings['texts']['add'];
         $remove_text = $settings['texts']['remove'];
         
-        $button_classes = 'parfume-comparison-btn ' . $classes;
+        $button_classes = 'parfume-comparison-btn ' . esc_attr($classes);
         
         return sprintf(
-            '<button type="button" class="%s" data-post-id="%d" data-add-text="%s" data-remove-text="%s">
-                <span class="btn-text">%s</span>
-                <span class="btn-icon">+</span>
-            </button>',
-            esc_attr($button_classes),
-            $post_id,
+            '<button type="button" class="%s" data-post-id="%d" data-add-text="%s" data-remove-text="%s">%s</button>',
+            $button_classes,
+            absint($post_id),
             esc_attr($add_text),
             esc_attr($remove_text),
             esc_html($add_text)
         );
     }
-    
-    /**
-     * Get comparison data for a specific perfume
-     */
-    public static function get_perfume_comparison_data($post_id) {
-        $data = array(
-            'id' => $post_id,
-            'title' => get_the_title($post_id),
-            'url' => get_permalink($post_id),
-            'image' => get_the_post_thumbnail_url($post_id, 'medium'),
-            'brand' => '',
-            'type' => '',
-            'price' => '',
-            'rating' => 0,
-            'criteria' => array()
-        );
-        
-        // Get brand
-        $brands = get_the_terms($post_id, 'parfume_marki');
-        if ($brands && !is_wp_error($brands)) {
-            $data['brand'] = $brands[0]->name;
-        }
-        
-        // Get type
-        $types = get_the_terms($post_id, 'parfume_type');
-        if ($types && !is_wp_error($types)) {
-            $data['type'] = $types[0]->name;
-        }
-        
-        // Get price from scraper data
-        global $wpdb;
-        $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
-        $min_price = $wpdb->get_var($wpdb->prepare(
-            "SELECT MIN(price) FROM $scraper_table WHERE post_id = %d AND price IS NOT NULL AND price > 0",
-            $post_id
-        ));
-        
-        if ($min_price) {
-            $data['price'] = number_format($min_price, 2) . ' лв.';
-        }
-        
-        // Get rating from comments
-        $comments_table = $wpdb->prefix . 'parfume_comments';
-        $rating = $wpdb->get_var($wpdb->prepare(
-            "SELECT AVG(rating) FROM $comments_table WHERE post_id = %d AND status = 'approved'",
-            $post_id
-        ));
-        
-        if ($rating) {
-            $data['rating'] = round($rating, 1);
-        }
-        
-        // Get additional criteria data
-        $active_criteria = self::get_active_criteria();
-        foreach ($active_criteria as $key => $criterion) {
-            switch ($key) {
-                case 'durability':
-                    $data['criteria']['durability'] = get_post_meta($post_id, '_parfume_durability', true);
-                    break;
-                case 'sillage':
-                    $data['criteria']['sillage'] = get_post_meta($post_id, '_parfume_sillage', true);
-                    break;
-                case 'intensity':
-                    $intensities = get_the_terms($post_id, 'parfume_intensity');
-                    if ($intensities && !is_wp_error($intensities)) {
-                        $data['criteria']['intensity'] = $intensities[0]->name;
-                    }
-                    break;
-                case 'season':
-                    $seasons = get_the_terms($post_id, 'parfume_season');
-                    if ($seasons && !is_wp_error($seasons)) {
-                        $data['criteria']['season'] = implode(', ', wp_list_pluck($seasons, 'name'));
-                    }
-                    break;
-                case 'top_notes':
-                case 'heart_notes':
-                case 'base_notes':
-                    $notes = get_post_meta($post_id, '_parfume_' . $key, true);
-                    if ($notes && is_array($notes)) {
-                        $data['criteria'][$key] = implode(', ', $notes);
-                    }
-                    break;
-            }
-        }
-        
-        return $data;
-    }
 }
-
-// Initialize the admin comparison
-new Parfume_Admin_Comparison();
