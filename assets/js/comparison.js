@@ -1,536 +1,516 @@
 /**
- * Comparison functionality for Parfume Catalog Plugin
+ * Parfume Catalog Comparison JavaScript
  * 
- * @package ParfumeCatalog
+ * Система за сравняване на парфюми
+ * 
+ * @package Parfume_Catalog
+ * @since 1.0.0
  */
 
 (function($) {
     'use strict';
 
-    // Global comparison object
-    window.ParfumeComparison = {
-        storageKey: 'parfume_comparison_list',
-        maxItems: 4,
-        items: [],
-        isPopupOpen: false,
-
-        init: function() {
-            this.loadFromStorage();
-            this.initEventHandlers();
-            this.initPopup();
-            this.updateUI();
-            this.checkSettings();
+    // Глобален обект за comparison системата
+    window.parfumeComparison = {
+        
+        // Настройки и данни
+        settings: {
+            maxItems: 4,
+            enabled: true,
+            autoShowPopup: true,
+            enableUndo: true,
+            enableSearch: true,
+            storageKey: 'parfume_comparison',
+            undoKey: 'parfume_comparison_undo',
+            ajaxUrl: window.parfumeComparison ? window.parfumeComparison.ajaxUrl : '/wp-admin/admin-ajax.php',
+            nonce: window.parfumeComparison ? window.parfumeComparison.nonce : ''
         },
 
-        /**
-         * Check if comparison is enabled
-         */
-        checkSettings: function() {
-            if (typeof parfume_comparison_settings !== 'undefined') {
-                this.maxItems = parseInt(parfume_comparison_settings.max_items) || 4;
-                
-                if (!parfume_comparison_settings.enabled) {
-                    // Hide all comparison buttons if disabled
-                    $('.compare-btn').hide();
-                    return;
-                }
+        // Локализирани текстове
+        strings: {
+            addToComparison: 'Добави за сравнение',
+            removeFromComparison: 'Премахни от сравнение',
+            compare: 'Сравни',
+            comparing: 'Сравняване...',
+            maxItemsReached: 'Максимум {max} парфюма могат да се сравняват едновременно',
+            itemAdded: 'Добавен за сравнение',
+            itemRemoved: 'Премахнат от сравнение',
+            clearAll: 'Изчисти всички',
+            exportCSV: 'Експорт CSV',
+            exportPDF: 'Експорт PDF',
+            print: 'Принтирай',
+            searchPlaceholder: 'Търси парфюми за добавяне...',
+            noResults: 'Няма намерени резултати',
+            loading: 'Зареждане...',
+            error: 'Възникна грешка',
+            undo: 'Отмени',
+            closeComparison: 'Затвори сравнението',
+            minimizeComparison: 'Минимизирай'
+        },
+
+        // DOM елементи
+        $floatingButton: null,
+        $popup: null,
+        $popupOverlay: null,
+        $comparisonTable: null,
+        $itemCount: null,
+        $undoButton: null,
+
+        // Състояние
+        comparisonData: [],
+        lastRemovedItem: null,
+        isPopupOpen: false,
+        isMinimized: false,
+
+        // Инициализация
+        init: function() {
+            // Merge settings от WordPress
+            if (window.parfumeComparison) {
+                $.extend(this.settings, window.parfumeComparison);
+            }
+            
+            // Merge strings от WordPress
+            if (window.parfumeComparison && window.parfumeComparison.strings) {
+                $.extend(this.strings, window.parfumeComparison.strings);
+            }
+
+            if (!this.settings.enabled) {
+                return;
+            }
+
+            this.loadComparisonData();
+            this.createFloatingButton();
+            this.createPopup();
+            this.bindEvents();
+            this.updateUI();
+            
+            console.log('Parfume Comparison initialized');
+        },
+
+        // Зареждане на данни от localStorage
+        loadComparisonData: function() {
+            try {
+                var stored = localStorage.getItem(this.settings.storageKey);
+                this.comparisonData = stored ? JSON.parse(stored) : [];
+            } catch (e) {
+                console.warn('Error loading comparison data:', e);
+                this.comparisonData = [];
             }
         },
 
-        /**
-         * Initialize event handlers
-         */
-        initEventHandlers: function() {
+        // Запазване на данни в localStorage
+        saveComparisonData: function() {
+            try {
+                localStorage.setItem(this.settings.storageKey, JSON.stringify(this.comparisonData));
+            } catch (e) {
+                console.warn('Error saving comparison data:', e);
+            }
+        },
+
+        // Създаване на floating button
+        createFloatingButton: function() {
+            this.$floatingButton = $(`
+                <div id="parfume-comparison-float" class="comparison-floating-button" style="display: none;">
+                    <div class="float-content">
+                        <span class="float-icon">⚖️</span>
+                        <span class="float-text">${this.strings.compare}</span>
+                        <span class="float-count">0</span>
+                    </div>
+                    <div class="float-actions">
+                        <button class="float-minimize" title="${this.strings.minimizeComparison}">−</button>
+                        <button class="float-close" title="${this.strings.closeComparison}">×</button>
+                    </div>
+                </div>
+            `);
+
+            $('body').append(this.$floatingButton);
+            this.$itemCount = this.$floatingButton.find('.float-count');
+        },
+
+        // Създаване на popup
+        createPopup: function() {
+            this.$popupOverlay = $(`
+                <div id="parfume-comparison-overlay" class="comparison-overlay" style="display: none;">
+                    <div class="comparison-popup">
+                        <div class="popup-header">
+                            <h3 class="popup-title">
+                                <span class="title-icon">⚖️</span>
+                                ${this.strings.compare}
+                                <span class="item-counter">(<span class="counter-value">0</span>)</span>
+                            </h3>
+                            <div class="popup-actions">
+                                ${this.settings.enableUndo ? `<button class="btn-undo" title="${this.strings.undo}" style="display: none;"><span>↶</span> ${this.strings.undo}</button>` : ''}
+                                <button class="btn-minimize" title="${this.strings.minimizeComparison}">−</button>
+                                <button class="btn-close" title="${this.strings.closeComparison}">×</button>
+                            </div>
+                        </div>
+                        
+                        <div class="popup-content">
+                            <div class="comparison-controls">
+                                ${this.settings.enableSearch ? `
+                                    <div class="search-container">
+                                        <input type="text" class="comparison-search" placeholder="${this.strings.searchPlaceholder}">
+                                        <div class="search-results" style="display: none;"></div>
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="action-buttons">
+                                    <button class="btn-clear-all">${this.strings.clearAll}</button>
+                                    <div class="export-dropdown">
+                                        <button class="btn-export">Експорт ▼</button>
+                                        <div class="export-menu">
+                                            <button class="btn-export-csv">${this.strings.exportCSV}</button>
+                                            <button class="btn-export-pdf">${this.strings.exportPDF}</button>
+                                            <button class="btn-print">${this.strings.print}</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-table-container">
+                                <table class="comparison-table">
+                                    <thead>
+                                        <tr class="table-header"></tr>
+                                    </thead>
+                                    <tbody class="table-body"></tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="empty-state" style="display: none;">
+                                <div class="empty-icon">⚖️</div>
+                                <h4>Няма парфюми за сравнение</h4>
+                                <p>Добавете парфюми като кликнете бутона "Добави за сравнение" на страниците на продуктите.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+
+            $('body').append(this.$popupOverlay);
+            this.$popup = this.$popupOverlay.find('.comparison-popup');
+            this.$comparisonTable = this.$popup.find('.comparison-table');
+            this.$undoButton = this.$popup.find('.btn-undo');
+        },
+
+        // Event listeners
+        bindEvents: function() {
             var self = this;
 
-            // Compare button clicks
-            $(document).on('click', '.compare-btn', function(e) {
+            // Floating button click
+            this.$floatingButton.on('click', '.float-content', function(e) {
                 e.preventDefault();
-                e.stopPropagation();
-                
-                var $btn = $(this);
-                var parfumeId = parseInt($btn.data('parfume-id'));
-                var action = $btn.data('action');
+                self.openPopup();
+            });
 
-                if (action === 'add' || !self.hasItem(parfumeId)) {
-                    self.addParfume(parfumeId, $btn);
-                } else {
-                    self.removeParfume(parfumeId);
+            // Floating button actions
+            this.$floatingButton.on('click', '.float-minimize', function(e) {
+                e.stopPropagation();
+                self.minimizePopup();
+            });
+
+            this.$floatingButton.on('click', '.float-close', function(e) {
+                e.stopPropagation();
+                self.closePopup();
+            });
+
+            // Popup header actions
+            this.$popup.on('click', '.btn-minimize', function() {
+                self.minimizePopup();
+            });
+
+            this.$popup.on('click', '.btn-close', function() {
+                self.closePopup();
+            });
+
+            this.$popup.on('click', '.btn-undo', function() {
+                self.undoLastAction();
+            });
+
+            // Comparison controls
+            this.$popup.on('click', '.btn-clear-all', function() {
+                self.clearAll();
+            });
+
+            this.$popup.on('click', '.btn-export', function() {
+                $(this).siblings('.export-menu').toggle();
+            });
+
+            this.$popup.on('click', '.btn-export-csv', function() {
+                self.exportToCSV();
+            });
+
+            this.$popup.on('click', '.btn-export-pdf', function() {
+                self.exportToPDF();
+            });
+
+            this.$popup.on('click', '.btn-print', function() {
+                self.printComparison();
+            });
+
+            // Remove item from comparison
+            this.$popup.on('click', '.remove-item', function() {
+                var parfumeId = $(this).data('parfume-id');
+                self.removeItem(parfumeId);
+            });
+
+            // Search functionality
+            if (this.settings.enableSearch) {
+                var searchTimeout;
+                this.$popup.on('input', '.comparison-search', function() {
+                    var query = $(this).val().trim();
+                    
+                    clearTimeout(searchTimeout);
+                    
+                    if (query.length < 2) {
+                        self.$popup.find('.search-results').hide().empty();
+                        return;
+                    }
+                    
+                    searchTimeout = setTimeout(function() {
+                        self.searchParfumes(query);
+                    }, 300);
+                });
+
+                // Add search result to comparison
+                this.$popup.on('click', '.search-result-item', function() {
+                    var parfumeData = $(this).data('parfume');
+                    self.addItem(parfumeData);
+                    self.$popup.find('.comparison-search').val('');
+                    self.$popup.find('.search-results').hide().empty();
+                });
+            }
+
+            // Overlay click to close
+            this.$popupOverlay.on('click', function(e) {
+                if (e.target === this) {
+                    self.closePopup();
                 }
             });
 
             // Keyboard shortcuts
             $(document).on('keydown', function(e) {
-                // Ctrl/Cmd + Shift + C to toggle comparison popup
-                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.keyCode === 67) {
+                // Ctrl+Shift+C to toggle comparison
+                if (e.ctrlKey && e.shiftKey && e.key === 'C') {
                     e.preventDefault();
                     self.togglePopup();
                 }
                 
                 // Escape to close popup
-                if (e.keyCode === 27 && self.isPopupOpen) {
+                if (e.key === 'Escape' && self.isPopupOpen) {
                     self.closePopup();
                 }
             });
 
-            // Window resize handler
-            $(window).on('resize', function() {
-                if (self.isPopupOpen) {
-                    self.repositionPopup();
-                }
-            });
-        },
-
-        /**
-         * Initialize comparison popup
-         */
-        initPopup: function() {
-            var self = this;
-            
-            // Create popup if it doesn't exist
-            if (!$('#parfume-comparison-popup').length) {
-                this.createPopup();
-            }
-
-            // Popup event handlers
-            $(document).on('click', '#parfume-comparison-popup .close-popup', function() {
-                self.closePopup();
-            });
-
-            $(document).on('click', '#parfume-comparison-popup .remove-item', function() {
-                var parfumeId = parseInt($(this).data('parfume-id'));
-                self.removeParfume(parfumeId);
-            });
-
-            $(document).on('click', '#parfume-comparison-popup .clear-all', function() {
-                if (confirm('Сигурни ли сте, че искате да премахнете всички парфюми от сравнението?')) {
-                    self.clearAll();
-                }
-            });
-
-            $(document).on('click', '#parfume-comparison-popup .add-parfume-search', function() {
-                self.showAddParfumeDialog();
-            });
-
-            // Popup drag functionality
-            this.makePopupDraggable();
-
-            // Outside click to close
+            // Close export dropdown when clicking outside
             $(document).on('click', function(e) {
-                if (self.isPopupOpen && 
-                    !$(e.target).closest('#parfume-comparison-popup').length && 
-                    !$(e.target).hasClass('compare-btn')) {
-                    self.closePopup();
+                if (!$(e.target).closest('.export-dropdown').length) {
+                    $('.export-menu').hide();
                 }
             });
         },
 
-        /**
-         * Create comparison popup
-         */
-        createPopup: function() {
-            var popupHtml = `
-                <div id="parfume-comparison-popup" class="parfume-comparison-popup" style="display: none;">
-                    <div class="popup-header">
-                        <h3>Сравнение на парфюми</h3>
-                        <div class="popup-controls">
-                            <button class="add-parfume-search" title="Добави парфюм">+</button>
-                            <button class="clear-all" title="Изчисти всички">🗑</button>
-                            <button class="close-popup" title="Затвори">×</button>
-                        </div>
-                    </div>
-                    <div class="popup-content">
-                        <div class="comparison-table-container">
-                            <table class="comparison-table">
-                                <tbody class="comparison-tbody">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="popup-footer">
-                        <div class="comparison-count">
-                            <span class="count">0</span> / <span class="max">${this.maxItems}</span> парфюми
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            $('body').append(popupHtml);
-        },
+        // Добавяне на елемент за сравнение
+        addItem: function(parfumeData) {
+            // Проверка за максимален брой
+            if (this.comparisonData.length >= this.settings.maxItems) {
+                this.showMessage(this.strings.maxItemsReached.replace('{max}', this.settings.maxItems), 'warning');
+                return false;
+            }
 
-        /**
-         * Make popup draggable
-         */
-        makePopupDraggable: function() {
-            var $popup = $('#parfume-comparison-popup');
-            var isDragging = false;
-            var currentX, currentY, initialX, initialY;
-
-            $popup.find('.popup-header').on('mousedown', function(e) {
-                isDragging = true;
-                initialX = e.clientX - $popup.offset().left;
-                initialY = e.clientY - $popup.offset().top;
-                
-                $(document).on('mousemove', drag);
-                $(document).on('mouseup', stopDrag);
+            // Проверка дали вече не е добавен
+            var exists = this.comparisonData.find(function(item) {
+                return item.id == parfumeData.id;
             });
 
-            function drag(e) {
-                if (isDragging) {
-                    currentX = e.clientX - initialX;
-                    currentY = e.clientY - initialY;
-                    
-                    $popup.css({
-                        left: currentX + 'px',
-                        top: currentY + 'px'
-                    });
-                }
+            if (exists) {
+                this.showMessage('Парфюмът вече е добавен за сравнение', 'info');
+                return false;
             }
 
-            function stopDrag() {
-                isDragging = false;
-                $(document).off('mousemove', drag);
-                $(document).off('mouseup', stopDrag);
-            }
-        },
-
-        /**
-         * Add parfume to comparison
-         */
-        addParfume: function(parfumeId, $btn) {
-            // Check if already exists
-            if (this.hasItem(parfumeId)) {
-                this.showMessage('Този парфюм вече е добавен за сравнение.', 'warning');
-                return;
-            }
-
-            // Check max items limit
-            if (this.items.length >= this.maxItems) {
-                this.showMessage(`Можете да сравнявате максимум ${this.maxItems} парфюма.`, 'warning');
-                return;
-            }
-
-            var self = this;
-
-            // Get parfume data
-            this.getParfumeData(parfumeId, function(parfumeData) {
-                if (parfumeData) {
-                    self.items.push(parfumeData);
-                    self.saveToStorage();
-                    self.updateUI();
-                    self.showMessage('Парфюмът е добавен за сравнение!', 'success');
-                    
-                    // Auto-open popup if we have 2 or more items
-                    if (self.items.length >= 2 && !self.isPopupOpen) {
-                        self.openPopup();
-                    }
-                } else {
-                    self.showMessage('Грешка при добавяне на парфюма.', 'error');
-                }
-            });
-        },
-
-        /**
-         * Remove parfume from comparison
-         */
-        removeParfume: function(parfumeId) {
-            var index = this.items.findIndex(item => item.id === parfumeId);
-            
-            if (index !== -1) {
-                var removedItem = this.items.splice(index, 1)[0];
-                this.saveToStorage();
-                this.updateUI();
-                this.showMessage(`${removedItem.title} е премахнат от сравнението.`, 'info');
-                
-                // Close popup if no items left
-                if (this.items.length === 0 && this.isPopupOpen) {
-                    this.closePopup();
-                }
-            }
-        },
-
-        /**
-         * Clear all items
-         */
-        clearAll: function() {
-            this.items = [];
-            this.saveToStorage();
+            // Добавяне
+            this.comparisonData.push(parfumeData);
+            this.saveComparisonData();
             this.updateUI();
-            this.closePopup();
-            this.showMessage('Всички парфюми са премахнати от сравнението.', 'info');
+            this.showMessage(this.strings.itemAdded, 'success');
+
+            // Auto-показване на popup ако е включено
+            if (this.settings.autoShowPopup && this.comparisonData.length >= 2 && !this.isPopupOpen) {
+                this.openPopup();
+            }
+
+            return true;
         },
 
-        /**
-         * Check if item exists
-         */
-        hasItem: function(parfumeId) {
-            return this.items.some(item => item.id === parfumeId);
+        // Премахване на елемент от сравнение
+        removeItem: function(parfumeId) {
+            var index = this.comparisonData.findIndex(function(item) {
+                return item.id == parfumeId;
+            });
+
+            if (index > -1) {
+                // Запазване за undo функционалност
+                if (this.settings.enableUndo) {
+                    this.lastRemovedItem = {
+                        data: this.comparisonData[index],
+                        index: index
+                    };
+                    localStorage.setItem(this.settings.undoKey, JSON.stringify(this.lastRemovedItem));
+                }
+
+                // Премахване
+                this.comparisonData.splice(index, 1);
+                this.saveComparisonData();
+                this.updateUI();
+                this.showMessage(this.strings.itemRemoved, 'success');
+
+                // Показване на undo бутон
+                if (this.settings.enableUndo && this.$undoButton) {
+                    this.$undoButton.show();
+                    
+                    // Auto-скриване след 10 секунди
+                    setTimeout(function() {
+                        this.$undoButton.fadeOut();
+                    }.bind(this), 10000);
+                }
+
+                return true;
+            }
+
+            return false;
         },
 
-        /**
-         * Get parfume data via AJAX
-         */
-        getParfumeData: function(parfumeId, callback) {
+        // Undo на последното действие
+        undoLastAction: function() {
+            if (!this.lastRemovedItem) {
+                try {
+                    var stored = localStorage.getItem(this.settings.undoKey);
+                    this.lastRemovedItem = stored ? JSON.parse(stored) : null;
+                } catch (e) {
+                    console.warn('Error loading undo data:', e);
+                }
+            }
+
+            if (this.lastRemovedItem) {
+                // Проверка за максимален брой
+                if (this.comparisonData.length >= this.settings.maxItems) {
+                    this.showMessage(this.strings.maxItemsReached.replace('{max}', this.settings.maxItems), 'warning');
+                    return;
+                }
+
+                // Възстановяване на елемента
+                var insertIndex = Math.min(this.lastRemovedItem.index, this.comparisonData.length);
+                this.comparisonData.splice(insertIndex, 0, this.lastRemovedItem.data);
+                
+                this.saveComparisonData();
+                this.updateUI();
+                this.showMessage('Възстановен: ' + this.lastRemovedItem.data.title, 'success');
+
+                // Изчистване на undo данните
+                this.lastRemovedItem = null;
+                localStorage.removeItem(this.settings.undoKey);
+                this.$undoButton.hide();
+            }
+        },
+
+        // Изчистване на всички елементи
+        clearAll: function() {
+            if (this.comparisonData.length === 0) {
+                return;
+            }
+
+            if (confirm('Сигурни ли сте, че искате да премахнете всички парфюми от сравнението?')) {
+                this.comparisonData = [];
+                this.saveComparisonData();
+                this.updateUI();
+                this.showMessage('Всички елементи са премахнати', 'success');
+            }
+        },
+
+        // Търсене на парфюми
+        searchParfumes: function(query) {
+            var $searchResults = this.$popup.find('.search-results');
+            $searchResults.html('<div class="search-loading">' + this.strings.loading + '</div>').show();
+
             $.ajax({
-                url: parfume_comparison_ajax.ajax_url,
+                url: this.settings.ajaxUrl,
                 type: 'POST',
                 data: {
-                    action: 'get_parfume_comparison_data',
-                    nonce: parfume_comparison_ajax.nonce,
-                    parfume_id: parfumeId
+                    action: 'parfume_search_suggestions',
+                    nonce: this.settings.nonce,
+                    query: query,
+                    exclude: this.comparisonData.map(function(item) { return item.id; })
                 },
                 success: function(response) {
-                    if (response.success) {
-                        callback(response.data);
+                    if (response.success && response.data.suggestions) {
+                        var html = '';
+                        response.data.suggestions.forEach(function(parfume) {
+                            html += `
+                                <div class="search-result-item" data-parfume='${JSON.stringify(parfume)}'>
+                                    <div class="result-image">
+                                        ${parfume.image ? `<img src="${parfume.image}" alt="${parfume.title}">` : '<span class="placeholder">🌸</span>'}
+                                    </div>
+                                    <div class="result-content">
+                                        <div class="result-title">${parfume.title}</div>
+                                        <div class="result-meta">${parfume.brand || ''} ${parfume.type || ''}</div>
+                                    </div>
+                                    <div class="result-action">
+                                        <span class="add-icon">+</span>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        $searchResults.html(html);
                     } else {
-                        callback(null);
+                        $searchResults.html('<div class="no-results">' + this.strings.noResults + '</div>');
                     }
-                },
+                }.bind(this),
                 error: function() {
-                    callback(null);
+                    $searchResults.html('<div class="search-error">' + this.strings.error + '</div>');
                 }
             });
         },
 
-        /**
-         * Update UI elements
-         */
-        updateUI: function() {
-            this.updateButtons();
-            this.updatePopup();
-            this.updateFloatingButton();
-        },
-
-        /**
-         * Update compare buttons
-         */
-        updateButtons: function() {
-            var self = this;
-            
-            $('.compare-btn').each(function() {
-                var $btn = $(this);
-                var parfumeId = parseInt($btn.data('parfume-id'));
-                var $icon = $btn.find('.compare-icon');
-                var $text = $btn.find('.compare-text');
-                
-                if (self.hasItem(parfumeId)) {
-                    $btn.addClass('active')
-                        .removeClass('btn-primary')
-                        .addClass('btn-danger')
-                        .data('action', 'remove');
-                    
-                    if ($icon.length) $icon.text('✓');
-                    if ($text.length) $text.text('Премахни');
-                } else {
-                    $btn.removeClass('active btn-danger')
-                        .addClass('btn-primary')
-                        .data('action', 'add');
-                    
-                    if ($icon.length) $icon.text('⚖');
-                    if ($text.length) $text.text('Сравни');
-                }
-            });
-        },
-
-        /**
-         * Update popup content
-         */
-        updatePopup: function() {
-            if (!$('#parfume-comparison-popup').length) return;
-
-            var $tbody = $('.comparison-tbody');
-            var $count = $('.comparison-count .count');
-            
-            // Update count
-            $count.text(this.items.length);
-            
-            if (this.items.length === 0) {
-                $tbody.html('<tr><td colspan="100%" class="no-items">Няма добавени парфюми за сравнение</td></tr>');
-                return;
-            }
-
-            // Build comparison table
-            this.buildComparisonTable($tbody);
-        },
-
-        /**
-         * Build comparison table
-         */
-        buildComparisonTable: function($tbody) {
-            $tbody.empty();
-            
-            if (this.items.length === 0) return;
-
-            // Get comparison criteria from settings
-            var criteria = this.getComparisonCriteria();
-            
-            // Header row with parfume images and titles
-            var headerHtml = '<tr class="parfume-header"><td class="criteria-label">Парфюм</td>';
-            
-            $.each(this.items, function(index, item) {
-                headerHtml += `
-                    <td class="parfume-cell">
-                        <div class="parfume-item-header">
-                            <button class="remove-item" data-parfume-id="${item.id}" title="Премахни">×</button>
-                            <div class="parfume-image">
-                                ${item.image ? `<img src="${item.image}" alt="${item.title}">` : '<div class="no-image">Няма снимка</div>'}
-                            </div>
-                            <div class="parfume-title">
-                                <a href="${item.url}" target="_blank">${item.title}</a>
-                            </div>
-                            <div class="parfume-brand">${item.brand || ''}</div>
-                        </div>
-                    </td>
-                `;
-            });
-            
-            headerHtml += '</tr>';
-            $tbody.append(headerHtml);
-
-            // Comparison criteria rows
-            $.each(criteria, function(key, criterion) {
-                var rowHtml = `<tr class="comparison-row"><td class="criteria-label">${criterion.label}</td>`;
-                
-                $.each(this.items, function(index, item) {
-                    var value = this.getItemValue(item, key, criterion);
-                    rowHtml += `<td class="parfume-cell">${value}</td>`;
-                }.bind(this));
-                
-                rowHtml += '</tr>';
-                $tbody.append(rowHtml);
-            }.bind(this));
-        },
-
-        /**
-         * Get comparison criteria
-         */
-        getComparisonCriteria: function() {
-            // Default criteria
-            var defaultCriteria = {
-                'brand': { label: 'Марка', type: 'text' },
-                'type': { label: 'Тип', type: 'text' },
-                'concentration': { label: 'Концентрация', type: 'text' },
-                'top_notes': { label: 'Върхни нотки', type: 'array' },
-                'middle_notes': { label: 'Средни нотки', type: 'array' },
-                'base_notes': { label: 'Базови нотки', type: 'array' },
-                'longevity': { label: 'Дълготрайност', type: 'text' },
-                'sillage': { label: 'Ароматна следа', type: 'text' },
-                'season': { label: 'Сезон', type: 'array' },
-                'intensity': { label: 'Интензивност', type: 'text' },
-                'price_range': { label: 'Ценови диапазон', type: 'text' },
-                'rating': { label: 'Рейтинг', type: 'rating' }
-            };
-
-            // Override with settings if available
-            if (typeof parfume_comparison_settings !== 'undefined' && 
-                parfume_comparison_settings.criteria) {
-                return parfume_comparison_settings.criteria;
-            }
-
-            return defaultCriteria;
-        },
-
-        /**
-         * Get item value for specific criterion
-         */
-        getItemValue: function(item, key, criterion) {
-            var value = item[key];
-            
-            if (!value) return '-';
-
-            switch (criterion.type) {
-                case 'array':
-                    if (Array.isArray(value)) {
-                        return value.join(', ');
-                    }
-                    return value;
-                    
-                case 'rating':
-                    var stars = '';
-                    var rating = parseFloat(value) || 0;
-                    for (var i = 1; i <= 5; i++) {
-                        stars += i <= rating ? '★' : '☆';
-                    }
-                    return stars + ' (' + rating + ')';
-                    
-                case 'text':
-                default:
-                    return value;
-            }
-        },
-
-        /**
-         * Update floating comparison button
-         */
-        updateFloatingButton: function() {
-            var $floatingBtn = $('.parfume-comparison-floating');
-            
-            if (this.items.length > 0) {
-                if (!$floatingBtn.length) {
-                    this.createFloatingButton();
-                    $floatingBtn = $('.parfume-comparison-floating');
-                }
-                
-                $floatingBtn.find('.count').text(this.items.length);
-                $floatingBtn.show();
-            } else {
-                $floatingBtn.hide();
-            }
-        },
-
-        /**
-         * Create floating comparison button
-         */
-        createFloatingButton: function() {
-            var buttonHtml = `
-                <div class="parfume-comparison-floating" style="display: none;">
-                    <button class="floating-compare-btn">
-                        <span class="icon">⚖</span>
-                        <span class="count">0</span>
-                    </button>
-                </div>
-            `;
-            
-            $('body').append(buttonHtml);
-            
-            // Event handler for floating button
-            $(document).on('click', '.floating-compare-btn', function() {
-                this.togglePopup();
-            }.bind(this));
-        },
-
-        /**
-         * Open popup
-         */
+        // Отваряне на popup
         openPopup: function() {
-            if (this.items.length === 0) {
-                this.showMessage('Добавете поне един парфюм за сравнение.', 'warning');
+            if (this.comparisonData.length === 0) {
+                this.showMessage('Няма добавени парфюми за сравнение', 'info');
                 return;
             }
 
-            var $popup = $('#parfume-comparison-popup');
-            
-            this.updatePopup();
-            this.repositionPopup();
-            
-            $popup.fadeIn(300);
+            this.loadComparisonData();
+            this.renderComparisonTable();
+            this.$popupOverlay.fadeIn(300);
             this.isPopupOpen = true;
-            
-            // Focus management for accessibility
-            $popup.find('.close-popup').focus();
+            this.isMinimized = false;
+            $('body').addClass('comparison-popup-open');
+
+            // Focus на първия интерактивен елемент
+            setTimeout(function() {
+                this.$popup.find('button, input').first().focus();
+            }.bind(this), 350);
         },
 
-        /**
-         * Close popup
-         */
+        // Затваряне на popup
         closePopup: function() {
-            $('#parfume-comparison-popup').fadeOut(300);
+            this.$popupOverlay.fadeOut(300);
             this.isPopupOpen = false;
+            this.isMinimized = false;
+            $('body').removeClass('comparison-popup-open');
+            
+            // Скриване на export menu
+            this.$popup.find('.export-menu').hide();
         },
 
-        /**
-         * Toggle popup
-         */
+        // Минимизиране на popup
+        minimizePopup: function() {
+            this.$popupOverlay.fadeOut(300);
+            this.isPopupOpen = false;
+            this.isMinimized = true;
+            $('body').removeClass('comparison-popup-open');
+        },
+
+        // Toggle на popup
         togglePopup: function() {
             if (this.isPopupOpen) {
                 this.closePopup();
@@ -539,165 +519,358 @@
             }
         },
 
-        /**
-         * Reposition popup
-         */
-        repositionPopup: function() {
-            var $popup = $('#parfume-comparison-popup');
-            var $window = $(window);
+        // Обновяване на UI
+        updateUI: function() {
+            var count = this.comparisonData.length;
             
-            // Center the popup
-            var left = ($window.width() - $popup.outerWidth()) / 2;
-            var top = ($window.height() - $popup.outerHeight()) / 2;
+            // Обновяване на floating button
+            this.$itemCount.text(count);
+            this.$popup.find('.counter-value').text(count);
             
-            // Ensure popup stays within viewport
-            left = Math.max(20, Math.min(left, $window.width() - $popup.outerWidth() - 20));
-            top = Math.max(20, Math.min(top, $window.height() - $popup.outerHeight() - 20));
-            
-            $popup.css({
-                left: left + 'px',
-                top: top + 'px'
+            if (count > 0) {
+                this.$floatingButton.show();
+            } else {
+                this.$floatingButton.hide();
+                if (this.isPopupOpen) {
+                    this.closePopup();
+                }
+            }
+
+            // Обновяване на comparison table
+            if (this.isPopupOpen) {
+                this.renderComparisonTable();
+            }
+
+            // Обновяване на external buttons
+            this.updateExternalButtons();
+        },
+
+        // Обновяване на външните бутони за сравнение
+        updateExternalButtons: function() {
+            var comparisonIds = this.comparisonData.map(function(item) {
+                return item.id.toString();
+            });
+
+            $('.parfume-compare-btn, .parfume-card-compare').each(function() {
+                var $btn = $(this);
+                var parfumeId = $btn.data('parfume-id');
+                
+                if (parfumeId && comparisonIds.indexOf(parfumeId.toString()) > -1) {
+                    $btn.addClass('active').find('.compare-text').text(window.parfumeComparison.strings.removeFromComparison || 'Премахни от сравнение');
+                } else {
+                    $btn.removeClass('active').find('.compare-text').text(window.parfumeComparison.strings.addToComparison || 'Добави за сравнение');
+                }
             });
         },
 
-        /**
-         * Show add parfume dialog
-         */
-        showAddParfumeDialog: function() {
-            var search = prompt('Въведете име на парфюм за търсене:');
-            if (search) {
-                this.searchParfumes(search);
+        // Рендериране на comparison таблица
+        renderComparisonTable: function() {
+            if (this.comparisonData.length === 0) {
+                this.$comparisonTable.hide();
+                this.$popup.find('.empty-state').show();
+                return;
             }
+
+            this.$popup.find('.empty-state').hide();
+            this.$comparisonTable.show();
+
+            // Заявка за пълните данни на парфюмите
+            this.fetchComparisonData();
         },
 
-        /**
-         * Search parfumes
-         */
-        searchParfumes: function(search) {
-            var self = this;
-            
+        // Заявка за пълни данни за сравнение
+        fetchComparisonData: function() {
+            var parfumeIds = this.comparisonData.map(function(item) {
+                return item.id;
+            });
+
             $.ajax({
-                url: parfume_comparison_ajax.ajax_url,
+                url: this.settings.ajaxUrl,
                 type: 'POST',
                 data: {
-                    action: 'search_parfumes_for_comparison',
-                    nonce: parfume_comparison_ajax.nonce,
-                    search: search
+                    action: 'parfume_get_comparison_data',
+                    nonce: this.settings.nonce,
+                    parfume_ids: parfumeIds
                 },
                 success: function(response) {
-                    if (response.success && response.data.length > 0) {
-                        self.showSearchResults(response.data);
+                    if (response.success && response.data) {
+                        this.renderTable(response.data);
                     } else {
-                        self.showMessage('Не са намерени парфюми.', 'info');
+                        this.showMessage('Грешка при зареждане на данните за сравнение', 'error');
                     }
-                },
+                }.bind(this),
                 error: function() {
-                    self.showMessage('Грешка при търсенето.', 'error');
+                    this.showMessage('Грешка при заявката за данни', 'error');
                 }
             });
         },
 
-        /**
-         * Show search results
-         */
-        showSearchResults: function(results) {
-            var self = this;
-            var resultsHtml = '<div class="search-results"><h4>Резултати от търсенето:</h4>';
-            
-            $.each(results, function(index, parfume) {
-                resultsHtml += `
-                    <div class="search-result-item">
-                        <span class="parfume-title">${parfume.title}</span>
-                        <span class="parfume-brand">${parfume.brand}</span>
-                        <button class="add-to-comparison" data-parfume-id="${parfume.id}">Добави</button>
-                    </div>
+        // Рендериране на таблицата с данни
+        renderTable: function(data) {
+            var $header = this.$comparisonTable.find('.table-header');
+            var $body = this.$comparisonTable.find('.table-body');
+
+            // Изчистване
+            $header.empty();
+            $body.empty();
+
+            // Header с парфюмите
+            var headerHtml = '<th class="criteria-header">Критерий</th>';
+            data.parfumes.forEach(function(parfume) {
+                headerHtml += `
+                    <th class="parfume-header">
+                        <div class="parfume-header-content">
+                            <button class="remove-item" data-parfume-id="${parfume.id}" title="Премахни от сравнение">×</button>
+                            <div class="parfume-image">
+                                ${parfume.image ? `<img src="${parfume.image}" alt="${parfume.title}">` : '<span class="placeholder">🌸</span>'}
+                            </div>
+                            <div class="parfume-info">
+                                <h4 class="parfume-title">${parfume.title}</h4>
+                                <div class="parfume-meta">${parfume.brand || ''} ${parfume.type || ''}</div>
+                            </div>
+                        </div>
+                    </th>
                 `;
             });
-            
-            resultsHtml += '</div>';
-            
-            // Show in popup or alert
-            alert('Функционалността за търсене ще бъде имплементирана в по-късна версия.');
+            $header.html(headerHtml);
+
+            // Body с критериите
+            data.criteria.forEach(function(criterion) {
+                if (!criterion.enabled) return;
+
+                var rowHtml = `<tr class="criterion-row criterion-${criterion.key}">`;
+                rowHtml += `<td class="criterion-label">${criterion.label}</td>`;
+                
+                data.parfumes.forEach(function(parfume) {
+                    var value = parfume.data[criterion.key] || '';
+                    rowHtml += `<td class="criterion-value">${this.formatCriterionValue(criterion.key, value)}</td>`;
+                }.bind(this));
+                
+                rowHtml += '</tr>';
+                $body.append(rowHtml);
+            }.bind(this));
         },
 
-        /**
-         * Load items from localStorage
-         */
-        loadFromStorage: function() {
-            try {
-                var stored = localStorage.getItem(this.storageKey);
-                if (stored) {
-                    this.items = JSON.parse(stored);
-                    
-                    // Validate items
-                    this.items = this.items.filter(function(item) {
-                        return item && item.id && item.title;
-                    });
+        // Форматиране на стойности според критерия
+        formatCriterionValue: function(criterionKey, value) {
+            switch (criterionKey) {
+                case 'rating':
+                    if (value) {
+                        var stars = '';
+                        var rating = parseFloat(value);
+                        for (var i = 1; i <= 5; i++) {
+                            stars += i <= rating ? '★' : '☆';
+                        }
+                        return `<span class="rating-stars">${stars}</span> <span class="rating-value">(${rating})</span>`;
+                    }
+                    return 'Няма оценки';
+
+                case 'price':
+                    if (value && value.min) {
+                        if (value.min === value.max) {
+                            return `${value.min} лв.`;
+                        } else {
+                            return `${value.min} - ${value.max} лв.`;
+                        }
+                    }
+                    return 'Няма данни за цена';
+
+                case 'notes':
+                    if (Array.isArray(value) && value.length > 0) {
+                        return value.slice(0, 5).map(function(note) {
+                            return `<span class="note-tag">${note}</span>`;
+                        }).join(' ');
+                    }
+                    return 'Няма данни';
+
+                case 'advantages':
+                case 'disadvantages':
+                    if (Array.isArray(value) && value.length > 0) {
+                        return '<ul class="pros-cons-list">' + 
+                               value.map(function(item) {
+                                   return `<li>${item}</li>`;
+                               }).join('') + 
+                               '</ul>';
+                    }
+                    return 'Няма данни';
+
+                default:
+                    return value || 'Няма данни';
+            }
+        },
+
+        // Export функции
+        exportToCSV: function() {
+            var parfumeIds = this.comparisonData.map(function(item) {
+                return item.id;
+            });
+
+            $.ajax({
+                url: this.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_export_comparison',
+                    nonce: this.settings.nonce,
+                    parfume_ids: parfumeIds,
+                    format: 'csv'
+                },
+                success: function(response) {
+                    if (response.success && response.data.download_url) {
+                        // Създаване на скрит линк за сваляне
+                        var link = document.createElement('a');
+                        link.href = response.data.download_url;
+                        link.download = 'parfume-comparison.csv';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    } else {
+                        this.showMessage('Грешка при експорт в CSV', 'error');
+                    }
+                }.bind(this),
+                error: function() {
+                    this.showMessage('Грешка при заявката за експорт', 'error');
                 }
-            } catch (e) {
-                console.error('Error loading comparison data:', e);
-                this.items = [];
-            }
+            });
         },
 
-        /**
-         * Save items to localStorage
-         */
-        saveToStorage: function() {
-            try {
-                localStorage.setItem(this.storageKey, JSON.stringify(this.items));
-            } catch (e) {
-                console.error('Error saving comparison data:', e);
-            }
+        // Export to PDF
+        exportToPDF: function() {
+            var parfumeIds = this.comparisonData.map(function(item) {
+                return item.id;
+            });
+
+            $.ajax({
+                url: this.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_export_comparison',
+                    nonce: this.settings.nonce,
+                    parfume_ids: parfumeIds,
+                    format: 'pdf'
+                },
+                success: function(response) {
+                    if (response.success && response.data.download_url) {
+                        window.open(response.data.download_url, '_blank');
+                    } else {
+                        this.showMessage('Грешка при експорт в PDF', 'error');
+                    }
+                }.bind(this),
+                error: function() {
+                    this.showMessage('Грешка при заявката за експорт', 'error');
+                }
+            });
         },
 
-        /**
-         * Show message to user
-         */
+        // Print comparison
+        printComparison: function() {
+            var printWindow = window.open('', '_blank');
+            var printContent = this.generatePrintContent();
+            
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
+        },
+
+        // Генериране на съдържание за принтиране
+        generatePrintContent: function() {
+            var tableHTML = this.$comparisonTable[0].outerHTML;
+            
+            return `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Сравнение на парфюми</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        table { border-collapse: collapse; width: 100%; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        th { background-color: #f2f2f2; font-weight: bold; }
+                        .parfume-image img { max-width: 50px; height: auto; }
+                        .note-tag { background: #e8f4f8; padding: 2px 6px; border-radius: 10px; font-size: 0.8em; }
+                        .rating-stars { color: #ffb400; }
+                        .pros-cons-list { margin: 0; padding-left: 20px; }
+                        .remove-item { display: none; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Сравнение на парфюми</h1>
+                    <p>Генерирано на: ${new Date().toLocaleDateString('bg-BG')}</p>
+                    ${tableHTML}
+                </body>
+                </html>
+            `;
+        },
+
+        // Показване на съобщения
         showMessage: function(message, type) {
             type = type || 'info';
             
-            // Create toast notification
-            var $toast = $(`
-                <div class="parfume-toast parfume-toast-${type}">
-                    <span class="toast-message">${message}</span>
-                    <button class="toast-close">×</button>
+            // Премахване на съществуващи съобщения
+            $('.comparison-message').remove();
+            
+            var $message = $(`
+                <div class="comparison-message comparison-message-${type}">
+                    <span class="message-text">${message}</span>
+                    <button class="message-close" aria-label="Затвори">&times;</button>
                 </div>
             `);
             
-            $('body').append($toast);
+            // Добавяне към popup или body
+            if (this.isPopupOpen) {
+                this.$popup.prepend($message);
+            } else {
+                $('body').prepend($message);
+            }
             
-            // Show toast
+            // Auto-скриване след 4 секунди
             setTimeout(function() {
-                $toast.addClass('show');
-            }, 100);
+                $message.fadeOut(function() {
+                    $message.remove();
+                });
+            }, 4000);
             
-            // Auto hide after 3 seconds
-            setTimeout(function() {
-                $toast.removeClass('show');
-                setTimeout(function() {
-                    $toast.remove();
-                }, 300);
-            }, 3000);
-            
-            // Manual close
-            $toast.find('.toast-close').on('click', function() {
-                $toast.removeClass('show');
-                setTimeout(function() {
-                    $toast.remove();
-                }, 300);
+            // Close button
+            $message.find('.message-close').on('click', function() {
+                $message.fadeOut(function() {
+                    $message.remove();
+                });
+            });
+        },
+
+        // External API за използване от други скриптове
+        addParfume: function(parfumeData) {
+            return this.addItem(parfumeData);
+        },
+
+        removeParfume: function(parfumeId) {
+            return this.removeItem(parfumeId);
+        },
+
+        getComparisonCount: function() {
+            return this.comparisonData.length;
+        },
+
+        getComparisonItems: function() {
+            return this.comparisonData.slice(); // Return copy
+        },
+
+        isParfumeInComparison: function(parfumeId) {
+            return this.comparisonData.some(function(item) {
+                return item.id == parfumeId;
             });
         }
     };
 
-    // Initialize when document is ready
+    // Инициализация при зареждане на DOM
     $(document).ready(function() {
-        if (typeof parfume_comparison_ajax !== 'undefined') {
-            ParfumeComparison.init();
-        }
+        parfumeComparison.init();
     });
 
-    // Expose to global scope
-    window.parfumeComparison = ParfumeComparison;
+    // Интеграция с основния frontend скрипт
+    if (window.parfumeCatalog) {
+        window.parfumeCatalog.comparison = parfumeComparison;
+    }
 
 })(jQuery);

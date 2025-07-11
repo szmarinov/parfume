@@ -1,8 +1,8 @@
 <?php
 /**
- * Parfume Catalog Scraper Module
+ * Parfume Catalog Scraper
  * 
- * Основен клас за скрейпване на продуктова информация от магазини
+ * Автоматично скрейпване на данни от магазини
  * 
  * @package Parfume_Catalog
  * @since 1.0.0
@@ -14,48 +14,56 @@ if (!defined('ABSPATH')) {
 }
 
 class Parfume_Catalog_Scraper {
-
-    // Константи за статус
+    
+    // Статуси за scraper записи
     const STATUS_PENDING = 'pending';
     const STATUS_SUCCESS = 'success';
     const STATUS_ERROR = 'error';
     const STATUS_BLOCKED = 'blocked';
-    const STATUS_MISSING_DATA = 'missing_data';
-
-    // Константи за логове
+    
+    // Log levels
     const LOG_INFO = 'info';
     const LOG_SUCCESS = 'success';
-    const LOG_ERROR = 'error';
     const LOG_WARNING = 'warning';
-
+    const LOG_ERROR = 'error';
+    const LOG_DEBUG = 'debug';
+    
     /**
-     * Конструктор
+     * Constructor
      */
     public function __construct() {
-        add_action('wp', array($this, 'init_cron'));
-        add_action('parfume_scraper_cron', array($this, 'run_batch_scraper'));
-        add_action('save_post', array($this, 'schedule_post_scraping'));
-        add_action('wp_ajax_parfume_manual_scrape', array($this, 'ajax_manual_scrape'));
-        add_action('wp_ajax_parfume_test_scraper_url', array($this, 'ajax_test_single_url'));
-        add_action('wp_ajax_parfume_get_scraper_stats', array($this, 'ajax_get_scraper_stats'));
-        add_action('admin_init', array($this, 'create_scraper_tables'));
+        add_action('init', array($this, 'init'));
+        add_action('parfume_scraper_cron', array($this, 'run_scheduled_scraper'));
+        
+        // AJAX hooks
+        add_action('wp_ajax_pc_manual_scrape', array($this, 'ajax_manual_scrape'));
+        add_action('wp_ajax_pc_test_single_url', array($this, 'ajax_test_single_url'));
+        add_action('wp_ajax_pc_get_scraper_stats', array($this, 'ajax_get_scraper_stats'));
     }
-
+    
+    /**
+     * Инициализация
+     */
+    public function init() {
+        $this->create_scraper_tables();
+        $this->schedule_scraper_if_needed();
+    }
+    
     /**
      * Създаване на необходимите таблици
      */
     public function create_scraper_tables() {
         global $wpdb;
-
+        
         $charset_collate = $wpdb->get_charset_collate();
-
+        
         // Таблица за scraper данни
         $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
-        $sql_scraper = "CREATE TABLE $scraper_table (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
-            post_id bigint(20) NOT NULL,
-            store_id varchar(50) NOT NULL,
-            product_url text NOT NULL,
+        $scraper_sql = "CREATE TABLE $scraper_table (
+            id int(11) NOT NULL AUTO_INCREMENT,
+            post_id int(11) NOT NULL,
+            store_id int(11) NOT NULL,
+            product_url varchar(500) NOT NULL,
             scraped_data longtext,
             status varchar(20) DEFAULT 'pending',
             error_message text,
@@ -65,166 +73,218 @@ class Parfume_Catalog_Scraper {
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            UNIQUE KEY post_store (post_id, store_id),
+            KEY post_id (post_id),
+            KEY store_id (store_id),
             KEY status (status),
             KEY next_scrape (next_scrape)
         ) $charset_collate;";
-
+        
         // Таблица за scraper логове
-        $log_table = $wpdb->prefix . 'parfume_scraper_log';
-        $sql_log = "CREATE TABLE $log_table (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
-            scraper_id mediumint(9),
+        $logs_table = $wpdb->prefix . 'parfume_scraper_logs';
+        $logs_sql = "CREATE TABLE $logs_table (
+            id int(11) NOT NULL AUTO_INCREMENT,
+            scraper_id int(11),
             level varchar(20) NOT NULL,
             message text NOT NULL,
             context longtext,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
+            KEY scraper_id (scraper_id),
             KEY level (level),
-            KEY created_at (created_at),
-            KEY scraper_id (scraper_id)
+            KEY created_at (created_at)
         ) $charset_collate;";
-
-        // Таблица за scraper queue
-        $queue_table = $wpdb->prefix . 'parfume_scraper_queue';
-        $sql_queue = "CREATE TABLE $queue_table (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
-            scraper_data_id mediumint(9) NOT NULL,
-            priority int(11) DEFAULT 0,
-            attempts int(11) DEFAULT 0,
-            status varchar(20) DEFAULT 'pending',
-            scheduled_for datetime,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            KEY scraper_data_id (scraper_data_id),
-            KEY status (status),
-            KEY scheduled_for (scheduled_for),
-            KEY priority (priority)
-        ) $charset_collate;";
-
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql_scraper);
-        dbDelta($sql_log);
-        dbDelta($sql_queue);
+        dbDelta($scraper_sql);
+        dbDelta($logs_sql);
     }
-
+    
     /**
-     * Инициализация на cron job
+     * Планиране на scraper ако е нужно
      */
-    public function init_cron() {
-        if (!wp_next_scheduled('parfume_scraper_cron')) {
-            $settings = get_option('parfume_catalog_scraper_settings', array());
-            $interval = isset($settings['interval']) ? $settings['interval'] : 12; // часове
-            
-            wp_schedule_event(time(), 'parfume_scraper_interval', 'parfume_scraper_cron');
+    private function schedule_scraper_if_needed() {
+        $settings = get_option('parfume_catalog_scraper_settings', array());
+        
+        if (!empty($settings['enabled']) && !wp_next_scheduled('parfume_scraper_cron')) {
+            wp_schedule_event(time(), 'hourly', 'parfume_scraper_cron');
         }
     }
-
+    
     /**
-     * Batch scraper - основна функция за автоматично скрейпване
+     * Стартиране на scheduled scraper
      */
-    public function run_batch_scraper() {
-        $this->log_scraper_activity(self::LOG_INFO, 'Стартиране на batch scraper');
-
+    public function run_scheduled_scraper() {
         $settings = get_option('parfume_catalog_scraper_settings', array());
-        $batch_size = isset($settings['batch_size']) ? intval($settings['batch_size']) : 10;
-
-        // Получаване на URL-и за скрейпване
-        $scrape_urls = $this->get_pending_scrape_urls($batch_size);
-
-        if (empty($scrape_urls)) {
-            $this->log_scraper_activity(self::LOG_INFO, 'Няма URL-и за скрейпване');
+        
+        if (empty($settings['enabled'])) {
             return;
         }
-
-        $processed = 0;
-        $successful = 0;
-        $failed = 0;
-
-        foreach ($scrape_urls as $scrape_item) {
-            $this->scrape_single_url($scrape_item);
-            $processed++;
-
-            // Проверка на статуса след скрейпване
-            $status = $this->get_scraper_status($scrape_item['id']);
-            if ($status === self::STATUS_SUCCESS) {
-                $successful++;
-            } elseif ($status === self::STATUS_ERROR) {
-                $failed++;
-            }
-
-            // Малка пауза между заявките
-            sleep(1);
-        }
-
-        $this->log_scraper_activity(self::LOG_INFO, sprintf(
-            'Batch scraper завършен. Обработени: %d, Успешни: %d, Неуспешни: %d',
-            $processed, $successful, $failed
-        ));
-    }
-
-    /**
-     * Получаване на pending URL-и за скрейпване
-     */
-    private function get_pending_scrape_urls($limit = 10) {
-        global $wpdb;
-
-        $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
-        $current_time = current_time('mysql');
-
-        $results = $wpdb->get_results($wpdb->prepare("
-            SELECT sd.*, pm.meta_value as stores_data
-            FROM $scraper_table sd
-            INNER JOIN {$wpdb->postmeta} pm ON sd.post_id = pm.post_id
-            WHERE sd.status IN (%s, %s, %s)
-            AND (sd.next_scrape IS NULL OR sd.next_scrape <= %s)
-            AND sd.retry_count < 3
-            AND pm.meta_key = '_parfume_stores'
-            ORDER BY sd.priority DESC, sd.next_scrape ASC
-            LIMIT %d
-        ", self::STATUS_PENDING, self::STATUS_ERROR, self::STATUS_MISSING_DATA, $current_time, $limit), ARRAY_A);
-
-        $scrape_urls = array();
-
-        foreach ($results as $result) {
-            $stores_data = maybe_unserialize($result['stores_data']);
-            
-            if (isset($stores_data[$result['store_id']]['product_url'])) {
-                $scrape_urls[] = array(
-                    'id' => $result['id'],
-                    'post_id' => $result['post_id'],
-                    'store_id' => $result['store_id'],
-                    'product_url' => $stores_data[$result['store_id']]['product_url'],
-                    'current_data' => $result
-                );
-            }
-        }
-
-        return $scrape_urls;
-    }
-
-    /**
-     * Скрейпване на единичен URL
-     */
-    private function scrape_single_url($scrape_item) {
-        $post_id = $scrape_item['post_id'];
-        $store_id = $scrape_item['store_id'];
-        $product_url = $scrape_item['product_url'];
         
-        $this->log_scraper_activity(self::LOG_INFO, sprintf(
-            'Скрейпване на URL: %s (Post: %d, Store: %s)', 
-            $product_url, $post_id, $store_id
-        ), $scrape_item['id']);
-
+        $this->log_scraper_activity(self::LOG_INFO, 'Стартиране на scheduled scraper');
+        
         try {
-            // Получаване на store schema
-            $store_info = Parfume_Catalog_Stores::get_store($store_id);
-            if (!$store_info) {
-                throw new Exception('Магазинът не е намерен');
+            $batch_size = isset($settings['batch_size']) ? intval($settings['batch_size']) : 10;
+            $processed = $this->process_scraper_batch($batch_size);
+            
+            $this->log_scraper_activity(self::LOG_SUCCESS, sprintf(
+                'Scheduled scraper завърши - обработени %d записа', 
+                $processed
+            ));
+            
+        } catch (Exception $e) {
+            $this->log_scraper_activity(self::LOG_ERROR, sprintf(
+                'Грешка в scheduled scraper: %s', 
+                $e->getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * Ръчно стартиране на scraper
+     */
+    public function run_manual_scraper() {
+        $this->log_scraper_activity(self::LOG_INFO, 'Стартиране на manual scraper');
+        
+        try {
+            $settings = get_option('parfume_catalog_scraper_settings', array());
+            $batch_size = isset($settings['batch_size']) ? intval($settings['batch_size']) : 50; // По-голям batch за manual
+            
+            $processed = $this->process_scraper_batch($batch_size);
+            
+            $this->log_scraper_activity(self::LOG_SUCCESS, sprintf(
+                'Manual scraper завърши - обработени %d записа', 
+                $processed
+            ));
+            
+            return array(
+                'success' => true,
+                'processed' => $processed,
+                'message' => sprintf(__('Обработени %d записа', 'parfume-catalog'), $processed)
+            );
+            
+        } catch (Exception $e) {
+            $this->log_scraper_activity(self::LOG_ERROR, sprintf(
+                'Грешка в manual scraper: %s', 
+                $e->getMessage()
+            ));
+            
+            return array(
+                'success' => false,
+                'error' => $e->getMessage()
+            );
+        }
+    }
+    
+    /**
+     * Стартиране на scraper само за неуспешни записи
+     */
+    public function run_failed_scraper() {
+        $this->log_scraper_activity(self::LOG_INFO, 'Стартиране на failed scraper');
+        
+        try {
+            global $wpdb;
+            $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
+            
+            // Reset статуса на неуспешни записи
+            $reset_count = $wpdb->update(
+                $scraper_table,
+                array(
+                    'status' => self::STATUS_PENDING,
+                    'retry_count' => 0,
+                    'error_message' => null,
+                    'next_scrape' => current_time('mysql')
+                ),
+                array('status' => self::STATUS_ERROR),
+                array('%s', '%d', '%s', '%s'),
+                array('%s')
+            );
+            
+            $this->log_scraper_activity(self::LOG_INFO, sprintf(
+                'Рестартирани %d неуспешни записа', 
+                $reset_count
+            ));
+            
+            // Обработване на рестартираните записи
+            $settings = get_option('parfume_catalog_scraper_settings', array());
+            $batch_size = isset($settings['batch_size']) ? intval($settings['batch_size']) : 20;
+            
+            $processed = $this->process_scraper_batch($batch_size);
+            
+            $this->log_scraper_activity(self::LOG_SUCCESS, sprintf(
+                'Failed scraper завърши - обработени %d записа', 
+                $processed
+            ));
+            
+            return array(
+                'success' => true,
+                'reset' => $reset_count,
+                'processed' => $processed,
+                'message' => sprintf(__('Рестартирани %d записа, обработени %d', 'parfume-catalog'), $reset_count, $processed)
+            );
+            
+        } catch (Exception $e) {
+            $this->log_scraper_activity(self::LOG_ERROR, sprintf(
+                'Грешка в failed scraper: %s', 
+                $e->getMessage()
+            ));
+            
+            return array(
+                'success' => false,
+                'error' => $e->getMessage()
+            );
+        }
+    }
+    
+    /**
+     * Обработване на партида записи за скрейпване
+     */
+    private function process_scraper_batch($batch_size = 10) {
+        global $wpdb;
+        
+        $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
+        
+        // Получаване на записи за обработване
+        $scrape_items = $wpdb->get_results($wpdb->prepare("
+            SELECT id, post_id, store_id, product_url 
+            FROM $scraper_table 
+            WHERE status = %s AND (next_scrape IS NULL OR next_scrape <= %s)
+            ORDER BY created_at ASC 
+            LIMIT %d
+        ", self::STATUS_PENDING, current_time('mysql'), $batch_size), ARRAY_A);
+        
+        if (empty($scrape_items)) {
+            return 0;
+        }
+        
+        $processed = 0;
+        $stores_schemas = get_option('parfume_catalog_stores_schemas', array());
+        
+        foreach ($scrape_items as $scrape_item) {
+            $this->process_single_scrape($scrape_item, $stores_schemas);
+            $processed++;
+            
+            // Малка пауза между заявките за да не натоварим сървъра
+            usleep(500000); // 0.5 секунди
+        }
+        
+        return $processed;
+    }
+    
+    /**
+     * Обработване на единичен scrape
+     */
+    private function process_single_scrape($scrape_item, $stores_schemas) {
+        $product_url = $scrape_item['product_url'];
+        $store_id = $scrape_item['store_id'];
+        
+        try {
+            // Проверка за валиден URL
+            if (!filter_var($product_url, FILTER_VALIDATE_URL)) {
+                throw new Exception('Невалиден URL');
             }
-
-            $schemas = get_option('parfume_catalog_scraper_schemas', array());
-            $schema = isset($schemas[$store_id]) ? $schemas[$store_id] : array();
+            
+            // Получаване на schema за магазина
+            $schema = isset($stores_schemas[$store_id]) ? $stores_schemas[$store_id] : array();
             
             if (empty($schema)) {
                 throw new Exception('Липсва schema за магазина');
@@ -268,7 +328,7 @@ class Parfume_Catalog_Scraper {
             ), $scrape_item['id']);
         }
     }
-
+    
     /**
      * Извличане на съдържанието на страница
      */
@@ -359,41 +419,30 @@ class Parfume_Catalog_Scraper {
             }
         }
 
-        // Извличане на информация за доставка
-        if (!empty($schema['delivery_selector'])) {
-            $delivery_elements = $this->query_selector($xpath, $schema['delivery_selector']);
-            if ($delivery_elements->length > 0) {
-                $delivery_text = trim($delivery_elements->item(0)->textContent);
-                $scraped_data['delivery_info'] = $this->clean_delivery_info($delivery_text);
-            }
-        }
-
-        // Извличане на варианти (ml)
-        if (!empty($schema['ml_selector'])) {
-            $variants_elements = $this->query_selector($xpath, $schema['ml_selector']);
+        // Извличане на варианти (мл)
+        if (!empty($schema['variants_selector'])) {
+            $variants_elements = $this->query_selector($xpath, $schema['variants_selector']);
             $variants = array();
             
-            foreach ($variants_elements as $variant_element) {
-                $variant_text = trim($variant_element->textContent);
-                $ml_value = $this->extract_ml_value($variant_text);
-                if ($ml_value) {
-                    $variant_data = array(
-                        'ml' => $ml_value,
-                        'text' => $variant_text
-                    );
-                    
-                    // Опит за извличане на цена за конкретния вариант
-                    $variant_price = $this->extract_variant_price($variant_element);
-                    if ($variant_price) {
-                        $variant_data['price'] = $variant_price;
-                    }
-                    
+            for ($i = 0; $i < $variants_elements->length; $i++) {
+                $variant_text = trim($variants_elements->item($i)->textContent);
+                $variant_data = $this->extract_variant_data($variant_text);
+                if ($variant_data) {
                     $variants[] = $variant_data;
                 }
             }
             
             if (!empty($variants)) {
-                $scraped_data['ml_options'] = $variants;
+                $scraped_data['variants'] = $variants;
+            }
+        }
+
+        // Извличане на информация за доставка
+        if (!empty($schema['delivery_selector'])) {
+            $delivery_elements = $this->query_selector($xpath, $schema['delivery_selector']);
+            if ($delivery_elements->length > 0) {
+                $delivery_text = trim($delivery_elements->item(0)->textContent);
+                $scraped_data['delivery'] = $this->clean_delivery_info($delivery_text);
             }
         }
 
@@ -401,84 +450,40 @@ class Parfume_Catalog_Scraper {
     }
 
     /**
-     * CSS селектор към XPath заявка
+     * CSS селектор към XPath конвертация
      */
-    private function query_selector($xpath, $selector) {
-        // Опростена конвертация от CSS към XPath
-        $selector = trim($selector);
+    private function query_selector($xpath, $css_selector) {
+        // Основни CSS към XPath конверсии
+        $css_selector = trim($css_selector);
         
-        // Клас селектор (.class-name)
-        if (strpos($selector, '.') === 0) {
-            $class_name = substr($selector, 1);
-            return $xpath->query("//*[contains(@class, '$class_name')]");
+        // Конвертиране на CSS селектори към XPath
+        $xpath_expression = $css_selector;
+        
+        // Клас селектори (.class)
+        $xpath_expression = preg_replace('/\.([a-zA-Z0-9_-]+)/', "[contains(@class, '$1')]", $xpath_expression);
+        
+        // ID селектори (#id)  
+        $xpath_expression = preg_replace('/#([a-zA-Z0-9_-]+)/', "[@id='$1']", $xpath_expression);
+        
+        // Атрибут селектори [attr=value]
+        $xpath_expression = preg_replace('/\[([a-zA-Z0-9_-]+)=[\'"]?([^\'"]*)[\'"]?\]/', "[@$1='$2']", $xpath_expression);
+        
+        // Tag селектори
+        $xpath_expression = preg_replace('/^([a-zA-Z][a-zA-Z0-9]*)([\[\.]|$)/', '//$1$2', $xpath_expression);
+        
+        // Descendant селектори (space)
+        $xpath_expression = preg_replace('/\s+/', '//', $xpath_expression);
+        
+        // Ако няма // в началото, добавяме
+        if (strpos($xpath_expression, '//') !== 0) {
+            $xpath_expression = '//' . $xpath_expression;
         }
         
-        // ID селектор (#id-name)
-        if (strpos($selector, '#') === 0) {
-            $id_name = substr($selector, 1);
-            return $xpath->query("//*[@id='$id_name']");
-        }
-        
-        // Tag селектор (div, span, etc.)
-        if (ctype_alpha($selector)) {
-            return $xpath->query("//$selector");
-        }
-        
-        // Атрибут селектор ([attribute=value])
-        if (preg_match('/\[([^=]+)=([^\]]+)\]/', $selector, $matches)) {
-            $attr = trim($matches[1]);
-            $value = trim($matches[2], '"\'');
-            return $xpath->query("//*[@$attr='$value']");
-        }
-        
-        // Комбинирани селектори (.class span)
-        if (strpos($selector, ' ') !== false) {
-            $parts = explode(' ', trim($selector));
-            $xpath_parts = array();
-            
-            foreach ($parts as $part) {
-                $part = trim($part);
-                if (empty($part)) continue;
-                
-                if (strpos($part, '.') === 0) {
-                    $class_name = substr($part, 1);
-                    $xpath_parts[] = "*[contains(@class, '$class_name')]";
-                } elseif (strpos($part, '#') === 0) {
-                    $id_name = substr($part, 1);
-                    $xpath_parts[] = "*[@id='$id_name']";
-                } else {
-                    $xpath_parts[] = $part;
-                }
-            }
-            
-            return $xpath->query('//' . implode('//', $xpath_parts));
-        }
-        
-        // Direct child selector (.parent > .child)
-        if (strpos($selector, '>') !== false) {
-            $parts = array_map('trim', explode('>', $selector));
-            $xpath_parts = array();
-            
-            foreach ($parts as $part) {
-                if (strpos($part, '.') === 0) {
-                    $class_name = substr($part, 1);
-                    $xpath_parts[] = "*[contains(@class, '$class_name')]";
-                } elseif (strpos($part, '#') === 0) {
-                    $id_name = substr($part, 1);
-                    $xpath_parts[] = "*[@id='$id_name']";
-                } else {
-                    $xpath_parts[] = $part;
-                }
-            }
-            
-            return $xpath->query('//' . implode('/', $xpath_parts));
-        }
-        
-        // Fallback - опитване като XPath заявка
         try {
-            return $xpath->query($selector);
+            return $xpath->query($xpath_expression);
         } catch (Exception $e) {
-            return $xpath->query("//*[contains(text(), '$selector')]");
+            // Fallback - търсене по text съдържание
+            return $xpath->query("//*[contains(text(), '{$css_selector}')]");
         }
     }
 
@@ -486,30 +491,21 @@ class Parfume_Catalog_Scraper {
      * Почистване на цена
      */
     private function clean_price($price_text) {
-        if (empty($price_text)) {
-            return 0;
+        // Премахване на всички символи освен цифри, точка и запетая
+        $clean_price = preg_replace('/[^\d\.,]/', '', $price_text);
+        
+        // Конвертиране на запетая към точка за decimal separator
+        $clean_price = str_replace(',', '.', $clean_price);
+        
+        // Ако има повече от една точка, запазваме последната като decimal separator
+        $parts = explode('.', $clean_price);
+        if (count($parts) > 2) {
+            $decimal = array_pop($parts);
+            $integer = implode('', $parts);
+            $clean_price = $integer . '.' . $decimal;
         }
         
-        // Премахване на всички символи освен цифри, точки и запетайки
-        $price = preg_replace('/[^\d.,]/', '', $price_text);
-        
-        if (empty($price)) {
-            return 0;
-        }
-        
-        // Конвертиране на запетайки в точки за decimal места
-        if (substr_count($price, ',') === 1 && substr_count($price, '.') === 0) {
-            $price = str_replace(',', '.', $price);
-        }
-        
-        // Премахване на хиляди разделители
-        if (substr_count($price, '.') > 1) {
-            $parts = explode('.', $price);
-            $decimal_part = array_pop($parts);
-            $price = implode('', $parts) . '.' . $decimal_part;
-        }
-        
-        return floatval($price);
+        return floatval($clean_price);
     }
 
     /**
@@ -518,24 +514,47 @@ class Parfume_Catalog_Scraper {
     private function clean_availability($availability_text) {
         $availability_text = strtolower(trim($availability_text));
         
-        // Българските думи за наличност
-        $available_keywords = array('наличен', 'в наличност', 'налично', 'available', 'in stock', 'на склад');
-        $unavailable_keywords = array('няма в наличност', 'изчерпан', 'out of stock', 'unavailable', 'не е наличен');
+        // Български индикатори за наличност
+        $available_keywords = array('наличен', 'налично', 'в наличност', 'available', 'in stock', 'на склад');
+        $unavailable_keywords = array('изчерпан', 'няма наличност', 'out of stock', 'unavailable', 'не е наличен');
         
         foreach ($available_keywords as $keyword) {
             if (strpos($availability_text, $keyword) !== false) {
-                return 'наличен';
+                return 'available';
             }
         }
         
         foreach ($unavailable_keywords as $keyword) {
             if (strpos($availability_text, $keyword) !== false) {
-                return 'няма в наличност';
+                return 'unavailable';
             }
         }
         
-        // Ако не може да се определи, връщаме оригиналния текст
-        return $availability_text;
+        return 'unknown';
+    }
+
+    /**
+     * Извличане на данни за вариант
+     */
+    private function extract_variant_data($variant_text) {
+        // Търсене на милилитри
+        if (preg_match('/(\d+)\s*ml/i', $variant_text, $matches)) {
+            $ml = intval($matches[1]);
+            
+            // Търсене на цена в същия текст
+            $price = null;
+            if (preg_match('/(\d+[\.,]?\d*)\s*лв/i', $variant_text, $price_matches)) {
+                $price = $this->clean_price($price_matches[1]);
+            }
+            
+            return array(
+                'ml' => $ml,
+                'price' => $price,
+                'text' => $variant_text
+            );
+        }
+        
+        return null;
     }
 
     /**
@@ -544,76 +563,27 @@ class Parfume_Catalog_Scraper {
     private function clean_delivery_info($delivery_text) {
         $delivery_text = trim($delivery_text);
         
-        // Почистване на излишни интервали и символи
-        $delivery_text = preg_replace('/\s+/', ' ', $delivery_text);
-        $delivery_text = str_replace(array("\n", "\r", "\t"), ' ', $delivery_text);
-        
-        // Определяне на безплатна доставка
-        $free_delivery_keywords = array('безплатна доставка', 'free shipping', 'free delivery', 'без такса доставка');
-        
-        $lower_text = strtolower($delivery_text);
-        foreach ($free_delivery_keywords as $keyword) {
-            if (strpos($lower_text, $keyword) !== false) {
-                return 'безплатна доставка';
-            }
+        // Търсене за безплатна доставка
+        if (preg_match('/(безплатна|free)/i', $delivery_text)) {
+            return array(
+                'type' => 'free',
+                'text' => $delivery_text
+            );
         }
         
-        return $delivery_text;
-    }
-
-    /**
-     * Извличане на ml стойност от текст
-     */
-    private function extract_ml_value($text) {
-        if (preg_match('/(\d+)\s*ml/i', $text, $matches)) {
-            return intval($matches[1]);
-        }
-        return null;
-    }
-
-    /**
-     * Извличане на цена за вариант
-     */
-    private function extract_variant_price($element) {
-        // Търсене на цена в същия елемент
-        $price_text = $element->textContent;
-        $price = $this->clean_price($price_text);
-        
-        if ($price > 0) {
-            return $price;
+        // Търсене за цена на доставка
+        if (preg_match('/(\d+[\.,]?\d*)\s*лв/i', $delivery_text, $matches)) {
+            return array(
+                'type' => 'paid',
+                'price' => $this->clean_price($matches[1]),
+                'text' => $delivery_text
+            );
         }
         
-        // Търсене в родителски елементи
-        $parent = $element->parentNode;
-        $levels = 0;
-        
-        while ($parent && $parent->nodeType === XML_ELEMENT_NODE && $levels < 3) {
-            $price_text = $parent->textContent;
-            $price = $this->clean_price($price_text);
-            
-            if ($price > 0) {
-                return $price;
-            }
-            
-            $parent = $parent->parentNode;
-            $levels++;
-        }
-        
-        // Търсене в съседни елементи
-        $sibling = $element->nextSibling;
-        while ($sibling) {
-            if ($sibling->nodeType === XML_ELEMENT_NODE) {
-                $price_text = $sibling->textContent;
-                $price = $this->clean_price($price_text);
-                
-                if ($price > 0) {
-                    return $price;
-                }
-            }
-            $sibling = $sibling->nextSibling;
-        }
-        
-        return null;
+        return array(
+            'type' => 'unknown',
+            'text' => $delivery_text
+        );
     }
 
     /**
@@ -659,7 +629,8 @@ class Parfume_Catalog_Scraper {
         ));
         
         $retry_count = $current_data ? intval($current_data->retry_count) + 1 : 1;
-        $max_retries = 3;
+        $settings = get_option('parfume_catalog_scraper_settings', array());
+        $max_retries = isset($settings['max_retries']) ? intval($settings['max_retries']) : 3;
         
         // Определяне на статус и следващ опит
         if ($retry_count >= $max_retries) {
@@ -694,7 +665,8 @@ class Parfume_Catalog_Scraper {
         $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
         
         $update_data = array(
-            'status' => $status
+            'status' => $status,
+            'updated_at' => current_time('mysql')
         );
         
         if ($error_message) {
@@ -705,31 +677,17 @@ class Parfume_Catalog_Scraper {
             $scraper_table,
             $update_data,
             array('id' => $scraper_id),
-            array('%s', '%s'),
+            array('%s', '%s', '%s'),
             array('%d')
         );
     }
 
     /**
-     * Получаване на статус на scraper
-     */
-    private function get_scraper_status($scraper_id) {
-        global $wpdb;
-        
-        $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
-        
-        return $wpdb->get_var($wpdb->prepare(
-            "SELECT status FROM $scraper_table WHERE id = %d",
-            $scraper_id
-        ));
-    }
-
-    /**
-     * Проверка дали да се спазва robots.txt
+     * Проверка дали да се зачита robots.txt
      */
     private function should_respect_robots() {
         $settings = get_option('parfume_catalog_scraper_settings', array());
-        return isset($settings['respect_robots']) ? (bool) $settings['respect_robots'] : true;
+        return !empty($settings['respect_robots']);
     }
 
     /**
@@ -737,325 +695,135 @@ class Parfume_Catalog_Scraper {
      */
     private function check_robots_txt($url) {
         $parsed_url = parse_url($url);
+        if (!$parsed_url) {
+            return true; // Ако не можем да парсираме URL-а, позволяваме скрейпването
+        }
+        
         $robots_url = $parsed_url['scheme'] . '://' . $parsed_url['host'] . '/robots.txt';
         
-        $response = wp_remote_get($robots_url, array('timeout' => 10));
+        $response = wp_remote_get($robots_url, array(
+            'timeout' => 5,
+            'user-agent' => 'Parfume-Catalog-Bot/1.0'
+        ));
         
-        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
-            return true; // Ако няма robots.txt, разрешаваме скрейпването
+        if (is_wp_error($response)) {
+            return true; // Ако не можем да достъпим robots.txt, позволяваме скрейпването
         }
         
         $robots_content = wp_remote_retrieve_body($response);
         
-        // Опростена проверка - търсим "Disallow: /"
-        if (strpos($robots_content, 'Disallow: /') !== false) {
-            return false;
-        }
+        // Проста проверка за Disallow правила
+        $lines = explode("\n", $robots_content);
+        $applies_to_us = false;
         
-        return true;
-    }
-
-    /**
-     * Планиране на скрейпване за пост
-     */
-    public function schedule_post_scraping($post_id) {
-        if (get_post_type($post_id) !== 'parfumes') {
-            return;
-        }
-
-        $post_stores = get_post_meta($post_id, '_parfume_stores', true);
-        if (!is_array($post_stores) || empty($post_stores)) {
-            return;
-        }
-
-        global $wpdb;
-        $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
-        
-        foreach ($post_stores as $store_id => $store_data) {
-            if (empty($store_data['product_url'])) {
+        foreach ($lines as $line) {
+            $line = trim($line);
+            
+            if (preg_match('/^User-agent:\s*\*/i', $line) || 
+                preg_match('/^User-agent:\s*Parfume-Catalog-Bot/i', $line)) {
+                $applies_to_us = true;
                 continue;
             }
             
-            // Проверка дали вече съществува запис
-            $existing = $wpdb->get_var($wpdb->prepare(
-                "SELECT id FROM $scraper_table WHERE post_id = %d AND store_id = %s",
-                $post_id, $store_id
-            ));
+            if (preg_match('/^User-agent:/i', $line)) {
+                $applies_to_us = false;
+                continue;
+            }
             
-            if (!$existing) {
-                // Добавяне на нов запис за скрейпване
-                $wpdb->insert(
-                    $scraper_table,
-                    array(
-                        'post_id' => $post_id,
-                        'store_id' => $store_id,
-                        'product_url' => $store_data['product_url'],
-                        'status' => self::STATUS_PENDING,
-                        'next_scrape' => current_time('mysql')
-                    ),
-                    array('%d', '%s', '%s', '%s', '%s')
-                );
-            } else {
-                // Обновяване на съществуващ запис
-                $wpdb->update(
-                    $scraper_table,
-                    array(
-                        'product_url' => $store_data['product_url'],
-                        'status' => self::STATUS_PENDING,
-                        'next_scrape' => current_time('mysql')
-                    ),
-                    array('id' => $existing),
-                    array('%s', '%s', '%s'),
-                    array('%d')
-                );
+            if ($applies_to_us && preg_match('/^Disallow:\s*(.+)/i', $line, $matches)) {
+                $disallowed_path = trim($matches[1]);
+                $path = parse_url($url, PHP_URL_PATH);
+                
+                if ($disallowed_path === '/' || 
+                    ($disallowed_path !== '/' && strpos($path, $disallowed_path) === 0)) {
+                    return false; // Disallowed
+                }
             }
         }
+        
+        return true; // Allowed
     }
 
     /**
-     * AJAX - Ръчно скрейпване
+     * Логиране на scraper активност
      */
-    public function ajax_manual_scrape() {
-        check_ajax_referer('parfume_catalog_admin_nonce', 'nonce');
-        
-        if (!current_user_can('edit_posts')) {
-            wp_send_json_error(__('Нямате права за тази операция.', 'parfume-catalog'));
-        }
-        
-        $post_id = intval($_POST['post_id']);
-        $store_id = sanitize_text_field($_POST['store_id']);
-        
-        // Получаване на scraper запис
+    private function log_scraper_activity($level, $message, $scraper_id = null) {
         global $wpdb;
-        $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
         
-        $scraper_record = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $scraper_table WHERE post_id = %d AND store_id = %s",
-            $post_id, $store_id
-        ), ARRAY_A);
+        $settings = get_option('parfume_catalog_scraper_settings', array());
+        $log_level = isset($settings['log_level']) ? $settings['log_level'] : self::LOG_INFO;
         
-        if (!$scraper_record) {
-            wp_send_json_error(__('Scraper записът не е намерен.', 'parfume-catalog'));
-        }
-        
-        // Получаване на product URL
-        $post_stores = get_post_meta($post_id, '_parfume_stores', true);
-        if (!isset($post_stores[$store_id]['product_url'])) {
-            wp_send_json_error(__('Product URL не е намерен.', 'parfume-catalog'));
-        }
-        
-        $scrape_item = array(
-            'id' => $scraper_record['id'],
-            'post_id' => $post_id,
-            'store_id' => $store_id,
-            'product_url' => $post_stores[$store_id]['product_url'],
-            'current_data' => $scraper_record
+        // Проверка дали това ниво трябва да се логира
+        $level_priority = array(
+            self::LOG_DEBUG => 0,
+            self::LOG_INFO => 1,
+            self::LOG_SUCCESS => 2,
+            self::LOG_WARNING => 3,
+            self::LOG_ERROR => 4
         );
         
-        // Изпълнение на скрейпването
-        $this->scrape_single_url($scrape_item);
-        
-        // Получаване на актуализираните данни
-        $updated_record = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $scraper_table WHERE id = %d",
-            $scraper_record['id']
-        ), ARRAY_A);
-        
-        if ($updated_record['status'] === self::STATUS_SUCCESS) {
-            $scraped_data = json_decode($updated_record['scraped_data'], true);
-            wp_send_json_success(array(
-                'message' => __('Скрейпването е успешно.', 'parfume-catalog'),
-                'data' => $scraped_data,
-                'last_scraped' => $updated_record['last_scraped']
-            ));
-        } else {
-            wp_send_json_error(array(
-                'message' => __('Скрейпването не е успешно.', 'parfume-catalog'),
-                'error' => $updated_record['error_message']
-            ));
-        }
-    }
-
-    /**
-     * AJAX - Тестване на единичен URL
-     */
-    public function ajax_test_single_url() {
-        check_ajax_referer('parfume_catalog_admin_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Нямате права за тази операция.', 'parfume-catalog'));
+        if ($level_priority[$level] < $level_priority[$log_level]) {
+            return;
         }
         
-        $test_url = esc_url_raw($_POST['test_url']);
-        $schema = array(
-            'price_selector' => sanitize_text_field($_POST['price_selector']),
-            'old_price_selector' => sanitize_text_field($_POST['old_price_selector']),
-            'availability_selector' => sanitize_text_field($_POST['availability_selector']),
-            'delivery_selector' => sanitize_text_field($_POST['delivery_selector']),
-            'ml_selector' => sanitize_text_field($_POST['ml_selector'])
-        );
-        
-        try {
-            $html_content = $this->fetch_page_content($test_url);
-            $scraped_data = $this->parse_page_data($html_content, $schema);
-            
-            wp_send_json_success(array(
-                'message' => __('Тестът е успешен.', 'parfume-catalog'),
-                'scraped_data' => $scraped_data,
-                'url' => $test_url
-            ));
-            
-        } catch (Exception $e) {
-            wp_send_json_error(array(
-                'message' => __('Тестът е неуспешен.', 'parfume-catalog'),
-                'error' => $e->getMessage(),
-                'url' => $test_url
-            ));
-        }
-    }
-
-    /**
-     * AJAX - Получаване на scraper статистики
-     */
-    public function ajax_get_scraper_stats() {
-        check_ajax_referer('parfume_catalog_admin_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Нямате права за тази операция.', 'parfume-catalog'));
-        }
-        
-        global $wpdb;
-        $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
-        
-        $stats = array();
-        
-        // Общ брой записи
-        $stats['total'] = $wpdb->get_var("SELECT COUNT(*) FROM $scraper_table");
-        
-        // Брой по статуси
-        $status_counts = $wpdb->get_results("
-            SELECT status, COUNT(*) as count 
-            FROM $scraper_table 
-            GROUP BY status
-        ");
-        
-        foreach ($status_counts as $status_count) {
-            $stats['by_status'][$status_count->status] = intval($status_count->count);
-        }
-        
-        // Последно успешно скрейпване
-        $last_success = $wpdb->get_var("
-            SELECT last_scraped 
-            FROM $scraper_table 
-            WHERE status = 'success' 
-            ORDER BY last_scraped DESC 
-            LIMIT 1
-        ");
-        
-        $stats['last_success'] = $last_success;
-        
-        // Брой неуспешни опити от последните 24 часа
-        $recent_errors = $wpdb->get_var($wpdb->prepare("
-            SELECT COUNT(*) 
-            FROM $scraper_table 
-            WHERE status = 'error' 
-            AND updated_at >= %s
-        ", date('Y-m-d H:i:s', strtotime('-24 hours'))));
-        
-        $stats['recent_errors'] = intval($recent_errors);
-        
-        wp_send_json_success($stats);
-    }
-
-    /**
-     * Логване на scraper активност
-     */
-    private function log_scraper_activity($level, $message, $scraper_id = null, $context = array()) {
-        global $wpdb;
-        
-        $log_table = $wpdb->prefix . 'parfume_scraper_log';
+        $logs_table = $wpdb->prefix . 'parfume_scraper_logs';
         
         $wpdb->insert(
-            $log_table,
+            $logs_table,
             array(
                 'scraper_id' => $scraper_id,
                 'level' => $level,
                 'message' => $message,
-                'context' => wp_json_encode($context)
+                'context' => wp_json_encode(array(
+                    'timestamp' => current_time('mysql'),
+                    'memory_usage' => memory_get_usage(true),
+                    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'WordPress Cron'
+                )),
+                'created_at' => current_time('mysql')
             ),
-            array('%d', '%s', '%s', '%s')
+            array('%d', '%s', '%s', '%s', '%s')
         );
         
-        // Почистване на стари логове (пазим само последните 1000)
-        $log_count = $wpdb->get_var("SELECT COUNT(*) FROM $log_table");
-        if ($log_count > 1000) {
-            $wpdb->query("
-                DELETE FROM $log_table 
-                WHERE id NOT IN (
-                    SELECT id FROM (
-                        SELECT id FROM $log_table 
-                        ORDER BY created_at DESC 
-                        LIMIT 1000
-                    ) AS t
-                )
-            ");
-        }
+        // Автоматично изчистване на стари логове
+        $this->cleanup_old_logs();
     }
 
     /**
-     * Публични помощни методи
+     * Изчистване на стари логове
      */
-
-    /**
-     * Получаване на скрейпнати данни за пост и магазин
-     */
-    public function get_scraped_data($post_id, $store_id) {
+    private function cleanup_old_logs() {
         global $wpdb;
         
-        $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
+        $settings = get_option('parfume_catalog_scraper_settings', array());
+        $retention_days = isset($settings['log_retention']) ? intval($settings['log_retention']) : 30;
         
-        $record = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $scraper_table WHERE post_id = %d AND store_id = %s",
-            $post_id, $store_id
-        ), ARRAY_A);
+        $logs_table = $wpdb->prefix . 'parfume_scraper_logs';
         
-        if (!$record) {
-            return false;
-        }
-        
-        $result = array(
-            'status' => $record['status'],
-            'last_scraped' => $record['last_scraped'],
-            'next_scrape' => $record['next_scrape'],
-            'error_message' => $record['error_message'],
-            'data' => array()
-        );
-        
-        if (!empty($record['scraped_data'])) {
-            $result['data'] = json_decode($record['scraped_data'], true);
-        }
-        
-        return $result;
+        $wpdb->query($wpdb->prepare("
+            DELETE FROM $logs_table 
+            WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)
+        ", $retention_days));
     }
 
     /**
-     * Тестване на URL с конкретна schema
+     * Тестване на schema за магазин
      */
-    public function test_url($url, $store_id) {
+    public function test_store_schema($store_id, $test_url) {
         try {
-            $schemas = get_option('parfume_catalog_scraper_schemas', array());
-            $schema = isset($schemas[$store_id]) ? $schemas[$store_id] : array();
+            $stores_schemas = get_option('parfume_catalog_stores_schemas', array());
+            $schema = isset($stores_schemas[$store_id]) ? $stores_schemas[$store_id] : array();
             
             if (empty($schema)) {
                 throw new Exception('Липсва schema за този магазин');
             }
             
-            $html_content = $this->fetch_page_content($url);
+            $html_content = $this->fetch_page_content($test_url);
             $scraped_data = $this->parse_page_data($html_content, $schema);
             
             return array(
                 'success' => true,
-                'data' => $scraped_data
+                'data' => $scraped_data,
+                'schema' => $schema
             );
             
         } catch (Exception $e) {
@@ -1067,31 +835,222 @@ class Parfume_Catalog_Scraper {
     }
 
     /**
-     * Получаване на всички scraper логове
+     * AJAX: Ръчно скрейпване
      */
-    public function get_scraper_logs($limit = 100, $level = null) {
-        global $wpdb;
+    public function ajax_manual_scrape() {
+        check_ajax_referer('parfume_admin_nonce', 'nonce');
         
-        $log_table = $wpdb->prefix . 'parfume_scraper_log';
-        
-        $where = '';
-        if ($level) {
-            $where = $wpdb->prepare(" WHERE level = %s", $level);
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Нямате достъп до тази функционалност.', 'parfume-catalog'));
         }
         
-        return $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM $log_table $where ORDER BY created_at DESC LIMIT %d",
-            $limit
+        $scraper_id = intval($_POST['scraper_id'] ?? 0);
+        
+        if (!$scraper_id) {
+            wp_send_json_error(__('Невалиден scraper ID.', 'parfume-catalog'));
+        }
+        
+        global $wpdb;
+        $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
+        
+        $scrape_item = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $scraper_table WHERE id = %d",
+            $scraper_id
         ), ARRAY_A);
+        
+        if (!$scrape_item) {
+            wp_send_json_error(__('Scraper записът не е намерен.', 'parfume-catalog'));
+        }
+        
+        $stores_schemas = get_option('parfume_catalog_stores_schemas', array());
+        $this->process_single_scrape($scrape_item, $stores_schemas);
+        
+        // Получаване на обновените данни
+        $updated_item = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $scraper_table WHERE id = %d",
+            $scraper_id
+        ), ARRAY_A);
+        
+        wp_send_json_success(array(
+            'message' => __('Скрейпването завърши.', 'parfume-catalog'),
+            'status' => $updated_item['status'],
+            'data' => json_decode($updated_item['scraped_data'], true),
+            'error' => $updated_item['error_message'],
+            'last_scraped' => $updated_item['last_scraped']
+        ));
     }
 
     /**
-     * Деактивиране на scraper
+     * AJAX: Тестване на единичен URL
      */
-    public static function deactivate_scraper() {
-        wp_clear_scheduled_hook('parfume_scraper_cron');
+    public function ajax_test_single_url() {
+        check_ajax_referer('parfume_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Нямате достъп до тази функционалност.', 'parfume-catalog'));
+        }
+        
+        $url = sanitize_url($_POST['url'] ?? '');
+        $store_id = intval($_POST['store_id'] ?? 0);
+        
+        if (empty($url)) {
+            wp_send_json_error(__('Моля въведете валиден URL.', 'parfume-catalog'));
+        }
+        
+        try {
+            if ($store_id) {
+                $result = $this->test_store_schema($store_id, $url);
+            } else {
+                // Основен тест на достъпност
+                $html_content = $this->fetch_page_content($url);
+                $result = array(
+                    'success' => true,
+                    'message' => __('URL-ът е достъпен.', 'parfume-catalog'),
+                    'content_length' => strlen($html_content)
+                );
+            }
+            
+            wp_send_json_success($result);
+            
+        } catch (Exception $e) {
+            wp_send_json_error(array(
+                'message' => __('Грешка при тестването: ', 'parfume-catalog') . $e->getMessage()
+            ));
+        }
+    }
+
+    /**
+     * AJAX: Получаване на scraper статистики
+     */
+    public function ajax_get_scraper_stats() {
+        check_ajax_referer('parfume_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Нямате достъп до тази функционалност.', 'parfume-catalog'));
+        }
+        
+        global $wpdb;
+        $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
+        
+        $stats = $wpdb->get_row("
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful,
+                SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as failed,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = 'blocked' THEN 1 ELSE 0 END) as blocked
+            FROM $scraper_table
+        ", ARRAY_A);
+        
+        wp_send_json_success($stats);
+    }
+
+    /**
+     * Добавяне на scraper запис за парфюм
+     */
+    public static function add_scraper_entry($post_id, $store_id, $product_url) {
+        global $wpdb;
+        
+        $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
+        
+        // Проверка дали записът вече съществува
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM $scraper_table WHERE post_id = %d AND store_id = %d",
+            $post_id, $store_id
+        ));
+        
+        if ($existing) {
+            // Обновяване на съществуващ запис
+            $wpdb->update(
+                $scraper_table,
+                array(
+                    'product_url' => $product_url,
+                    'status' => self::STATUS_PENDING,
+                    'next_scrape' => current_time('mysql')
+                ),
+                array('id' => $existing),
+                array('%s', '%s', '%s'),
+                array('%d')
+            );
+            return $existing;
+        } else {
+            // Добавяне на нов запис
+            $wpdb->insert(
+                $scraper_table,
+                array(
+                    'post_id' => $post_id,
+                    'store_id' => $store_id,
+                    'product_url' => $product_url,
+                    'status' => self::STATUS_PENDING,
+                    'next_scrape' => current_time('mysql')
+                ),
+                array('%d', '%d', '%s', '%s', '%s')
+            );
+            return $wpdb->insert_id;
+        }
+    }
+
+    /**
+     * Премахване на scraper запис
+     */
+    public static function remove_scraper_entry($post_id, $store_id) {
+        global $wpdb;
+        
+        $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
+        
+        $wpdb->delete(
+            $scraper_table,
+            array(
+                'post_id' => $post_id,
+                'store_id' => $store_id
+            ),
+            array('%d', '%d')
+        );
+    }
+
+    /**
+     * Получаване на scraper данни за парфюм
+     */
+    public static function get_scraped_data($post_id, $store_id = null) {
+        global $wpdb;
+        
+        $scraper_table = $wpdb->prefix . 'parfume_scraper_data';
+        
+        if ($store_id) {
+            $data = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $scraper_table WHERE post_id = %d AND store_id = %d",
+                $post_id, $store_id
+            ), ARRAY_A);
+            
+            if ($data && !empty($data['scraped_data'])) {
+                $data['scraped_data'] = json_decode($data['scraped_data'], true);
+            }
+            
+            return $data;
+        } else {
+            $results = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $scraper_table WHERE post_id = %d",
+                $post_id
+            ), ARRAY_A);
+            
+            foreach ($results as &$result) {
+                if (!empty($result['scraped_data'])) {
+                    $result['scraped_data'] = json_decode($result['scraped_data'], true);
+                }
+            }
+            
+            return $results;
+        }
+    }
+
+    /**
+     * Static метод за external access
+     */
+    public static function is_scraper_enabled() {
+        $settings = get_option('parfume_catalog_scraper_settings', array());
+        return !empty($settings['enabled']);
     }
 }
 
-// Initialize the scraper module
+// Инициализиране
 new Parfume_Catalog_Scraper();

@@ -235,42 +235,259 @@ class Parfume_Catalog {
         
         // Set activation flag
         $this->plugin_activated = true;
-        
-        // Save plugin version
+        update_option('parfume_catalog_activated', true);
         update_option('parfume_catalog_version', $this->version);
         update_option('parfume_catalog_db_version', $this->db_version);
         
-        // Create database tables
-        $this->create_database_tables();
+        // Create default options
+        $this->create_default_options();
         
-        // Set default options
-        $this->set_default_options();
+        // Create custom database tables if needed
+        $this->create_custom_tables();
         
-        // Flush rewrite rules
-        flush_rewrite_rules();
-        
-        // Schedule cron jobs
-        $this->schedule_cron_jobs();
-        
-        // Log activation
-        error_log('Parfume Catalog plugin activated successfully');
+        // Set rewrite flush flag
+        set_transient('parfume_catalog_flush_rewrite_rules', true, 30);
     }
     
     /**
      * Plugin deactivation
      */
     public function deactivate() {
-        // Clear scheduled cron jobs
-        $this->clear_cron_jobs();
-        
-        // Flush rewrite rules
-        flush_rewrite_rules();
+        // Clear scheduled hooks
+        wp_clear_scheduled_hook('parfume_catalog_scraper_cron');
+        wp_clear_scheduled_hook('parfume_catalog_cleanup_cron');
         
         // Clean up transients
         $this->cleanup_transients();
         
-        // Log deactivation
-        error_log('Parfume Catalog plugin deactivated');
+        // Flush rewrite rules
+        flush_rewrite_rules();
+        
+        // Set deactivation flag
+        update_option('parfume_catalog_activated', false);
+    }
+    
+    /**
+     * Initialize plugin
+     */
+    public function init() {
+        // Load text domain
+        $this->load_textdomain();
+        
+        // Check if rewrite rules need to be flushed
+        if (get_transient('parfume_catalog_flush_rewrite_rules')) {
+            flush_rewrite_rules();
+            delete_transient('parfume_catalog_flush_rewrite_rules');
+        }
+    }
+    
+    /**
+     * Load plugin text domain
+     */
+    public function load_textdomain() {
+        load_plugin_textdomain(
+            'parfume-catalog',
+            false,
+            dirname(plugin_basename(__FILE__)) . '/languages/'
+        );
+    }
+    
+    /**
+     * WordPress loaded hook
+     */
+    public function wp_loaded() {
+        // Plugin fully loaded - final initialization
+        do_action('parfume_catalog_loaded');
+    }
+    
+    /**
+     * Admin init hook
+     */
+    public function admin_init() {
+        // Check for plugin updates
+        $this->check_for_updates();
+    }
+    
+    /**
+     * Enqueue frontend scripts and styles
+     */
+    public function enqueue_frontend_scripts() {
+        // Only load on parfume-related pages
+        if (is_singular('parfumes') || is_post_type_archive('parfumes') || 
+            is_tax('parfume_type') || is_tax('parfume_vid') || is_tax('parfume_marki') || 
+            is_tax('parfume_season') || is_tax('parfume_intensity') || is_tax('parfume_notes')) {
+            
+            // Main frontend CSS
+            wp_enqueue_style(
+                'parfume-catalog-frontend',
+                PARFUME_CATALOG_PLUGIN_URL . 'assets/css/frontend.css',
+                array(),
+                PARFUME_CATALOG_VERSION
+            );
+            
+            // Mobile CSS
+            wp_enqueue_style(
+                'parfume-catalog-mobile',
+                PARFUME_CATALOG_PLUGIN_URL . 'assets/css/mobile.css',
+                array('parfume-catalog-frontend'),
+                PARFUME_CATALOG_VERSION,
+                'screen and (max-width: 768px)'
+            );
+            
+            // Main frontend JS
+            wp_enqueue_script(
+                'parfume-catalog-frontend',
+                PARFUME_CATALOG_PLUGIN_URL . 'assets/js/frontend.js',
+                array('jquery'),
+                PARFUME_CATALOG_VERSION,
+                true
+            );
+            
+            // Comparison functionality
+            if (parfume_catalog_is_comparison_enabled()) {
+                wp_enqueue_script(
+                    'parfume-catalog-comparison',
+                    PARFUME_CATALOG_PLUGIN_URL . 'assets/js/comparison.js',
+                    array('jquery', 'parfume-catalog-frontend'),
+                    PARFUME_CATALOG_VERSION,
+                    true
+                );
+            }
+            
+            // Mobile stores functionality
+            wp_enqueue_script(
+                'parfume-catalog-mobile-stores',
+                PARFUME_CATALOG_PLUGIN_URL . 'assets/js/mobile-stores.js',
+                array('jquery'),
+                PARFUME_CATALOG_VERSION,
+                true
+            );
+            
+            // Localize scripts
+            wp_localize_script('parfume-catalog-frontend', 'parfume_catalog_ajax', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('parfume_catalog_nonce'),
+                'strings' => array(
+                    'loading' => __('Зареждане...', 'parfume-catalog'),
+                    'error' => __('Грешка при зареждане', 'parfume-catalog'),
+                    'no_results' => __('Няма резултати', 'parfume-catalog'),
+                    'add_to_comparison' => __('Добави за сравнение', 'parfume-catalog'),
+                    'remove_from_comparison' => __('Премахни от сравнение', 'parfume-catalog'),
+                    'view_comparison' => __('Виж сравнение', 'parfume-catalog'),
+                    'close' => __('Затвори', 'parfume-catalog'),
+                    'copied' => __('Копирано!', 'parfume-catalog')
+                )
+            ));
+        }
+    }
+    
+    /**
+     * Enqueue admin scripts and styles
+     */
+    public function enqueue_admin_scripts($hook) {
+        global $post_type;
+        
+        // Load on all parfume-related admin pages
+        if ($post_type === 'parfumes' || strpos($hook, 'parfume-catalog') !== false) {
+            wp_enqueue_style(
+                'parfume-catalog-admin',
+                PARFUME_CATALOG_PLUGIN_URL . 'assets/css/admin.css',
+                array(),
+                PARFUME_CATALOG_VERSION
+            );
+            
+            wp_enqueue_script(
+                'parfume-catalog-admin',
+                PARFUME_CATALOG_PLUGIN_URL . 'assets/js/admin.js',
+                array('jquery', 'jquery-ui-sortable'),
+                PARFUME_CATALOG_VERSION,
+                true
+            );
+            
+            wp_localize_script('parfume-catalog-admin', 'parfume_catalog_admin_ajax', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('parfume_catalog_admin_nonce'),
+                'strings' => array(
+                    'confirm_delete' => __('Сигурни ли сте?', 'parfume-catalog'),
+                    'saving' => __('Запазване...', 'parfume-catalog'),
+                    'saved' => __('Запазено!', 'parfume-catalog'),
+                    'error' => __('Грешка!', 'parfume-catalog')
+                )
+            ));
+        }
+    }
+    
+    /**
+     * Handle AJAX requests
+     */
+    public function handle_ajax_request() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'parfume_catalog_nonce')) {
+            wp_die('Security check failed');
+        }
+        
+        $action = sanitize_text_field($_POST['action_type']);
+        
+        switch ($action) {
+            case 'add_to_comparison':
+                $this->handle_add_to_comparison();
+                break;
+                
+            case 'remove_from_comparison':
+                $this->handle_remove_from_comparison();
+                break;
+                
+            case 'load_comparison_popup':
+                $this->handle_load_comparison_popup();
+                break;
+                
+            default:
+                wp_send_json_error('Invalid action');
+        }
+    }
+    
+    /**
+     * Handle add to comparison
+     */
+    private function handle_add_to_comparison() {
+        $post_id = intval($_POST['post_id']);
+        
+        if (!$post_id || get_post_type($post_id) !== 'parfumes') {
+            wp_send_json_error('Invalid post ID');
+        }
+        
+        // Add to comparison logic here
+        wp_send_json_success(array(
+            'message' => __('Добавено за сравнение', 'parfume-catalog'),
+            'post_id' => $post_id
+        ));
+    }
+    
+    /**
+     * Handle remove from comparison
+     */
+    private function handle_remove_from_comparison() {
+        $post_id = intval($_POST['post_id']);
+        
+        if (!$post_id) {
+            wp_send_json_error('Invalid post ID');
+        }
+        
+        // Remove from comparison logic here
+        wp_send_json_success(array(
+            'message' => __('Премахнато от сравнение', 'parfume-catalog'),
+            'post_id' => $post_id
+        ));
+    }
+    
+    /**
+     * Handle load comparison popup
+     */
+    private function handle_load_comparison_popup() {
+        // Load comparison popup content logic here
+        wp_send_json_success(array(
+            'html' => '<div>Comparison popup content</div>'
+        ));
     }
     
     /**
@@ -289,614 +506,122 @@ class Parfume_Catalog {
     }
     
     /**
-     * Initialize plugin
+     * Create default options
      */
-    public function init() {
-        // Load text domain
-        $this->load_textdomain();
-        
-        // Register post types and taxonomies
-        $this->register_post_types_and_taxonomies();
-        
-        // Add custom image sizes
-        $this->add_image_sizes();
-        
-        // Register shortcodes
-        $this->register_shortcodes();
-    }
-    
-    /**
-     * Load text domain
-     */
-    public function load_textdomain() {
-        load_plugin_textdomain(
-            'parfume-catalog',
-            false,
-            dirname(plugin_basename(__FILE__)) . '/languages/'
-        );
-    }
-    
-    /**
-     * WordPress loaded
-     */
-    public function wp_loaded() {
-        // Plugin fully loaded
-        do_action('parfume_catalog_loaded');
-    }
-    
-    /**
-     * Admin init
-     */
-    public function admin_init() {
-        // Check for plugin updates
-        $this->check_for_updates();
-        
-        // Add admin capabilities
-        $this->add_admin_capabilities();
-    }
-    
-    /**
-     * Enqueue frontend scripts
-     */
-    public function enqueue_frontend_scripts() {
-        // Only enqueue on relevant pages
-        if (!$this->should_enqueue_frontend_scripts()) {
-            return;
-        }
-        
-        // Check if CSS file exists before enqueuing
-        $css_file = PARFUME_CATALOG_PLUGIN_DIR . 'assets/css/frontend.css';
-        if (file_exists($css_file)) {
-            wp_enqueue_style(
-                'parfume-catalog-frontend',
-                PARFUME_CATALOG_PLUGIN_URL . 'assets/css/frontend.css',
-                array(),
-                $this->version
-            );
-        }
-        
-        // Check if JS file exists before enqueuing
-        $js_file = PARFUME_CATALOG_PLUGIN_DIR . 'assets/js/frontend.js';
-        if (file_exists($js_file)) {
-            wp_enqueue_script(
-                'parfume-catalog-frontend',
-                PARFUME_CATALOG_PLUGIN_URL . 'assets/js/frontend.js',
-                array('jquery'),
-                $this->version,
-                true
-            );
-            
-            // Localize script
-            wp_localize_script('parfume-catalog-frontend', 'parfume_catalog_ajax', array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('parfume_catalog_nonce'),
-                'strings' => array(
-                    'loading' => __('Зареждане...', 'parfume-catalog'),
-                    'error' => __('Грешка при зареждане', 'parfume-catalog'),
-                    'success' => __('Успешно!', 'parfume-catalog')
-                )
-            ));
-        }
-    }
-    
-    /**
-     * Enqueue admin scripts
-     */
-    public function enqueue_admin_scripts($hook) {
-        // Only enqueue on plugin admin pages
-        if (!$this->is_plugin_admin_page($hook)) {
-            return;
-        }
-        
-        // Check if CSS file exists before enqueuing
-        $css_file = PARFUME_CATALOG_PLUGIN_DIR . 'assets/css/admin.css';
-        if (file_exists($css_file)) {
-            wp_enqueue_style(
-                'parfume-catalog-admin',
-                PARFUME_CATALOG_PLUGIN_URL . 'assets/css/admin.css',
-                array(),
-                $this->version
-            );
-        }
-        
-        // Check if JS file exists before enqueuing
-        $js_file = PARFUME_CATALOG_PLUGIN_DIR . 'assets/js/admin.js';
-        if (file_exists($js_file)) {
-            wp_enqueue_script(
-                'parfume-catalog-admin',
-                PARFUME_CATALOG_PLUGIN_URL . 'assets/js/admin.js',
-                array('jquery'),
-                $this->version,
-                true
-            );
-            
-            // Localize script
-            wp_localize_script('parfume-catalog-admin', 'parfume_catalog_admin_ajax', array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('parfume_catalog_admin_nonce'),
-                'strings' => array(
-                    'confirm_delete' => __('Сигурни ли сте, че искате да изтриете това?', 'parfume-catalog'),
-                    'processing' => __('Обработка...', 'parfume-catalog'),
-                    'error' => __('Възникна грешка', 'parfume-catalog')
-                )
-            ));
-        }
-    }
-    
-    /**
-     * Check if should enqueue frontend scripts
-     */
-    private function should_enqueue_frontend_scripts() {
-        return (
-            is_singular('parfumes') ||
-            is_post_type_archive('parfumes') ||
-            is_tax('parfume_type') ||
-            is_tax('parfume_vid') ||
-            is_tax('parfume_marki') ||
-            is_tax('parfume_season') ||
-            is_tax('parfume_intensity') ||
-            is_tax('parfume_notes') ||
-            is_page() // For pages that might have shortcodes
-        );
-    }
-    
-    /**
-     * Check if current page is plugin admin page
-     */
-    private function is_plugin_admin_page($hook) {
-        $plugin_pages = array(
-            'toplevel_page_parfume-catalog',
-            'parfume-catalog_page_parfume-catalog-settings',
-            'parfume-catalog_page_parfume-catalog-stores',
-            'parfume-catalog_page_parfume-catalog-scraper',
-            'parfume-catalog_page_parfume-catalog-comparison',
-            'parfume-catalog_page_parfume-catalog-comments',
-            'parfume-catalog_page_parfume-catalog-blog',
-            'parfume-catalog_page_parfume-catalog-docs'
-        );
-        
-        return in_array($hook, $plugin_pages) || 
-               (isset($_GET['post_type']) && $_GET['post_type'] === 'parfumes');
-    }
-    
-    /**
-     * Handle AJAX requests
-     */
-    public function handle_ajax_request() {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'parfume_catalog_nonce')) {
-            wp_die(__('Нарушение на сигурността', 'parfume-catalog'));
-        }
-        
-        $action = isset($_POST['action_type']) ? sanitize_text_field($_POST['action_type']) : '';
-        
-        switch ($action) {
-            case 'get_parfumes':
-                $this->ajax_get_parfumes();
-                break;
-            case 'add_to_comparison':
-                $this->ajax_add_to_comparison();
-                break;
-            case 'remove_from_comparison':
-                $this->ajax_remove_from_comparison();
-                break;
-            default:
-                wp_send_json_error(__('Невалидно действие', 'parfume-catalog'));
-        }
-    }
-    
-    /**
-     * AJAX get parfumes
-     */
-    private function ajax_get_parfumes() {
-        // Implementation for getting parfumes via AJAX
-        $args = array(
-            'post_type' => 'parfumes',
-            'posts_per_page' => 12,
-            'post_status' => 'publish'
-        );
-        
-        $query = new WP_Query($args);
-        $parfumes = array();
-        
-        if ($query->have_posts()) {
-            while ($query->have_posts()) {
-                $query->the_post();
-                $parfumes[] = array(
-                    'id' => get_the_ID(),
-                    'title' => get_the_title(),
-                    'url' => get_permalink(),
-                    'image' => get_the_post_thumbnail_url(get_the_ID(), 'medium'),
-                    'brand' => $this->get_parfume_brand(get_the_ID()),
-                    'type' => $this->get_parfume_type(get_the_ID()),
-                    'notes' => $this->get_parfume_notes(get_the_ID(), 3)
-                );
-            }
-            wp_reset_postdata();
-        }
-        
-        wp_send_json_success($parfumes);
-    }
-    
-    /**
-     * AJAX add to comparison
-     */
-    private function ajax_add_to_comparison() {
-        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-        
-        if (!$post_id || get_post_type($post_id) !== 'parfumes') {
-            wp_send_json_error(__('Невалиден парфюм', 'parfume-catalog'));
-        }
-        
-        // This would be handled by the comparison module
-        wp_send_json_success(array(
-            'message' => __('Парфюмът е добавен за сравнение', 'parfume-catalog'),
-            'post_id' => $post_id
-        ));
-    }
-    
-    /**
-     * AJAX remove from comparison
-     */
-    private function ajax_remove_from_comparison() {
-        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-        
-        if (!$post_id) {
-            wp_send_json_error(__('Невалиден парфюм', 'parfume-catalog'));
-        }
-        
-        // This would be handled by the comparison module
-        wp_send_json_success(array(
-            'message' => __('Парфюмът е премахнат от сравнение', 'parfume-catalog'),
-            'post_id' => $post_id
-        ));
-    }
-    
-    /**
-     * Create database tables
-     */
-    private function create_database_tables() {
-        global $wpdb;
-        
-        $charset_collate = $wpdb->get_charset_collate();
-        
-        // Create tables only if they don't exist
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        
-        // Log table creation
-        error_log('Parfume Catalog: Creating database tables');
-    }
-    
-    /**
-     * Set default options
-     */
-    private function set_default_options() {
+    private function create_default_options() {
         $default_options = array(
             'archive_slug' => 'parfiumi',
-            'type_slug' => 'tip',
-            'brand_slug' => 'marki',
-            'season_slug' => 'season',
+            'type_slug' => 'parfiumi',
+            'vid_slug' => 'parfiumi',
+            'marki_slug' => 'parfiumi/marki',
+            'season_slug' => 'parfiumi/season',
             'notes_slug' => 'notes',
             'comparison_enabled' => true,
             'comments_enabled' => true,
             'scraper_enabled' => true,
-            'scraper_interval' => 12
+            'related_count' => 4,
+            'recent_count' => 4,
+            'brand_count' => 4
         );
         
         add_option('parfume_catalog_options', $default_options);
     }
     
     /**
-     * Register post types and taxonomies
+     * Create custom database tables
      */
-    private function register_post_types_and_taxonomies() {
-        // This will be handled by the Post Types class
-        do_action('parfume_catalog_register_post_types');
+    private function create_custom_tables() {
+        global $wpdb;
+        
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        // Table for store data
+        $table_name = $wpdb->prefix . 'parfume_stores';
+        $sql = "CREATE TABLE $table_name (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL,
+            slug varchar(255) NOT NULL,
+            logo_url varchar(500),
+            affiliate_url varchar(500),
+            scraper_schema longtext,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY slug (slug)
+        ) $charset_collate;";
+        
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+        
+        // Table for scraped data
+        $table_name = $wpdb->prefix . 'parfume_scraped_data';
+        $sql = "CREATE TABLE $table_name (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            post_id bigint(20) unsigned NOT NULL,
+            store_id bigint(20) unsigned NOT NULL,
+            product_url varchar(500) NOT NULL,
+            price decimal(10,2),
+            old_price decimal(10,2),
+            currency varchar(10),
+            availability varchar(100),
+            shipping_info text,
+            variants longtext,
+            last_scraped datetime,
+            status varchar(50) DEFAULT 'pending',
+            error_message text,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY post_id (post_id),
+            KEY store_id (store_id),
+            KEY last_scraped (last_scraped)
+        ) $charset_collate;";
+        
+        dbDelta($sql);
     }
     
     /**
-     * Add custom image sizes
-     */
-    private function add_image_sizes() {
-        add_image_size('parfume-thumbnail', 300, 400, true);
-        add_image_size('parfume-medium', 600, 800, true);
-        add_image_size('parfume-large', 900, 1200, true);
-    }
-    
-    /**
-     * Register shortcodes
-     */
-    private function register_shortcodes() {
-        add_shortcode('parfume_list', array($this, 'parfume_list_shortcode'));
-        add_shortcode('parfume_brands', array($this, 'parfume_brands_shortcode'));
-        add_shortcode('parfume_notes', array($this, 'parfume_notes_shortcode'));
-        add_shortcode('parfume_comparison', array($this, 'parfume_comparison_shortcode'));
-    }
-    
-    /**
-     * Shortcode for parfume list
-     */
-    public function parfume_list_shortcode($atts) {
-        $atts = shortcode_atts(array(
-            'limit' => 12,
-            'brand' => '',
-            'type' => '',
-            'season' => ''
-        ), $atts);
-        
-        ob_start();
-        
-        $args = array(
-            'post_type' => 'parfumes',
-            'posts_per_page' => intval($atts['limit']),
-            'post_status' => 'publish'
-        );
-        
-        // Add taxonomy queries based on shortcode attributes
-        if (!empty($atts['brand'])) {
-            $args['tax_query'][] = array(
-                'taxonomy' => 'parfume_marki',
-                'field' => 'slug',
-                'terms' => $atts['brand']
-            );
-        }
-        
-        if (!empty($atts['type'])) {
-            $args['tax_query'][] = array(
-                'taxonomy' => 'parfume_type',
-                'field' => 'slug',
-                'terms' => $atts['type']
-            );
-        }
-        
-        if (!empty($atts['season'])) {
-            $args['tax_query'][] = array(
-                'taxonomy' => 'parfume_season',
-                'field' => 'slug',
-                'terms' => $atts['season']
-            );
-        }
-        
-        $query = new WP_Query($args);
-        
-        if ($query->have_posts()) {
-            echo '<div class="parfume-catalog-list">';
-            while ($query->have_posts()) {
-                $query->the_post();
-                $this->render_parfume_item(get_the_ID());
-            }
-            echo '</div>';
-            wp_reset_postdata();
-        } else {
-            echo '<p>' . __('Няма намерени парфюми.', 'parfume-catalog') . '</p>';
-        }
-        
-        return ob_get_clean();
-    }
-    
-    /**
-     * Shortcode for brands
-     */
-    public function parfume_brands_shortcode($atts) {
-        $atts = shortcode_atts(array(
-            'limit' => -1,
-            'orderby' => 'name',
-            'order' => 'ASC'
-        ), $atts);
-        
-        $brands = get_terms(array(
-            'taxonomy' => 'parfume_marki',
-            'hide_empty' => true,
-            'number' => intval($atts['limit']),
-            'orderby' => $atts['orderby'],
-            'order' => $atts['order']
-        ));
-        
-        if (!$brands || is_wp_error($brands)) {
-            return '<p>' . __('Няма намерени марки.', 'parfume-catalog') . '</p>';
-        }
-        
-        ob_start();
-        echo '<div class="parfume-brands-list">';
-        foreach ($brands as $brand) {
-            echo '<a href="' . get_term_link($brand) . '" class="parfume-brand-item">';
-            echo esc_html($brand->name);
-            echo ' <span class="count">(' . $brand->count . ')</span>';
-            echo '</a>';
-        }
-        echo '</div>';
-        
-        return ob_get_clean();
-    }
-    
-    /**
-     * Shortcode for notes
-     */
-    public function parfume_notes_shortcode($atts) {
-        $atts = shortcode_atts(array(
-            'group' => '',
-            'limit' => -1
-        ), $atts);
-        
-        $args = array(
-            'taxonomy' => 'parfume_notes',
-            'hide_empty' => true,
-            'number' => intval($atts['limit'])
-        );
-        
-        if (!empty($atts['group'])) {
-            $args['meta_query'] = array(
-                array(
-                    'key' => 'note_group',
-                    'value' => $atts['group'],
-                    'compare' => '='
-                )
-            );
-        }
-        
-        $notes = get_terms($args);
-        
-        if (!$notes || is_wp_error($notes)) {
-            return '<p>' . __('Няма намерени нотки.', 'parfume-catalog') . '</p>';
-        }
-        
-        ob_start();
-        echo '<div class="parfume-notes-list">';
-        foreach ($notes as $note) {
-            echo '<span class="parfume-note-item">';
-            echo esc_html($note->name);
-            echo '</span>';
-        }
-        echo '</div>';
-        
-        return ob_get_clean();
-    }
-    
-    /**
-     * Shortcode for comparison
-     */
-    public function parfume_comparison_shortcode($atts) {
-        if (!class_exists('Parfume_Catalog_Comparison')) {
-            return '<p>' . __('Модулът за сравнение не е активен.', 'parfume-catalog') . '</p>';
-        }
-        
-        // This would be handled by the comparison module
-        return '<div id="parfume-comparison-widget"></div>';
-    }
-    
-    /**
-     * Render parfume item
-     */
-    private function render_parfume_item($post_id) {
-        $brand = $this->get_parfume_brand($post_id);
-        $type = $this->get_parfume_type($post_id);
-        $notes = $this->get_parfume_notes($post_id, 3);
-        
-        echo '<div class="parfume-item" data-post-id="' . $post_id . '">';
-        echo '<div class="parfume-image">';
-        if (has_post_thumbnail($post_id)) {
-            echo '<a href="' . get_permalink($post_id) . '">';
-            echo get_the_post_thumbnail($post_id, 'parfume-thumbnail');
-            echo '</a>';
-        }
-        echo '</div>';
-        
-        echo '<div class="parfume-content">';
-        echo '<h3 class="parfume-title"><a href="' . get_permalink($post_id) . '">' . get_the_title($post_id) . '</a></h3>';
-        
-        if ($brand) {
-            echo '<div class="parfume-brand">' . esc_html($brand) . '</div>';
-        }
-        
-        if ($type) {
-            echo '<div class="parfume-type">' . esc_html($type) . '</div>';
-        }
-        
-        if (!empty($notes)) {
-            echo '<div class="parfume-notes">';
-            echo '<span class="notes-label">' . __('Нотки:', 'parfume-catalog') . '</span>';
-            echo implode(', ', $notes);
-            echo '</div>';
-        }
-        
-        echo '</div>';
-        echo '</div>';
-    }
-    
-    /**
-     * Schedule cron jobs
-     */
-    private function schedule_cron_jobs() {
-        // Schedule scraper cron job
-        if (!wp_next_scheduled('parfume_catalog_scraper_cron')) {
-            wp_schedule_event(time(), 'twicedaily', 'parfume_catalog_scraper_cron');
-        }
-        
-        // Schedule cleanup cron job
-        if (!wp_next_scheduled('parfume_catalog_cleanup_cron')) {
-            wp_schedule_event(time(), 'daily', 'parfume_catalog_cleanup_cron');
-        }
-    }
-    
-    /**
-     * Clear cron jobs
-     */
-    private function clear_cron_jobs() {
-        wp_clear_scheduled_hook('parfume_catalog_scraper_cron');
-        wp_clear_scheduled_hook('parfume_catalog_cleanup_cron');
-    }
-    
-    /**
-     * Check for updates
+     * Check for plugin updates
      */
     private function check_for_updates() {
         $current_version = get_option('parfume_catalog_version', '0.0.0');
         
-        if (version_compare($current_version, $this->version, '<')) {
+        if (version_compare($current_version, PARFUME_CATALOG_VERSION, '<')) {
             $this->perform_update($current_version);
+            update_option('parfume_catalog_version', PARFUME_CATALOG_VERSION);
         }
     }
     
     /**
-     * Perform update
+     * Perform plugin update
      */
-    private function perform_update($from_version) {
-        // Update database if needed
-        $this->update_database($from_version);
+    private function perform_update($old_version) {
+        // Update database structure if needed
+        $this->create_custom_tables();
         
-        // Update options
-        update_option('parfume_catalog_version', $this->version);
-        
-        // Flush rewrite rules
-        flush_rewrite_rules();
-        
-        // Log update
-        error_log("Parfume Catalog updated from {$from_version} to {$this->version}");
+        // Flush rewrite rules after update
+        set_transient('parfume_catalog_flush_rewrite_rules', true, 30);
     }
     
     /**
-     * Update database
-     */
-    private function update_database($from_version) {
-        // Database update logic based on version
-        if (version_compare($from_version, '1.0.0', '<')) {
-            // Updates for version 1.0.0
-        }
-    }
-    
-    /**
-     * Add admin capabilities
-     */
-    private function add_admin_capabilities() {
-        $role = get_role('administrator');
-        if ($role) {
-            $role->add_cap('manage_parfume_catalog');
-            $role->add_cap('edit_parfumes');
-            $role->add_cap('edit_others_parfumes');
-            $role->add_cap('publish_parfumes');
-            $role->add_cap('read_private_parfumes');
-            $role->add_cap('delete_parfumes');
-            $role->add_cap('delete_private_parfumes');
-            $role->add_cap('delete_published_parfumes');
-            $role->add_cap('delete_others_parfumes');
-            $role->add_cap('edit_private_parfumes');
-            $role->add_cap('edit_published_parfumes');
-        }
-    }
-    
-    /**
-     * Helper functions
+     * Get parfume brand name
      */
     private function get_parfume_brand($post_id) {
         $brands = get_the_terms($post_id, 'parfume_marki');
         return $brands && !is_wp_error($brands) ? $brands[0]->name : '';
     }
     
+    /**
+     * Get parfume type
+     */
     private function get_parfume_type($post_id) {
         $types = get_the_terms($post_id, 'parfume_type');
         return $types && !is_wp_error($types) ? $types[0]->name : '';
     }
     
+    /**
+     * Get parfume notes
+     */
     private function get_parfume_notes($post_id, $limit = 5) {
         $notes = get_the_terms($post_id, 'parfume_notes');
         if (!$notes || is_wp_error($notes)) {

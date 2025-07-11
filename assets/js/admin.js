@@ -1,1305 +1,1425 @@
 /**
- * Admin JavaScript for Parfume Catalog Plugin
+ * Parfume Catalog Admin JavaScript
  * 
- * @package ParfumeCatalog
+ * Административна JavaScript функционалност
+ * 
+ * @package Parfume_Catalog
+ * @since 1.0.0
  */
 
 (function($) {
     'use strict';
 
-    // Global admin object
-    window.ParfumeAdmin = {
+    // Глобален admin обект
+    window.parfumeAdmin = {
+        
+        // Настройки
+        settings: {
+            ajaxUrl: window.parfume_catalog_admin_ajax ? window.parfume_catalog_admin_ajax.ajax_url : ajaxurl,
+            nonce: window.parfume_catalog_admin_ajax ? window.parfume_catalog_admin_ajax.nonce : '',
+            strings: window.parfume_catalog_admin_ajax ? window.parfume_catalog_admin_ajax.strings : {}
+        },
+
+        // Инициализация
         init: function() {
             this.initTabs();
-            this.initStoreManager();
-            this.initStoreModal();
-            this.initStoreMetaBox();
-            this.initScraperInterface();
-            this.initTestTool();
-            this.initComparison();
-            this.initImportExport();
-            this.initNotifications();
-            this.initFormValidation();
-            this.initMediaUploader();
+            this.initForms();
+            this.initModals();
+            this.initFileUploads();
+            this.initDragDrop();
+            this.initTooltips();
+            this.initConfirmations();
+            this.initStores();
+            this.initScraper();
+            this.initComments();
+            this.initMetaBoxes();
+            this.initSettings();
+            
+            console.log('Parfume Admin initialized');
         },
 
-        /**
-         * Initialize tab navigation
-         */
+        // Tab navigation
         initTabs: function() {
-            $('.parfume-nav-tab').on('click', function(e) {
+            $(document).on('click', '.nav-tab', function(e) {
                 e.preventDefault();
+                var $tab = $(this);
+                var target = $tab.attr('href') || $tab.data('target');
                 
-                var target = $(this).attr('href');
-                var $targetSection = $(target);
+                if (!target) return;
                 
-                if ($targetSection.length) {
-                    // Update active tab
-                    $('.parfume-nav-tab').removeClass('nav-tab-active');
-                    $(this).addClass('nav-tab-active');
-                    
-                    // Show target section
-                    $('.parfume-tab-content').hide();
-                    $targetSection.show();
-                    
-                    // Update URL hash
-                    if (history.pushState) {
-                        history.pushState(null, null, target);
-                    }
-                }
+                // Remove active class from all tabs and contents
+                $tab.siblings('.nav-tab').removeClass('nav-tab-active');
+                $tab.addClass('nav-tab-active');
+                
+                // Hide all tab contents and show target
+                $('.tab-content').removeClass('active').hide();
+                $(target).addClass('active').show();
+                
+                // Trigger custom event
+                $(document).trigger('parfume:tab:changed', [target, $tab]);
             });
-            
-            // Show initial tab based on URL hash
-            var hash = window.location.hash;
-            if (hash && $(hash).length) {
-                $('.parfume-nav-tab[href="' + hash + '"]').trigger('click');
-            } else {
-                $('.parfume-nav-tab').first().trigger('click');
-            }
+
+            // Modal tabs
+            $(document).on('click', '.modal-tab', function(e) {
+                e.preventDefault();
+                var $tab = $(this);
+                var target = $tab.data('target');
+                
+                if (!target) return;
+                
+                $tab.siblings('.modal-tab').removeClass('active');
+                $tab.addClass('active');
+                
+                $tab.closest('.store-modal').find('.modal-tab-content').removeClass('active');
+                $(target).addClass('active');
+            });
+
+            // Initialize first tab
+            $('.nav-tab.nav-tab-active').trigger('click');
         },
 
-        /**
-         * Initialize store management
-         */
-        initStoreManager: function() {
+        // Form handling
+        initForms: function() {
             var self = this;
-            
-            // Add new store button
-            $(document).on('click', '#add-new-store', function(e) {
+
+            // Generic form submission with AJAX
+            $(document).on('submit', '.parfume-ajax-form', function(e) {
                 e.preventDefault();
-                self.openStoreModal();
+                self.submitForm($(this));
             });
-            
-            // Edit store button
-            $(document).on('click', '.edit-store', function(e) {
+
+            // Auto-save forms
+            $(document).on('change input', '.parfume-auto-save', function() {
+                var $form = $(this).closest('form');
+                clearTimeout($form.data('autosave-timeout'));
+                
+                $form.data('autosave-timeout', setTimeout(function() {
+                    self.submitForm($form, true);
+                }, 2000));
+            });
+
+            // Settings form validation
+            $(document).on('submit', '.parfume-settings-form', function(e) {
+                var valid = self.validateSettingsForm($(this));
+                if (!valid) {
+                    e.preventDefault();
+                }
+            });
+
+            // Dynamic field addition
+            $(document).on('click', '.add-dynamic-field', function(e) {
                 e.preventDefault();
-                var storeId = $(this).data('store-id');
-                self.editStore(storeId);
+                self.addDynamicField($(this));
             });
-            
-            // Delete store button
-            $(document).on('click', '.delete-store', function(e) {
+
+            $(document).on('click', '.remove-dynamic-field', function(e) {
                 e.preventDefault();
-                var storeId = $(this).data('store-id');
-                self.deleteStore(storeId);
+                self.removeDynamicField($(this));
             });
+        },
+
+        // Submit form via AJAX
+        submitForm: function($form, isAutoSave) {
+            var self = this;
+            var $submitBtn = $form.find('[type="submit"]');
+            var originalText = $submitBtn.val() || $submitBtn.text();
             
-            // Make stores sortable
-            if ($('#parfume-stores-list').length) {
-                $('#parfume-stores-list').sortable({
-                    handle: '.parfume-store-drag-handle',
-                    placeholder: 'parfume-store-placeholder',
-                    update: function() {
-                        self.updateStoreOrder();
-                    }
-                });
+            // Prevent double submission
+            if ($form.hasClass('submitting')) {
+                return false;
             }
             
-            // Store logo upload (legacy support)
-            $(document).on('click', '.parfume-upload-logo', function() {
-                var $button = $(this);
-                var frame = wp.media({
-                    title: 'Избери лого на магазин',
-                    button: { text: 'Използвай това изображение' },
-                    multiple: false,
-                    library: { type: 'image' }
-                });
-                
-                frame.on('select', function() {
-                    var attachment = frame.state().get('selection').first().toJSON();
-                    var $container = $button.closest('.parfume-store-item');
-                    
-                    $container.find('.store-logo-preview').attr('src', attachment.url);
-                    $container.find('.store-logo-url').val(attachment.url);
-                    $container.find('.store-logo-id').val(attachment.id);
-                });
-                
-                frame.open();
-            });
+            $form.addClass('submitting');
             
-            // Test store connection
-            $(document).on('click', '.parfume-test-store', function() {
-                var $button = $(this);
-                var $store = $button.closest('.parfume-store-item');
-                var storeData = self.getStoreData($store);
-                
-                $button.prop('disabled', true).text('Тествам...');
-                
-                $.ajax({
-                    url: ajaxurl,
-                    type: 'POST',
-                    data: {
-                        action: 'parfume_test_store',
-                        nonce: parfume_catalog_admin_ajax.nonce,
-                        store_data: storeData
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            self.showNotification('Връзката с магазина е успешна!', 'success');
-                        } else {
-                            self.showNotification('Грешка: ' + response.data, 'error');
+            if (!isAutoSave) {
+                $submitBtn.prop('disabled', true);
+                if ($submitBtn.is('input')) {
+                    $submitBtn.val(self.settings.strings.saving || 'Запазване...');
+                } else {
+                    $submitBtn.html('<span class="spinner"></span> ' + (self.settings.strings.saving || 'Запазване...'));
+                }
+            }
+
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: $form.serialize(),
+                success: function(response) {
+                    if (response.success) {
+                        if (!isAutoSave) {
+                            self.showNotice(response.data.message || self.settings.strings.saved || 'Запазено успешно!', 'success');
                         }
-                    },
-                    error: function() {
-                        self.showNotification('Възникна грешка при тестването.', 'error');
-                    },
-                    complete: function() {
-                        $button.prop('disabled', false).text('Тествай връзката');
+                        
+                        // Trigger custom event
+                        $form.trigger('parfume:form:success', [response.data]);
+                    } else {
+                        self.showNotice(response.data || self.settings.strings.error || 'Възникна грешка!', 'error');
+                        $form.trigger('parfume:form:error', [response.data]);
                     }
-                });
+                },
+                error: function() {
+                    self.showNotice(self.settings.strings.ajax_error || 'Грешка при заявката!', 'error');
+                },
+                complete: function() {
+                    $form.removeClass('submitting');
+                    
+                    if (!isAutoSave) {
+                        $submitBtn.prop('disabled', false);
+                        if ($submitBtn.is('input')) {
+                            $submitBtn.val(originalText);
+                        } else {
+                            $submitBtn.text(originalText);
+                        }
+                    }
+                }
             });
         },
 
-        /**
-         * Initialize store modal functionality
-         */
-        initStoreModal: function() {
+        // Form validation
+        validateSettingsForm: function($form) {
+            var isValid = true;
             var self = this;
             
-            // Close modal events
-            $(document).on('click', '.store-modal-close, .cancel-store-btn, #store-modal-overlay', function(e) {
-                if (e.target === this || $(e.target).hasClass('store-modal-close') || $(e.target).hasClass('cancel-store-btn')) {
-                    self.closeStoreModal();
+            // Remove previous error highlights
+            $form.find('.error').removeClass('error');
+            
+            // Required field validation
+            $form.find('[required]').each(function() {
+                var $field = $(this);
+                var value = $field.val().trim();
+                
+                if (!value) {
+                    $field.addClass('error');
+                    self.showNotice(self.settings.strings.required_field || 'Моля, попълнете задължителните полета!', 'error');
+                    isValid = false;
                 }
             });
             
-            // Save store
-            $(document).on('click', '.save-store-btn', function(e) {
-                e.preventDefault();
-                self.saveStore();
+            // URL validation
+            $form.find('input[type="url"]').each(function() {
+                var $field = $(this);
+                var value = $field.val().trim();
+                
+                if (value && !self.isValidUrl(value)) {
+                    $field.addClass('error');
+                    self.showNotice(self.settings.strings.invalid_url || 'Невалиден URL адрес!', 'error');
+                    isValid = false;
+                }
             });
             
-            // Test schema
-            $(document).on('click', '.test-schema-btn', function(e) {
-                e.preventDefault();
-                self.testSchema();
+            // Email validation
+            $form.find('input[type="email"]').each(function() {
+                var $field = $(this);
+                var value = $field.val().trim();
+                
+                if (value && !self.isValidEmail(value)) {
+                    $field.addClass('error');
+                    self.showNotice(self.settings.strings.invalid_email || 'Невалиден email адрес!', 'error');
+                    isValid = false;
+                }
             });
             
-            // Close modal on ESC
+            return isValid;
+        },
+
+        // Modal handling
+        initModals: function() {
+            var self = this;
+
+            // Open modal
+            $(document).on('click', '[data-modal]', function(e) {
+                e.preventDefault();
+                var modalId = $(this).data('modal');
+                self.openModal(modalId, $(this));
+            });
+
+            // Close modal
+            $(document).on('click', '.modal-close, .modal-overlay', function(e) {
+                if (e.target === this) {
+                    self.closeModal($(this).closest('.modal-overlay, .store-modal-overlay'));
+                }
+            });
+
+            // ESC key to close modal
             $(document).on('keydown', function(e) {
-                if (e.keyCode === 27 && $('#store-modal').is(':visible')) {
-                    self.closeStoreModal();
+                if (e.key === 'Escape') {
+                    $('.modal-overlay.active, .store-modal-overlay.active').each(function() {
+                        self.closeModal($(this));
+                    });
                 }
             });
         },
 
-        /**
-         * Initialize store meta box functionality
-         */
-        initStoreMetaBox: function() {
-            var self = this;
+        // Open modal
+        openModal: function(modalId, $trigger) {
+            var $modal = $('#' + modalId);
             
-            // Add store to post
-            $(document).on('click', '.add-store-to-post', function(e) {
-                e.preventDefault();
-                self.addStoreToPost();
-            });
+            if (!$modal.length) return;
             
-            // Remove store from post
-            $(document).on('click', '.remove-store', function(e) {
-                e.preventDefault();
-                self.removeStoreFromPost($(this));
-            });
-            
-            // Move store up/down
-            $(document).on('click', '.move-store-up', function(e) {
-                e.preventDefault();
-                self.moveStoreUp($(this));
-            });
-            
-            $(document).on('click', '.move-store-down', function(e) {
-                e.preventDefault();
-                self.moveStoreDown($(this));
-            });
-            
-            // Manual scrape
-            $(document).on('click', '.manual-scrape', function(e) {
-                e.preventDefault();
-                var $button = $(this);
-                var postId = $button.data('post-id');
-                var storeId = $button.data('store-id');
-                self.manualScrape($button, postId, storeId);
-            });
-            
-            // Make stores sortable in post meta box
-            if ($('#selected-stores-list').length) {
-                $('#selected-stores-list').sortable({
-                    handle: '.store-item-header',
-                    placeholder: 'post-store-item-placeholder',
-                    opacity: 0.7
-                });
-            }
-        },
-
-        /**
-         * Initialize media uploader
-         */
-        initMediaUploader: function() {
-            var self = this;
-            
-            // Upload logo button in modal
-            $(document).on('click', '.upload-logo-btn', function(e) {
-                e.preventDefault();
-                self.openMediaUploader();
-            });
-            
-            // Remove logo button
-            $(document).on('click', '.remove-logo-btn', function(e) {
-                e.preventDefault();
-                self.removeLogo();
-            });
-        },
-
-        /**
-         * Open store modal
-         */
-        openStoreModal: function(storeId) {
-            // Reset form
-            $('#store-form')[0].reset();
-            $('#store-id').val(storeId || '');
-            
-            if (storeId) {
-                $('#store-modal-title').text('Редактиране на магазин');
-                this.loadStoreData(storeId);
-            } else {
-                $('#store-modal-title').text('Добави нов магазин');
+            // Load data if needed
+            var entityId = $trigger ? $trigger.data('entity-id') : null;
+            if (entityId) {
+                this.loadModalData($modal, entityId);
             }
             
-            $('#logo-preview').empty();
-            $('.remove-logo-btn').hide();
-            
-            // Show modal
-            $('#store-modal, #store-modal-overlay').fadeIn(300);
+            $modal.addClass('active');
             $('body').addClass('modal-open');
             
             // Focus first input
             setTimeout(function() {
-                $('#store-name').focus();
-            }, 350);
+                $modal.find('input, select, textarea').first().focus();
+            }, 300);
         },
 
-        /**
-         * Close store modal
-         */
-        closeStoreModal: function() {
-            $('#store-modal, #store-modal-overlay').fadeOut(300);
+        // Close modal
+        closeModal: function($modal) {
+            $modal.removeClass('active');
             $('body').removeClass('modal-open');
-            $('#schema-test-results').hide();
-        },
-
-        /**
-         * Load store data for editing
-         */
-        loadStoreData: function(storeId) {
-            // This would load existing store data
-            // Implementation depends on how store data is passed to frontend
-        },
-
-        /**
-         * Save store
-         */
-        saveStore: function() {
-            var self = this;
-            var $btn = $('.save-store-btn');
             
-            // Validate required fields
-            if (!$('#store-name').val().trim()) {
-                self.showNotification('Моля въведете име на магазин', 'error');
-                $('#store-name').focus();
-                return;
+            // Reset form if exists
+            var $form = $modal.find('form');
+            if ($form.length) {
+                $form[0].reset();
+                $form.find('.error').removeClass('error');
             }
-            
-            // Show loading state
-            $btn.prop('disabled', true).text('Запазване...');
-            
-            // Prepare data
-            var data = {
-                action: 'parfume_add_store',
-                nonce: parfume_catalog_admin_ajax.nonce,
-                store_id: $('#store-id').val(),
-                store_name: $('#store-name').val(),
-                store_url: $('#store-url').val(),
-                store_logo: $('#store-logo').val(),
-                store_active: $('#store-active').is(':checked') ? 1 : 0,
-                price_selector: $('#price-selector').val(),
-                old_price_selector: $('#old-price-selector').val(),
-                availability_selector: $('#availability-selector').val(),
-                delivery_selector: $('#delivery-selector').val(),
-                variants_selector: $('#variants-selector').val()
-            };
-            
-            // Send AJAX request
-            $.post(parfume_catalog_admin_ajax.ajax_url, data)
-                .done(function(response) {
-                    if (response.success) {
-                        self.showNotification(response.data.message, 'success');
-                        self.closeStoreModal();
-                        
-                        // Reload page to show updated store list
-                        setTimeout(function() {
-                            window.location.reload();
-                        }, 1000);
-                    } else {
-                        self.showNotification(response.data || 'Възникна грешка при запазването', 'error');
-                    }
-                })
-                .fail(function() {
-                    self.showNotification('Възникна грешка при връзката със сървъра', 'error');
-                })
-                .always(function() {
-                    $btn.prop('disabled', false).text('Запази');
-                });
         },
 
-        /**
-         * Edit store
-         */
-        editStore: function(storeId) {
-            this.openStoreModal(storeId);
-        },
-
-        /**
-         * Delete store
-         */
-        deleteStore: function(storeId) {
+        // Load modal data
+        loadModalData: function($modal, entityId) {
             var self = this;
+            var entityType = $modal.data('entity-type') || 'store';
             
-            if (!confirm(parfume_catalog_admin_ajax.strings.confirm_delete || 'Сигурни ли сте, че искате да изтриете този магазин?')) {
-                return;
-            }
+            $modal.addClass('loading');
             
-            var data = {
-                action: 'parfume_delete_store',
-                nonce: parfume_catalog_admin_ajax.nonce,
-                store_id: storeId
-            };
-            
-            $.post(parfume_catalog_admin_ajax.ajax_url, data)
-                .done(function(response) {
-                    if (response.success) {
-                        self.showNotification(response.data, 'success');
-                        $('tr[data-store-id="' + storeId + '"]').fadeOut(300, function() {
-                            $(this).remove();
-                        });
-                    } else {
-                        self.showNotification(response.data || 'Възникна грешка при изтриването', 'error');
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_get_' + entityType,
+                    nonce: self.settings.nonce,
+                    id: entityId
+                },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        self.populateModal($modal, response.data);
                     }
-                })
-                .fail(function() {
-                    self.showNotification('Възникна грешка при връзката със сървъра', 'error');
-                });
-        },
-
-        /**
-         * Open media uploader
-         */
-        openMediaUploader: function() {
-            var frame = wp.media({
-                title: 'Избери лого на магазин',
-                button: { text: 'Избери лого' },
-                multiple: false,
-                library: { type: 'image' }
-            });
-            
-            frame.on('select', function() {
-                var attachment = frame.state().get('selection').first().toJSON();
-                
-                // Set logo URL
-                $('#store-logo').val(attachment.url);
-                
-                // Show preview
-                $('#logo-preview').html('<img src="' + attachment.url + '" alt="Logo" style="max-width: 100px; max-height: 60px;" />');
-                
-                // Show remove button
-                $('.remove-logo-btn').show();
-            });
-            
-            frame.open();
-        },
-
-        /**
-         * Remove logo
-         */
-        removeLogo: function() {
-            $('#store-logo').val('');
-            $('#logo-preview').empty();
-            $('.remove-logo-btn').hide();
-        },
-
-        /**
-         * Test schema
-         */
-        testSchema: function() {
-            var self = this;
-            var $btn = $('.test-schema-btn');
-            var testUrl = $('#test-url').val();
-            
-            if (!testUrl) {
-                self.showNotification('Моля въведете URL за тестване', 'error');
-                $('#test-url').focus();
-                return;
-            }
-            
-            // Show loading state
-            $btn.prop('disabled', true).text('Тестване...');
-            $('#schema-test-results').hide();
-            
-            // Prepare data
-            var data = {
-                action: 'parfume_test_scraper_url',
-                nonce: parfume_catalog_admin_ajax.nonce,
-                test_url: testUrl,
-                price_selector: $('#price-selector').val(),
-                old_price_selector: $('#old-price-selector').val(),
-                availability_selector: $('#availability-selector').val(),
-                delivery_selector: $('#delivery-selector').val(),
-                variants_selector: $('#variants-selector').val()
-            };
-            
-            // Send AJAX request
-            $.post(parfume_catalog_admin_ajax.ajax_url, data)
-                .done(function(response) {
-                    if (response.success) {
-                        self.displayTestResults(response.data);
-                    } else {
-                        self.showNotification(response.data || 'Неуспешен тест на schema', 'error');
-                    }
-                })
-                .fail(function() {
-                    self.showNotification('Възникна грешка при тестването', 'error');
-                })
-                .always(function() {
-                    $btn.prop('disabled', false).text('Тествай');
-                });
-        },
-
-        /**
-         * Display test results
-         */
-        displayTestResults: function(data) {
-            var html = '<h4>Резултати от тестването:</h4>';
-            
-            if (data.success) {
-                html += '<div class="parfume-notice"><p><strong>Успешен тест!</strong> ' + data.message + '</p></div>';
-                
-                if (data.data) {
-                    html += '<div class="test-data">';
-                    html += '<h5>Извлечени данни:</h5>';
-                    html += '<ul>';
-                    
-                    if (data.data.price) {
-                        html += '<li><strong>Цена:</strong> ' + data.data.price + '</li>';
-                    }
-                    if (data.data.old_price) {
-                        html += '<li><strong>Стара цена:</strong> ' + data.data.old_price + '</li>';
-                    }
-                    if (data.data.availability) {
-                        html += '<li><strong>Наличност:</strong> ' + data.data.availability + '</li>';
-                    }
-                    if (data.data.delivery) {
-                        html += '<li><strong>Доставка:</strong> ' + data.data.delivery + '</li>';
-                    }
-                    if (data.data.variants && data.data.variants.length) {
-                        html += '<li><strong>Варианти:</strong> ' + data.data.variants.join(', ') + '</li>';
-                    }
-                    
-                    html += '</ul>';
-                    html += '</div>';
+                },
+                error: function() {
+                    self.showNotice(self.settings.strings.load_error || 'Грешка при зареждане на данните!', 'error');
+                },
+                complete: function() {
+                    $modal.removeClass('loading');
                 }
-            } else {
-                html += '<div class="parfume-notice notice-error"><p><strong>Неуспешен тест:</strong> ' + data.message + '</p></div>';
-            }
-            
-            $('#schema-test-results').html(html).slideDown();
-        },
-
-        /**
-         * Add store to post
-         */
-        addStoreToPost: function() {
-            var storeId = $('#add-store-select').val();
-            if (!storeId) {
-                return;
-            }
-            
-            // Check if store is already added
-            if ($('.post-store-item[data-store-id="' + storeId + '"]').length) {
-                this.showNotification('Този магазин вече е добавен', 'warning');
-                return;
-            }
-            
-            // Disable option in select
-            $('#add-store-select option[value="' + storeId + '"]').prop('disabled', true);
-            $('#add-store-select').val('');
-            
-            // Add store item
-            var storeName = $('#add-store-select option[value="' + storeId + '"]').text();
-            this.addStoreItem(storeId, storeName);
-        },
-
-        /**
-         * Add store item to list
-         */
-        addStoreItem: function(storeId, storeName) {
-            var template = `
-                <div class="post-store-item" data-store-id="${storeId}">
-                    <div class="store-item-header">
-                        <div class="store-info">
-                            <strong>${storeName}</strong>
-                        </div>
-                        <div class="store-controls">
-                            <button type="button" class="button-link move-store-up" title="Нагоре">↑</button>
-                            <button type="button" class="button-link move-store-down" title="Надолу">↓</button>
-                            <button type="button" class="button-link remove-store" title="Премахни">×</button>
-                        </div>
-                    </div>
-                    <div class="store-item-fields">
-                        <input type="hidden" name="parfume_stores[${storeId}][store_id]" value="${storeId}" />
-                        <label>
-                            Product URL:
-                            <input type="url" name="parfume_stores[${storeId}][product_url]" value="" class="widefat" placeholder="https://example.com/product/..." />
-                        </label>
-                        <label>
-                            Affiliate URL:
-                            <input type="url" name="parfume_stores[${storeId}][affiliate_url]" value="" class="widefat" placeholder="https://affiliate.link/..." />
-                        </label>
-                        <label>
-                            Promo Code:
-                            <input type="text" name="parfume_stores[${storeId}][promo_code]" value="" class="widefat" placeholder="DISCOUNT10" />
-                        </label>
-                        <label>
-                            Promo Code Info:
-                            <input type="text" name="parfume_stores[${storeId}][promo_code_info]" value="" class="widefat" placeholder="10% отстъпка" />
-                        </label>
-                    </div>
-                </div>
-            `;
-            
-            $('#selected-stores-list').append(template);
-        },
-
-        /**
-         * Remove store from post
-         */
-        removeStoreFromPost: function($button) {
-            var $item = $button.closest('.post-store-item');
-            var storeId = $item.data('store-id');
-            
-            // Re-enable option in select
-            $('#add-store-select option[value="' + storeId + '"]').prop('disabled', false);
-            
-            // Remove item
-            $item.fadeOut(300, function() {
-                $(this).remove();
             });
         },
 
-        /**
-         * Move store up
-         */
-        moveStoreUp: function($button) {
-            var $item = $button.closest('.post-store-item');
-            var $prev = $item.prev('.post-store-item');
-            
-            if ($prev.length) {
-                $item.fadeOut(200, function() {
-                    $item.insertBefore($prev).fadeIn(200);
-                });
-            }
-        },
-
-        /**
-         * Move store down
-         */
-        moveStoreDown: function($button) {
-            var $item = $button.closest('.post-store-item');
-            var $next = $item.next('.post-store-item');
-            
-            if ($next.length) {
-                $item.fadeOut(200, function() {
-                    $item.insertAfter($next).fadeIn(200);
-                });
-            }
-        },
-
-        /**
-         * Manual scrape
-         */
-        manualScrape: function($button, postId, storeId) {
-            var self = this;
-            
-            // Show loading state
-            $button.prop('disabled', true).text('Скрейпване...');
-            
-            var data = {
-                action: 'parfume_manual_scrape',
-                nonce: parfume_catalog_admin_ajax.nonce,
-                store_id: storeId,
-                post_id: postId
-            };
-            
-            $.post(parfume_catalog_admin_ajax.ajax_url, data)
-                .done(function(response) {
-                    if (response.success) {
-                        self.showNotification('Скрейпването е завършено успешно', 'success');
-                        // Update scraper status
-                        $button.siblings('.scraper-status').text('Последно: току що');
-                    } else {
-                        self.showNotification(response.data || 'Грешка при скрейпването', 'error');
-                    }
-                })
-                .fail(function() {
-                    self.showNotification('Възникна грешка при скрейпването', 'error');
-                })
-                .always(function() {
-                    $button.prop('disabled', false).text('Ръчно обновяване');
-                });
-        },
-
-        /**
-         * Get store data from form
-         */
-        getStoreData: function($store) {
-            var data = {};
-            $store.find('input, select, textarea').each(function() {
+        // Populate modal with data
+        populateModal: function($modal, data) {
+            $modal.find('input, select, textarea').each(function() {
                 var $field = $(this);
                 var name = $field.attr('name');
-                if (name) {
-                    data[name] = $field.val();
+                var value = data[name];
+                
+                if (name && value !== undefined) {
+                    if ($field.is(':checkbox')) {
+                        $field.prop('checked', !!value);
+                    } else {
+                        $field.val(value);
+                    }
                 }
             });
-            return data;
-        },
-
-        /**
-         * Add new store (legacy support)
-         */
-        addNewStore: function() {
-            var template = $('#parfume-store-template').html();
-            var storeIndex = Date.now(); // Use timestamp as unique index
             
-            template = template.replace(/\{index\}/g, storeIndex);
-            
-            var $newStore = $(template);
-            $('#parfume-stores-list').append($newStore);
-            
-            // Animate in
-            $newStore.hide().fadeIn(300);
-            
-            // Focus first input
-            $newStore.find('input').first().focus();
-        },
-
-        /**
-         * Update store order
-         */
-        updateStoreOrder: function() {
-            var order = [];
-            $('#parfume-stores-list .parfume-store-item').each(function(index) {
-                $(this).find('.store-order').val(index);
-                order.push(index);
-            });
-        },
-
-        /**
-         * Initialize scraper interface
-         */
-        initScraperInterface: function() {
-            var self = this;
-            
-            // Manual scrape button
-            $(document).on('click', '.parfume-scrape-now', function() {
-                var $button = $(this);
-                var postId = $button.data('post-id');
-                var storeId = $button.data('store-id');
-                
-                self.runScraper($button, postId, storeId);
-            });
-            
-            // Batch scrape
-            $(document).on('click', '#parfume-batch-scrape', function() {
-                var $button = $(this);
-                self.runBatchScraper($button);
-            });
-            
-            // Auto-refresh scraper status
-            if ($('.parfume-scraper-status').length) {
-                setInterval(function() {
-                    self.updateScraperStatus();
-                }, 30000); // Every 30 seconds
+            // Handle special fields
+            if (data.logo) {
+                var $logoArea = $modal.find('.logo-upload-area');
+                $logoArea.addClass('has-logo');
+                $logoArea.find('.logo-preview').attr('src', data.logo).show();
+                $logoArea.find('.upload-text').hide();
             }
         },
 
-        /**
-         * Run individual scraper
-         */
-        runScraper: function($button, postId, storeId) {
-            var originalText = $button.text();
-            $button.prop('disabled', true).text('Скрейпвам...');
-            
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'parfume_scrape_product',
-                    nonce: parfume_catalog_admin_ajax.nonce,
-                    post_id: postId,
-                    store_id: storeId
-                },
-                success: function(response) {
-                    if (response.success) {
-                        this.showNotification('Скрейпването е завършено успешно!', 'success');
-                        this.updateScraperResults($button, response.data);
-                    } else {
-                        this.showNotification('Грешка при скрейпване: ' + response.data, 'error');
-                    }
-                }.bind(this),
-                error: function() {
-                    this.showNotification('Възникна грешка при скрейпването.', 'error');
-                }.bind(this),
-                complete: function() {
-                    $button.prop('disabled', false).text(originalText);
-                }
-            });
-        },
-
-        /**
-         * Run batch scraper
-         */
-        runBatchScraper: function($button) {
-            var originalText = $button.text();
-            $button.prop('disabled', true).text('Обработвам...');
-            
-            // Show progress bar
-            var $progress = $('.parfume-scraper-progress');
-            $progress.show();
-            
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'parfume_batch_scrape',
-                    nonce: parfume_catalog_admin_ajax.nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        this.showNotification('Batch скрейпването е стартирано!', 'success');
-                        this.monitorBatchProgress();
-                    } else {
-                        this.showNotification('Грешка при стартиране: ' + response.data, 'error');
-                    }
-                }.bind(this),
-                error: function() {
-                    this.showNotification('Възникна грешка.', 'error');
-                }.bind(this),
-                complete: function() {
-                    $button.prop('disabled', false).text(originalText);
-                }
-            });
-        },
-
-        /**
-         * Monitor batch progress
-         */
-        monitorBatchProgress: function() {
+        // File uploads
+        initFileUploads: function() {
             var self = this;
-            var checkProgress = function() {
-                $.ajax({
-                    url: ajaxurl,
-                    type: 'POST',
-                    data: {
-                        action: 'parfume_scraper_progress',
-                        nonce: parfume_catalog_admin_ajax.nonce
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            var progress = response.data;
-                            self.updateProgressBar(progress.percent);
-                            
-                            if (progress.status === 'completed') {
-                                self.showNotification('Batch скрейпването е завършено!', 'success');
-                                $('.parfume-scraper-progress').hide();
-                            } else if (progress.status === 'running') {
-                                setTimeout(checkProgress, 2000);
-                            }
-                        }
-                    }
-                });
-            };
-            
-            checkProgress();
-        },
 
-        /**
-         * Update progress bar
-         */
-        updateProgressBar: function(percent) {
-            $('.parfume-scraper-progress-bar').css('width', percent + '%');
-            $('.parfume-scraper-progress-text').text(percent + '%');
-        },
+            // WordPress media uploader
+            $(document).on('click', '.upload-logo-btn', function(e) {
+                e.preventDefault();
+                self.openMediaUploader($(this));
+            });
 
-        /**
-         * Update scraper status
-         */
-        updateScraperStatus: function() {
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'parfume_scraper_status',
-                    nonce: parfume_catalog_admin_ajax.nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        // Update status indicators
-                        $('.parfume-scraper-status').each(function() {
-                            var $status = $(this);
-                            var postId = $status.data('post-id');
-                            var storeId = $status.data('store-id');
-                            
-                            if (response.data[postId] && response.data[postId][storeId]) {
-                                var status = response.data[postId][storeId];
-                                $status.removeClass('success error pending running')
-                                       .addClass(status.status)
-                                       .text(status.label);
-                            }
-                        });
+            // Remove logo
+            $(document).on('click', '.remove-logo', function(e) {
+                e.preventDefault();
+                self.removeLogo($(this));
+            });
+
+            // Drag and drop
+            $(document).on('dragover dragenter', '.logo-upload-area', function(e) {
+                e.preventDefault();
+                $(this).addClass('drag-over');
+            });
+
+            $(document).on('dragleave dragend drop', '.logo-upload-area', function(e) {
+                e.preventDefault();
+                $(this).removeClass('drag-over');
+                
+                if (e.type === 'drop') {
+                    var files = e.originalEvent.dataTransfer.files;
+                    if (files.length > 0) {
+                        self.handleFileUpload(files[0], $(this));
                     }
                 }
             });
         },
 
-        /**
-         * Initialize test tool
-         */
-        initTestTool: function() {
+        // Open WordPress media uploader
+        openMediaUploader: function($button) {
             var self = this;
             
-            // Test URL scraping
-            $(document).on('click', '#parfume-test-scrape', function() {
-                var $button = $(this);
-                var url = $('#test-url').val();
-                
-                if (!url) {
-                    self.showNotification('Моля въведете URL за тестване.', 'warning');
-                    return;
-                }
-                
-                self.runTestScrape($button, url);
-            });
-            
-            // Save schema
-            $(document).on('click', '#parfume-save-schema', function() {
-                var $button = $(this);
-                var schema = self.getSelectedSchema();
-                var storeId = $('#test-store-id').val();
-                
-                if (!storeId) {
-                    self.showNotification('Моля изберете магазин.', 'warning');
-                    return;
-                }
-                
-                self.saveSchema($button, storeId, schema);
-            });
-            
-            // Selector clicking
-            $(document).on('click', '.parfume-selector-item', function() {
-                $(this).toggleClass('selected');
-                self.updateSelectedSchema();
-            });
-        },
+            if (typeof wp === 'undefined' || !wp.media) {
+                self.showNotice('WordPress media library не е налична!', 'error');
+                return;
+            }
 
-        /**
-         * Run test scrape
-         */
-        runTestScrape: function($button, url) {
-            var originalText = $button.text();
-            $button.prop('disabled', true).text('Анализирам...');
-            
-            $('.parfume-test-results').empty();
-            
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'parfume_test_scrape',
-                    nonce: parfume_catalog_admin_ajax.nonce,
-                    url: url
+            var mediaUploader = wp.media({
+                title: 'Избери лого',
+                button: {
+                    text: 'Използвай това изображение'
                 },
-                success: function(response) {
-                    if (response.success) {
-                        this.displayTestResults(response.data);
-                    } else {
-                        this.showNotification('Грешка при анализиране: ' + response.data, 'error');
-                    }
-                }.bind(this),
-                error: function() {
-                    this.showNotification('Възникна грешка при анализирането.', 'error');
-                }.bind(this),
-                complete: function() {
-                    $button.prop('disabled', false).text(originalText);
+                multiple: false,
+                library: {
+                    type: 'image'
                 }
             });
+
+            mediaUploader.on('select', function() {
+                var attachment = mediaUploader.state().get('selection').first().toJSON();
+                self.setLogo($button.closest('.logo-upload-area'), attachment.url);
+            });
+
+            mediaUploader.open();
         },
 
-        /**
-         * Get selected schema
-         */
-        getSelectedSchema: function() {
-            var schema = {};
+        // Set logo
+        setLogo: function($area, logoUrl) {
+            $area.addClass('has-logo');
             
-            $('.parfume-selector-item.selected').each(function() {
-                var $item = $(this);
-                var type = $item.data('type');
-                var selector = $item.data('selector');
-                
-                schema[type + '_selector'] = selector;
-            });
+            var $preview = $area.find('.logo-preview');
+            if (!$preview.length) {
+                $preview = $('<img class="logo-preview" />');
+                $area.find('.upload-icon').after($preview);
+            }
             
-            return schema;
-        },
-
-        /**
-         * Save schema
-         */
-        saveSchema: function($button, storeId, schema) {
-            var originalText = $button.text();
-            $button.prop('disabled', true).text('Запазвам...');
+            $preview.attr('src', logoUrl).show();
+            $area.find('.upload-text').hide();
+            $area.find('input[name*="logo"]').val(logoUrl);
             
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'parfume_save_schema',
-                    nonce: parfume_catalog_admin_ajax.nonce,
-                    store_id: storeId,
-                    schema: schema
-                },
-                success: function(response) {
-                    if (response.success) {
-                        this.showNotification('Схемата е запазена успешно!', 'success');
-                    } else {
-                        this.showNotification('Грешка при запазване: ' + response.data, 'error');
-                    }
-                }.bind(this),
-                error: function() {
-                    this.showNotification('Възникна грешка при запазването.', 'error');
-                }.bind(this),
-                complete: function() {
-                    $button.prop('disabled', false).text(originalText);
-                }
-            });
-        },
-
-        /**
-         * Initialize comparison settings
-         */
-        initComparison: function() {
-            var self = this;
-            
-            // Toggle comparison fields
-            $(document).on('change', '.comparison-field-toggle', function() {
-                var $checkbox = $(this);
-                var $field = $checkbox.closest('.parfume-comparison-field');
-                
-                if ($checkbox.is(':checked')) {
-                    $field.addClass('enabled');
-                } else {
-                    $field.removeClass('enabled');
-                }
-                
-                self.updateComparisonPreview();
-            });
-            
-            // Make comparison fields sortable
-            if ($('.parfume-comparison-fields').length) {
-                $('.parfume-comparison-fields').sortable({
-                    update: function() {
-                        self.updateComparisonPreview();
-                    }
-                });
+            if (!$area.find('.remove-logo').length) {
+                $area.append('<button type="button" class="remove-logo">Премахни</button>');
             }
         },
 
-        /**
-         * Update comparison preview
-         */
-        updateComparisonPreview: function() {
-            var enabledFields = [];
+        // Remove logo
+        removeLogo: function($button) {
+            var $area = $button.closest('.logo-upload-area');
             
-            $('.parfume-comparison-field.enabled').each(function() {
-                var $field = $(this);
-                var fieldName = $field.find('.comparison-field-toggle').val();
-                var fieldLabel = $field.find('label').text();
-                
-                enabledFields.push({
-                    name: fieldName,
-                    label: fieldLabel
-                });
-            });
-            
-            // Update preview table
-            var $preview = $('.parfume-comparison-preview');
-            if ($preview.length && enabledFields.length > 0) {
-                var tableHTML = '<table class="parfume-comparison-table"><thead><tr><th>Критерий</th><th>Парфюм 1</th><th>Парфюм 2</th></tr></thead><tbody>';
-                
-                $.each(enabledFields, function(index, field) {
-                    tableHTML += '<tr><td>' + field.label + '</td><td>Примерна стойност</td><td>Примерна стойност</td></tr>';
-                });
-                
-                tableHTML += '</tbody></table>';
-                $preview.html(tableHTML);
-            }
+            $area.removeClass('has-logo');
+            $area.find('.logo-preview').hide();
+            $area.find('.upload-text').show();
+            $area.find('input[name*="logo"]').val('');
+            $button.remove();
         },
 
-        /**
-         * Initialize import/export
-         */
-        initImportExport: function() {
+        // Handle file upload
+        handleFileUpload: function(file, $area) {
             var self = this;
             
-            // File drop zone
-            var $dropZone = $('.parfume-import-drop-zone');
-            
-            $dropZone.on('dragover dragenter', function(e) {
-                e.preventDefault();
-                $(this).addClass('dragover');
-            });
-            
-            $dropZone.on('dragleave', function(e) {
-                e.preventDefault();
-                $(this).removeClass('dragover');
-            });
-            
-            $dropZone.on('drop', function(e) {
-                e.preventDefault();
-                $(this).removeClass('dragover');
-                
-                var files = e.originalEvent.dataTransfer.files;
-                if (files.length > 0) {
-                    self.handleFileUpload(files[0]);
-                }
-            });
-            
-            // File input change
-            $(document).on('change', '#parfume-import-file', function() {
-                var files = this.files;
-                if (files.length > 0) {
-                    self.handleFileUpload(files[0]);
-                }
-            });
-            
-            // Export button
-            $(document).on('click', '#parfume-export-data', function() {
-                var $button = $(this);
-                var exportType = $('input[name="export_type"]:checked').val();
-                
-                self.exportData($button, exportType);
-            });
-        },
-
-        /**
-         * Handle file upload
-         */
-        handleFileUpload: function(file) {
-            var self = this;
-            
-            if (file.type !== 'application/json') {
-                self.showNotification('Моля изберете JSON файл.', 'warning');
+            if (!file.type.match('image.*')) {
+                self.showNotice('Моля, изберете изображение!', 'error');
                 return;
             }
             
             var formData = new FormData();
             formData.append('file', file);
-            formData.append('action', 'parfume_import_data');
-            formData.append('nonce', parfume_catalog_admin_ajax.nonce);
+            formData.append('action', 'parfume_upload_logo');
+            formData.append('nonce', self.settings.nonce);
+            
+            $area.addClass('uploading');
             
             $.ajax({
-                url: ajaxurl,
+                url: self.settings.ajaxUrl,
                 type: 'POST',
                 data: formData,
                 processData: false,
                 contentType: false,
                 success: function(response) {
                     if (response.success) {
-                        self.showNotification('Импортирането е завършено успешно!', 'success');
+                        self.setLogo($area, response.data.url);
+                        self.showNotice('Логото е качено успешно!', 'success');
                     } else {
-                        self.showNotification('Грешка при импортиране: ' + response.data, 'error');
+                        self.showNotice(response.data || 'Грешка при качване!', 'error');
                     }
                 },
                 error: function() {
-                    self.showNotification('Възникна грешка при импортирането.', 'error');
+                    self.showNotice('Грешка при качване на файла!', 'error');
+                },
+                complete: function() {
+                    $area.removeClass('uploading');
                 }
             });
         },
 
-        /**
-         * Export data
-         */
-        exportData: function($button, exportType) {
-            var originalText = $button.text();
-            $button.prop('disabled', true).text('Експортирам...');
+        // Drag and drop functionality
+        initDragDrop: function() {
+            // Make lists sortable
+            $('.sortable-list').sortable({
+                handle: '.drag-handle',
+                placeholder: 'sortable-placeholder',
+                helper: 'clone',
+                opacity: 0.8,
+                update: function(event, ui) {
+                    var $list = $(this);
+                    var order = $list.sortable('toArray', { attribute: 'data-id' });
+                    
+                    // Save order
+                    parfumeAdmin.saveSortOrder($list, order);
+                }
+            });
+
+            // Stores drag and drop
+            $('#post-stores-list').sortable({
+                handle: '.store-drag-handle',
+                placeholder: 'store-placeholder',
+                update: function(event, ui) {
+                    parfumeAdmin.updateStoresOrder();
+                }
+            });
+        },
+
+        // Save sort order
+        saveSortOrder: function($list, order) {
+            var listType = $list.data('type');
+            var postId = $list.data('post-id');
             
             $.ajax({
-                url: ajaxurl,
+                url: this.settings.ajaxUrl,
                 type: 'POST',
                 data: {
-                    action: 'parfume_export_data',
-                    nonce: parfume_catalog_admin_ajax.nonce,
-                    export_type: exportType
+                    action: 'parfume_save_order',
+                    nonce: this.settings.nonce,
+                    type: listType,
+                    post_id: postId,
+                    order: order
+                },
+                success: function(response) {
+                    if (!response.success) {
+                        console.warn('Error saving order:', response.data);
+                    }
+                }
+            });
+        },
+
+        // Tooltips
+        initTooltips: function() {
+            $(document).on('mouseenter', '[data-tooltip]', function() {
+                var $element = $(this);
+                var text = $element.data('tooltip');
+                
+                if (!text || $element.find('.admin-tooltip').length) return;
+                
+                var $tooltip = $('<div class="admin-tooltip">' + text + '</div>');
+                $element.append($tooltip);
+                
+                // Position tooltip
+                setTimeout(function() {
+                    var rect = $element[0].getBoundingClientRect();
+                    var tooltipRect = $tooltip[0].getBoundingClientRect();
+                    
+                    if (rect.left + tooltipRect.width > window.innerWidth) {
+                        $tooltip.addClass('tooltip-left');
+                    }
+                    
+                    if (rect.top - tooltipRect.height < 0) {
+                        $tooltip.addClass('tooltip-bottom');
+                    }
+                    
+                    $tooltip.addClass('visible');
+                }, 10);
+            });
+
+            $(document).on('mouseleave', '[data-tooltip]', function() {
+                $(this).find('.admin-tooltip').remove();
+            });
+        },
+
+        // Confirmation dialogs
+        initConfirmations: function() {
+            $(document).on('click', '[data-confirm]', function(e) {
+                var message = $(this).data('confirm') || 'Сигурни ли сте?';
+                
+                if (!confirm(message)) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        },
+
+        // Stores functionality
+        initStores: function() {
+            var self = this;
+
+            // Add new store
+            $(document).on('click', '.add-store-btn', function(e) {
+                e.preventDefault();
+                self.openModal('store-modal');
+            });
+
+            // Edit store
+            $(document).on('click', '.edit-store-btn', function(e) {
+                e.preventDefault();
+                var storeId = $(this).data('store-id');
+                self.openModal('store-modal', $(this));
+            });
+
+            // Delete store
+            $(document).on('click', '.delete-store-btn', function(e) {
+                e.preventDefault();
+                if (confirm(self.settings.strings.confirm_delete || 'Сигурни ли сте?')) {
+                    self.deleteStore($(this).data('store-id'));
+                }
+            });
+
+            // Test store URL
+            $(document).on('click', '.test-store-url', function(e) {
+                e.preventDefault();
+                self.testStoreUrl($(this));
+            });
+
+            // Store form submission
+            $(document).on('submit', '#store-form', function(e) {
+                e.preventDefault();
+                self.saveStore($(this));
+            });
+        },
+
+        // Save store
+        saveStore: function($form) {
+            var self = this;
+            var $modal = $form.closest('.store-modal-overlay');
+            var $submitBtn = $form.find('[type="submit"]');
+            
+            $submitBtn.prop('disabled', true).text('Запазване...');
+            
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: $form.serialize(),
+                success: function(response) {
+                    if (response.success) {
+                        self.showNotice('Магазинът е запазен успешно!', 'success');
+                        self.closeModal($modal);
+                        
+                        // Reload stores if on stores page
+                        if ($('.stores-grid').length) {
+                            location.reload();
+                        }
+                    } else {
+                        self.showNotice(response.data || 'Грешка при запазване!', 'error');
+                    }
+                },
+                error: function() {
+                    self.showNotice('Грешка при заявката!', 'error');
+                },
+                complete: function() {
+                    $submitBtn.prop('disabled', false).text('Запази');
+                }
+            });
+        },
+
+        // Delete store
+        deleteStore: function(storeId) {
+            var self = this;
+            
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_delete_store',
+                    nonce: self.settings.nonce,
+                    store_id: storeId
                 },
                 success: function(response) {
                     if (response.success) {
-                        // Download file
-                        var blob = new Blob([JSON.stringify(response.data, null, 2)], {
-                            type: 'application/json'
-                        });
-                        
-                        var url = window.URL.createObjectURL(blob);
-                        var a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'parfume-export-' + Date.now() + '.json';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        window.URL.revokeObjectURL(url);
-                        
-                        this.showNotification('Експортирането е завършено!', 'success');
+                        self.showNotice('Магазинът е изтрит успешно!', 'success');
+                        $('[data-store-id="' + storeId + '"]').closest('.store-card').fadeOut();
                     } else {
-                        this.showNotification('Грешка при експортиране: ' + response.data, 'error');
+                        self.showNotice(response.data || 'Грешка при изтриване!', 'error');
                     }
-                }.bind(this),
+                },
                 error: function() {
-                    this.showNotification('Възникна грешка при експортирането.', 'error');
-                }.bind(this),
-                complete: function() {
-                    $button.prop('disabled', false).text(originalText);
+                    self.showNotice('Грешка при заявката!', 'error');
                 }
             });
         },
 
-        /**
-         * Initialize notifications
-         */
-        initNotifications: function() {
-            // Auto-hide notices after 5 seconds
-            setTimeout(function() {
-                $('.parfume-notice').fadeOut();
-            }, 5000);
-        },
-
-        /**
-         * Show notification
-         */
-        showNotification: function(message, type) {
-            type = type || 'info';
+        // Test store URL
+        testStoreUrl: function($button) {
+            var self = this;
+            var url = $button.siblings('input').val();
+            var storeId = $button.data('store-id');
             
-            var $notice = $('<div class="parfume-notice notice-' + type + '"><p>' + message + '</p></div>');
-            
-            // Remove existing notices
-            $('.parfume-notice').remove();
-            
-            // Add notice
-            if ($('.parfume-admin-header').length) {
-                $('.parfume-admin-header').after($notice);
-            } else if ($('.wrap').length) {
-                $('.wrap').prepend($notice);
-            } else {
-                $('body').prepend($notice);
+            if (!url) {
+                self.showNotice('Моля, въведете URL за тестване!', 'warning');
+                return;
             }
             
-            // Auto-hide success notices
-            if (type === 'success') {
-                setTimeout(function() {
-                    $notice.fadeOut(300, function() {
-                        $(this).remove();
+            $button.prop('disabled', true).text('Тестване...');
+            
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_test_store_url',
+                    nonce: self.settings.nonce,
+                    url: url,
+                    store_id: storeId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        self.showNotice('URL-ът е достъпен!', 'success');
+                        
+                        if (response.data.scraped_data) {
+                            // Show scraped data preview
+                            self.showScrapedDataPreview(response.data.scraped_data);
+                        }
+                    } else {
+                        self.showNotice(response.data || 'URL-ът не е достъпен!', 'error');
+                    }
+                },
+                error: function() {
+                    self.showNotice('Грешка при тестване!', 'error');
+                },
+                complete: function() {
+                    $button.prop('disabled', false).text('Тествай');
+                }
+            });
+        },
+
+        // Show scraped data preview
+        showScrapedDataPreview: function(data) {
+            var content = '<div class="scraped-data-preview">';
+            content += '<h4>Извлечени данни:</h4>';
+            
+            if (data.price) {
+                content += '<p><strong>Цена:</strong> ' + data.price + '</p>';
+            }
+            
+            if (data.availability) {
+                content += '<p><strong>Наличност:</strong> ' + data.availability + '</p>';
+            }
+            
+            if (data.variants && data.variants.length > 0) {
+                content += '<p><strong>Варианти:</strong> ' + data.variants.length + '</p>';
+            }
+            
+            content += '</div>';
+            
+            // Show in modal or notification
+            this.showNotice(content, 'info', 10000);
+        },
+
+        // Scraper functionality
+        initScraper: function() {
+            var self = this;
+
+            // Manual scraper run
+            $(document).on('click', '.run-scraper-btn', function(e) {
+                e.preventDefault();
+                var type = $(this).data('type') || 'full';
+                self.runScraper(type);
+            });
+
+            // Test single URL
+            $(document).on('click', '.test-single-url', function(e) {
+                e.preventDefault();
+                self.testSingleUrl();
+            });
+
+            // Clear logs
+            $(document).on('click', '.clear-logs-btn', function(e) {
+                e.preventDefault();
+                if (confirm('Сигурни ли сте, че искате да изчистите всички логове?')) {
+                    self.clearScraperLogs();
+                }
+            });
+
+            // Auto refresh monitor
+            if ($('.scraper-monitor').length) {
+                setInterval(function() {
+                    if ($('#auto-refresh').is(':checked')) {
+                        self.refreshMonitorData();
+                    }
+                }, 30000);
+            }
+        },
+
+        // Run scraper
+        runScraper: function(type) {
+            var self = this;
+            var $button = $('.run-scraper-btn[data-type="' + type + '"]');
+            
+            $button.prop('disabled', true).text('Стартиране...');
+            
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_run_scraper',
+                    nonce: self.settings.nonce,
+                    type: type
+                },
+                success: function(response) {
+                    if (response.success) {
+                        self.showNotice('Scraper-ът е стартиран успешно!', 'success');
+                        
+                        // Refresh stats after a delay
+                        setTimeout(function() {
+                            self.refreshScraperStats();
+                        }, 2000);
+                    } else {
+                        self.showNotice(response.data || 'Грешка при стартиране!', 'error');
+                    }
+                },
+                error: function() {
+                    self.showNotice('Грешка при заявката!', 'error');
+                },
+                complete: function() {
+                    $button.prop('disabled', false).text('Стартирай');
+                }
+            });
+        },
+
+        // Test single URL
+        testSingleUrl: function() {
+            var self = this;
+            var url = $('#test-url').val();
+            var storeId = $('#test-store').val();
+            
+            if (!url) {
+                self.showNotice('Моля, въведете URL за тестване!', 'warning');
+                return;
+            }
+            
+            $('#test-url-btn').prop('disabled', true).text('Тестване...');
+            
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_test_single_url',
+                    nonce: self.settings.nonce,
+                    url: url,
+                    store_id: storeId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#test-results').show();
+                        $('#test-results-content').html(self.formatTestResults(response.data));
+                    } else {
+                        self.showNotice(response.data || 'Грешка при тестване!', 'error');
+                    }
+                },
+                error: function() {
+                    self.showNotice('Грешка при заявката!', 'error');
+                },
+                complete: function() {
+                    $('#test-url-btn').prop('disabled', false).text('Тествай');
+                }
+            });
+        },
+
+        // Format test results
+        formatTestResults: function(data) {
+            var html = '<div class="test-results">';
+            
+            if (data.status_code) {
+                html += '<p><strong>HTTP статус:</strong> ' + data.status_code + '</p>';
+            }
+            
+            if (data.content_length) {
+                html += '<p><strong>Размер на съдържанието:</strong> ' + data.content_length + ' символа</p>';
+            }
+            
+            if (data.schema_test) {
+                html += '<h4>Резултати от schema тест:</h4>';
+                
+                if (data.schema_test.data) {
+                    var scrapedData = data.schema_test.data;
+                    
+                    if (scrapedData.price) {
+                        html += '<p><strong>Цена:</strong> ' + scrapedData.price + '</p>';
+                    }
+                    
+                    if (scrapedData.availability) {
+                        html += '<p><strong>Наличност:</strong> ' + scrapedData.availability + '</p>';
+                    }
+                    
+                    if (scrapedData.variants) {
+                        html += '<p><strong>Варианти:</strong> ' + scrapedData.variants.length + '</p>';
+                    }
+                }
+                
+                if (data.schema_test.error) {
+                    html += '<p class="error"><strong>Грешка:</strong> ' + data.schema_test.error + '</p>';
+                }
+            }
+            
+            html += '</div>';
+            return html;
+        },
+
+        // Clear scraper logs
+        clearScraperLogs: function() {
+            var self = this;
+            
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_clear_scraper_logs',
+                    nonce: self.settings.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        self.showNotice('Логовете са изчистени успешно!', 'success');
+                        
+                        // Clear logs display
+                        $('#logs-list').empty();
+                    } else {
+                        self.showNotice(response.data || 'Грешка при изчистване!', 'error');
+                    }
+                },
+                error: function() {
+                    self.showNotice('Грешка при заявката!', 'error');
+                }
+            });
+        },
+
+        // Refresh scraper stats
+        refreshScraperStats: function() {
+            var self = this;
+            
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_get_scraper_stats',
+                    nonce: self.settings.nonce
+                },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        self.updateStatsDisplay(response.data);
+                    }
+                }
+            });
+        },
+
+        // Update stats display
+        updateStatsDisplay: function(stats) {
+            $('.stat-card.total .stat-number').text(stats.total || 0);
+            $('.stat-card.success .stat-number').text(stats.successful || 0);
+            $('.stat-card.error .stat-number').text(stats.failed || 0);
+            $('.stat-card.pending .stat-number').text(stats.pending || 0);
+        },
+
+        // Refresh monitor data
+        refreshMonitorData: function() {
+            // This would load fresh monitor data via AJAX
+            // Implementation depends on specific requirements
+        },
+
+        // Comments functionality
+        initComments: function() {
+            var self = this;
+
+            // Moderate comment
+            $(document).on('click', '.moderate-comment', function(e) {
+                e.preventDefault();
+                var commentId = $(this).data('comment-id');
+                var action = $(this).data('action');
+                self.moderateComment(commentId, action);
+            });
+
+            // Bulk moderate comments
+            $(document).on('click', '.bulk-moderate-btn', function(e) {
+                e.preventDefault();
+                var action = $('#bulk-action').val();
+                var commentIds = [];
+                
+                $('.comment-checkbox:checked').each(function() {
+                    commentIds.push($(this).val());
+                });
+                
+                if (commentIds.length === 0) {
+                    self.showNotice('Моля, изберете коментари!', 'warning');
+                    return;
+                }
+                
+                self.bulkModerateComments(commentIds, action);
+            });
+        },
+
+        // Moderate single comment
+        moderateComment: function(commentId, action) {
+            var self = this;
+            
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_moderate_comment',
+                    nonce: self.settings.nonce,
+                    comment_id: commentId,
+                    moderate_action: action
+                },
+                success: function(response) {
+                    if (response.success) {
+                        self.showNotice('Коментарът е модериран успешно!', 'success');
+                        
+                        // Update comment status in UI
+                        var $comment = $('[data-comment-id="' + commentId + '"]').closest('.comment-item');
+                        $comment.find('.comment-status').removeClass().addClass('comment-status ' + action);
+                    } else {
+                        self.showNotice(response.data || 'Грешка при модериране!', 'error');
+                    }
+                },
+                error: function() {
+                    self.showNotice('Грешка при заявката!', 'error');
+                }
+            });
+        },
+
+        // Bulk moderate comments
+        bulkModerateComments: function(commentIds, action) {
+            var self = this;
+            
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_bulk_moderate_comments',
+                    nonce: self.settings.nonce,
+                    comment_ids: commentIds,
+                    moderate_action: action
+                },
+                success: function(response) {
+                    if (response.success) {
+                        self.showNotice('Коментарите са модерирани успешно!', 'success');
+                        location.reload(); // Refresh to show updated comments
+                    } else {
+                        self.showNotice(response.data || 'Грешка при модериране!', 'error');
+                    }
+                },
+                error: function() {
+                    self.showNotice('Грешка при заявката!', 'error');
+                }
+            });
+        },
+
+        // Meta boxes functionality
+        initMetaBoxes: function() {
+            var self = this;
+
+            // Dynamic fields (pros/cons, notes, etc.)
+            $(document).on('click', '.add-dynamic-item', function(e) {
+                e.preventDefault();
+                self.addDynamicItem($(this));
+            });
+
+            $(document).on('click', '.remove-dynamic-item', function(e) {
+                e.preventDefault();
+                $(this).closest('.dynamic-item').remove();
+            });
+
+            // Notes selection
+            $(document).on('change', '.notes-checkbox', function() {
+                self.updateSelectedNotes();
+            });
+
+            // Store management in post
+            $(document).on('click', '.add-post-store', function(e) {
+                e.preventDefault();
+                self.addPostStore($(this));
+            });
+
+            $(document).on('click', '.remove-post-store', function(e) {
+                e.preventDefault();
+                $(this).closest('.post-store-item').remove();
+                self.updateStoresOrder();
+            });
+
+            // Manual scrape for post store
+            $(document).on('click', '.manual-scrape-store', function(e) {
+                e.preventDefault();
+                self.manualScrapeStore($(this));
+            });
+        },
+
+        // Add dynamic item (pros/cons)
+        addDynamicItem: function($button) {
+            var $container = $button.siblings('.dynamic-items');
+            var template = $button.data('template') || '<div class="dynamic-item"><input type="text" name="{name}[]" /><button type="button" class="remove-dynamic-item">×</button></div>';
+            var name = $button.data('name');
+            
+            var html = template.replace('{name}', name);
+            $container.append(html);
+        },
+
+        // Update selected notes display
+        updateSelectedNotes: function() {
+            var $container = $('.selected-notes');
+            var selectedNotes = [];
+            
+            $('.notes-checkbox:checked').each(function() {
+                var noteName = $(this).data('note-name');
+                selectedNotes.push(noteName);
+            });
+            
+            var html = selectedNotes.map(function(note) {
+                return '<span class="note-tag">' + note + '</span>';
+            }).join(' ');
+            
+            $container.html(html);
+        },
+
+        // Add store to post
+        addPostStore: function($button) {
+            var storeId = $button.data('store-id');
+            var storeName = $button.data('store-name');
+            
+            if ($('#post-stores-list').find('[data-store-id="' + storeId + '"]').length > 0) {
+                this.showNotice('Този магазин вече е добавен!', 'warning');
+                return;
+            }
+            
+            var template = wp.template('post-store-item');
+            var html = template({
+                store_id: storeId,
+                store_name: storeName
+            });
+            
+            $('#post-stores-list').append(html);
+            this.updateStoresOrder();
+        },
+
+        // Update stores order
+        updateStoresOrder: function() {
+            $('#post-stores-list .post-store-item').each(function(index) {
+                $(this).find('[name*="[order]"]').val(index);
+            });
+        },
+
+        // Manual scrape store
+        manualScrapeStore: function($button) {
+            var self = this;
+            var storeId = $button.data('store-id');
+            var postId = $button.data('post-id');
+            
+            $button.prop('disabled', true).text('Скрейпване...');
+            
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_manual_scrape_store',
+                    nonce: self.settings.nonce,
+                    store_id: storeId,
+                    post_id: postId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        self.showNotice('Скрейпването завърши успешно!', 'success');
+                        
+                        // Update scraped data display
+                        if (response.data.scraped_data) {
+                            self.updateScrapedDataDisplay($button, response.data.scraped_data);
+                        }
+                    } else {
+                        self.showNotice(response.data || 'Грешка при скрейпване!', 'error');
+                    }
+                },
+                error: function() {
+                    self.showNotice('Грешка при заявката!', 'error');
+                },
+                complete: function() {
+                    $button.prop('disabled', false).text('Обнови');
+                }
+            });
+        },
+
+        // Update scraped data display
+        updateScrapedDataDisplay: function($button, data) {
+            var $container = $button.closest('.post-store-item').find('.scraped-data');
+            
+            var html = '';
+            if (data.price) {
+                html += '<div class="scraped-price"><strong>Цена:</strong> ' + data.price + ' лв.</div>';
+            }
+            
+            if (data.availability) {
+                html += '<div class="scraped-availability"><strong>Наличност:</strong> ' + data.availability + '</div>';
+            }
+            
+            if (data.variants && data.variants.length > 0) {
+                html += '<div class="scraped-variants"><strong>Варианти:</strong> ' + data.variants.length + '</div>';
+            }
+            
+            html += '<div class="scraped-time"><small>Обновено: ' + new Date().toLocaleString('bg-BG') + '</small></div>';
+            
+            $container.html(html);
+        },
+
+        // Settings functionality
+        initSettings: function() {
+            var self = this;
+
+            // Import/Export functionality
+            $(document).on('click', '.export-settings-btn', function(e) {
+                e.preventDefault();
+                self.exportSettings();
+            });
+
+            $(document).on('click', '.import-settings-btn', function(e) {
+                e.preventDefault();
+                $('#settings-import-file').click();
+            });
+
+            $(document).on('change', '#settings-import-file', function() {
+                if (this.files && this.files[0]) {
+                    self.importSettings(this.files[0]);
+                }
+            });
+
+            // Reset settings
+            $(document).on('click', '.reset-settings-btn', function(e) {
+                e.preventDefault();
+                if (confirm('Сигурни ли сте, че искате да възстановите настройките по подразбиране?')) {
+                    self.resetSettings();
+                }
+            });
+
+            // Notes import
+            $(document).on('click', '.import-notes-btn', function(e) {
+                e.preventDefault();
+                $('#notes-import-file').click();
+            });
+
+            $(document).on('change', '#notes-import-file', function() {
+                if (this.files && this.files[0]) {
+                    self.importNotes(this.files[0]);
+                }
+            });
+        },
+
+        // Export settings
+        exportSettings: function() {
+            var self = this;
+            
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_export_settings',
+                    nonce: self.settings.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Create download link
+                        var dataStr = JSON.stringify(response.data, null, 2);
+                        var dataBlob = new Blob([dataStr], {type: 'application/json'});
+                        
+                        var link = document.createElement('a');
+                        link.href = URL.createObjectURL(dataBlob);
+                        link.download = 'parfume-catalog-settings.json';
+                        link.click();
+                        
+                        self.showNotice('Настройките са експортирани успешно!', 'success');
+                    } else {
+                        self.showNotice(response.data || 'Грешка при експорт!', 'error');
+                    }
+                },
+                error: function() {
+                    self.showNotice('Грешка при заявката!', 'error');
+                }
+            });
+        },
+
+        // Import settings
+        importSettings: function(file) {
+            var self = this;
+            
+            if (!file.type.match('application/json')) {
+                self.showNotice('Моля, изберете JSON файл!', 'error');
+                return;
+            }
+            
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    var settings = JSON.parse(e.target.result);
+                    
+                    $.ajax({
+                        url: self.settings.ajaxUrl,
+                        type: 'POST',
+                        data: {
+                            action: 'parfume_import_settings',
+                            nonce: self.settings.nonce,
+                            settings_data: JSON.stringify(settings)
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                self.showNotice('Настройките са импортирани успешно!', 'success');
+                                location.reload();
+                            } else {
+                                self.showNotice(response.data || 'Грешка при импорт!', 'error');
+                            }
+                        },
+                        error: function() {
+                            self.showNotice('Грешка при заявката!', 'error');
+                        }
                     });
-                }, 3000);
-            }
+                } catch (err) {
+                    self.showNotice('Невалиден JSON файл!', 'error');
+                }
+            };
             
-            // Scroll to notice
-            if ($notice.offset()) {
-                $('html, body').animate({
-                    scrollTop: $notice.offset().top - 100
-                }, 300);
-            }
+            reader.readAsText(file);
         },
 
-        /**
-         * Initialize form validation
-         */
-        initFormValidation: function() {
-            // Real-time validation
-            $(document).on('blur', 'input[type="url"]', function() {
-                var $input = $(this);
-                var url = $input.val();
-                
-                if (url && !this.isValidUrl(url)) {
-                    $input.addClass('error');
-                    this.showFieldError($input, 'Моля въведете валиден URL.');
-                } else {
-                    $input.removeClass('error');
-                    this.hideFieldError($input);
-                }
-            }.bind(this));
+        // Import notes
+        importNotes: function(file) {
+            var self = this;
             
-            $(document).on('blur', 'input[type="email"]', function() {
-                var $input = $(this);
-                var email = $input.val();
-                
-                if (email && !this.isValidEmail(email)) {
-                    $input.addClass('error');
-                    this.showFieldError($input, 'Моля въведете валиден имейл.');
-                } else {
-                    $input.removeClass('error');
-                    this.hideFieldError($input);
+            if (!file.type.match('application/json')) {
+                self.showNotice('Моля, изберете JSON файл!', 'error');
+                return;
+            }
+            
+            var formData = new FormData();
+            formData.append('notes_file', file);
+            formData.append('action', 'parfume_import_notes');
+            formData.append('nonce', self.settings.nonce);
+            
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        self.showNotice(response.data.message || 'Нотките са импортирани успешно!', 'success');
+                    } else {
+                        self.showNotice(response.data || 'Грешка при импорт!', 'error');
+                    }
+                },
+                error: function() {
+                    self.showNotice('Грешка при заявката!', 'error');
                 }
-            }.bind(this));
+            });
         },
 
-        /**
-         * Validate URL
-         */
-        isValidUrl: function(string) {
+        // Reset settings
+        resetSettings: function() {
+            var self = this;
+            
+            $.ajax({
+                url: self.settings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_reset_settings',
+                    nonce: self.settings.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        self.showNotice('Настройките са възстановени успешно!', 'success');
+                        location.reload();
+                    } else {
+                        self.showNotice(response.data || 'Грешка при възстановяване!', 'error');
+                    }
+                },
+                error: function() {
+                    self.showNotice('Грешка при заявката!', 'error');
+                }
+            });
+        },
+
+        // Utility functions
+        showNotice: function(message, type, duration) {
+            type = type || 'info';
+            duration = duration || 5000;
+            
+            $('.parfume-message').remove();
+            
+            var $notice = $('<div class="parfume-message ' + type + '">' +
+                '<p>' + message + '</p>' +
+                '<button type="button" class="notice-dismiss">&times;</button>' +
+                '</div>');
+            
+            $('.wrap').first().prepend($notice);
+            
+            setTimeout(function() {
+                $notice.fadeOut(function() {
+                    $notice.remove();
+                });
+            }, duration);
+            
+            $notice.find('.notice-dismiss').on('click', function() {
+                $notice.fadeOut(function() {
+                    $notice.remove();
+                });
+            });
+        },
+
+        isValidUrl: function(url) {
             try {
-                new URL(string);
+                new URL(url);
                 return true;
-            } catch (_) {
+            } catch (e) {
                 return false;
             }
         },
 
-        /**
-         * Validate email
-         */
         isValidEmail: function(email) {
             var re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             return re.test(email);
         },
 
-        /**
-         * Show field error
-         */
-        showFieldError: function($field, message) {
-            this.hideFieldError($field);
+        // Add dynamic field
+        addDynamicField: function($button) {
+            var $container = $button.siblings('.dynamic-fields-container');
+            var template = $button.data('template');
+            var index = $container.children().length;
             
-            var $error = $('<div class="field-error" style="color: #dc3232; font-size: 12px; margin-top: 5px;">' + message + '</div>');
-            $field.after($error);
+            var html = template.replace(/{{INDEX}}/g, index);
+            $container.append(html);
         },
 
-        /**
-         * Hide field error
-         */
-        hideFieldError: function($field) {
-            $field.next('.field-error').remove();
+        // Remove dynamic field
+        removeDynamicField: function($button) {
+            $button.closest('.dynamic-field').remove();
         }
     };
 
-    // Initialize when document is ready
+    // Initialize when DOM is ready
     $(document).ready(function() {
-        if (typeof parfume_catalog_admin_ajax !== 'undefined') {
-            ParfumeAdmin.init();
-        }
+        parfumeAdmin.init();
     });
+
+    // WordPress post edit screen integration
+    if (typeof postboxes !== 'undefined') {
+        postboxes.add_postbox_toggles(pagenow);
+    }
 
 })(jQuery);
