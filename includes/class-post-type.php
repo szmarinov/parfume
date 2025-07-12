@@ -134,6 +134,16 @@ class Post_Type {
                 );
             }
             
+            // Single perfumer specific CSS
+            if (is_tax('perfumer')) {
+                wp_enqueue_style(
+                    'parfume-reviews-single-perfumer',
+                    PARFUME_REVIEWS_PLUGIN_URL . 'assets/css/single-perfumer.css',
+                    array('parfume-reviews-frontend'),
+                    PARFUME_REVIEWS_VERSION
+                );
+            }
+            
             // Filters CSS
             wp_enqueue_style(
                 'parfume-reviews-filters',
@@ -215,6 +225,14 @@ class Post_Type {
             $queried_object = get_queried_object();
             
             if ($queried_object && isset($queried_object->taxonomy)) {
+                // Special handling for single perfumer pages
+                if ($queried_object->taxonomy === 'perfumer') {
+                    $single_perfumer_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/single-perfumer.php';
+                    if (file_exists($single_perfumer_template)) {
+                        return $single_perfumer_template;
+                    }
+                }
+                
                 // Specific taxonomy template
                 $specific_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/taxonomy-' . $queried_object->taxonomy . '.php';
                 if (file_exists($specific_template)) {
@@ -222,15 +240,9 @@ class Post_Type {
                 }
                 
                 // Generic taxonomy template
-                $generic_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/taxonomy.php';
+                $generic_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/taxonomy-parfume.php';
                 if (file_exists($generic_template)) {
                     return $generic_template;
-                }
-                
-                // Fallback to archive template
-                $archive_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/archive-parfume.php';
-                if (file_exists($archive_template)) {
-                    return $archive_template;
                 }
             }
         }
@@ -239,20 +251,12 @@ class Post_Type {
     }
     
     public function debug_query_info() {
-        if (!current_user_can('manage_options')) {
-            return;
-        }
-        
         global $wp_query;
         
-        if (parfume_reviews_is_parfume_page()) {
-            echo '<div style="background: #fff; border: 2px solid #ff0000; padding: 10px; margin: 10px; font-size: 12px; position: fixed; bottom: 10px; right: 10px; z-index: 99999; max-width: 400px;">';
-            echo '<strong>Parfume Debug Info:</strong><br>';
-            echo '<strong>Current URL:</strong> ' . esc_url($_SERVER['REQUEST_URI']) . '<br>';
-            echo '<strong>Query Vars:</strong><pre>' . print_r($wp_query->query_vars, true) . '</pre>';
-            echo '<strong>GET Parameters:</strong><pre>' . print_r($_GET, true) . '</pre>';
-            echo '<strong>Is 404:</strong> ' . (is_404() ? 'YES' : 'NO') . '<br>';
-            echo '<strong>Post Type Archive:</strong> ' . (is_post_type_archive('parfume') ? 'YES' : 'NO') . '<br>';
+        if (is_post_type_archive('parfume') || is_tax(array('marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'))) {
+            echo '<div style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.9); color: white; padding: 10px; z-index: 9999; font-size: 12px; max-width: 300px;">';
+            echo '<strong>Query Debug:</strong><br>';
+            echo '<strong>Is Archive:</strong> ' . (is_post_type_archive('parfume') ? 'YES' : 'NO') . '<br>';
             echo '<strong>Is Tax:</strong> ' . (is_tax() ? 'YES' : 'NO') . '<br>';
             echo '<strong>Found Posts:</strong> ' . $wp_query->found_posts . '<br>';
             
@@ -286,6 +290,7 @@ class Post_Type {
     
     /**
      * Построява URL за филтри използвайки Query Handler
+     * ПОПРАВЕНО: Премахнат дублираният static метод
      */
     public function build_filter_url($filters = array(), $base_url = '') {
         if ($this->query_handler) {
@@ -294,6 +299,14 @@ class Post_Type {
         
         // Fallback ако Query Handler не е наличен
         return self::build_filter_url_static($filters, $base_url);
+    }
+    
+    /**
+     * Проверява дали има активни филтри
+     */
+    public function has_active_filters() {
+        $filters = $this->get_active_filters();
+        return !empty($filters);
     }
     
     /**
@@ -350,95 +363,5 @@ class Post_Type {
         }
         
         return $base_url;
-    }
-    
-    /**
-     * LEGACY МЕТОДИ ЗА COMPATIBILITY
-     */
-    
-    /**
-     * @deprecated Use get_active_filters() instead
-     */
-    public static function build_filter_url($filters = array(), $base_url = '') {
-        return self::build_filter_url_static($filters, $base_url);
-    }
-    
-    /**
-     * @deprecated Use build_filter_url() instead  
-     */
-    public static function get_active_filters() {
-        return self::get_active_filters_static();
-    }
-    
-    /**
-     * Проверява дали има активни филтри
-     */
-    public function has_active_filters() {
-        $filters = $this->get_active_filters();
-        return !empty($filters);
-    }
-    
-    /**
-     * Получава броя на активните филтри
-     */
-    public function get_active_filters_count() {
-        $filters = $this->get_active_filters();
-        $count = 0;
-        
-        foreach ($filters as $key => $value) {
-            if (is_array($value)) {
-                $count += count($value);
-            } elseif (!empty($value)) {
-                $count++;
-            }
-        }
-        
-        return $count;
-    }
-    
-    /**
-     * Получава описание на активните филтри
-     */
-    public function get_active_filters_description() {
-        $filters = $this->get_active_filters();
-        
-        if (empty($filters)) {
-            return '';
-        }
-        
-        $descriptions = array();
-        
-        foreach ($filters as $taxonomy => $terms) {
-            if (is_array($terms) && !empty($terms)) {
-                $taxonomy_object = get_taxonomy($taxonomy);
-                $taxonomy_name = $taxonomy_object ? $taxonomy_object->labels->name : $taxonomy;
-                
-                $term_names = array();
-                foreach ($terms as $term_slug) {
-                    $term = get_term_by('slug', $term_slug, $taxonomy);
-                    if ($term && !is_wp_error($term)) {
-                        $term_names[] = $term->name;
-                    }
-                }
-                
-                if (!empty($term_names)) {
-                    $descriptions[] = $taxonomy_name . ': ' . implode(', ', $term_names);
-                }
-            } elseif (!is_array($terms) && !empty($terms)) {
-                switch ($taxonomy) {
-                    case 'min_price':
-                        $descriptions[] = 'Мин. цена: ' . $terms . ' лв.';
-                        break;
-                    case 'max_price':
-                        $descriptions[] = 'Макс. цена: ' . $terms . ' лв.';
-                        break;
-                    case 'min_rating':
-                        $descriptions[] = 'Мин. рейтинг: ' . $terms . ' звезди';
-                        break;
-                }
-            }
-        }
-        
-        return implode(' | ', $descriptions);
     }
 }

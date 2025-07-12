@@ -1,349 +1,273 @@
 /**
- * Parfume Reviews Admin Settings JavaScript
- * assets/js/admin-settings.js
+ * Admin JavaScript for Parfume Reviews Plugin
+ * Handles media upload for taxonomy terms
  */
-
-(function($) {
-    'use strict';
-
-    $(document).ready(function() {
-        initTabs();
-        initFormEnhancements();
-        initValidation();
-        initTooltips();
-    });
-
-    /**
-     * Initialize tab functionality
-     */
-    function initTabs() {
-        // Handle tab clicks
-        $('.parfume-settings-tabs .nav-tab').on('click', function(e) {
-            e.preventDefault();
-            
-            const $clickedTab = $(this);
-            const targetTabId = $clickedTab.attr('href').replace('#', '');
-            
-            // Update active tab visually
-            $('.parfume-settings-tabs .nav-tab').removeClass('nav-tab-active');
-            $clickedTab.addClass('nav-tab-active');
-            
-            // Hide all tab content with fade effect
-            $('.tab-content').removeClass('tab-content-active').fadeOut(200, function() {
-                // Show target tab content with fade effect after previous content is hidden
-                $('#' + targetTabId).addClass('tab-content-active').fadeIn(300, function() {
-                    // Update URL hash without triggering scroll
-                    if (history.pushState) {
-                        history.pushState(null, null, '#' + targetTabId);
-                    }
-                    
-                    // Trigger custom event for other scripts
-                    $(document).trigger('parfume-tab-changed', [targetTabId]);
-                });
-                
-                // Focus management for accessibility
-                setTimeout(function() {
-                    $('#' + targetTabId).find('input, select, textarea').first().focus();
-                }, 300);
-            });
-        });
+jQuery(document).ready(function($) {
+    
+    // Media uploader for taxonomy terms
+    var mediaUploader;
+    
+    $(document).on('click', '.pr_tax_media_button', function(e) {
+        e.preventDefault();
         
-        // Handle browser back/forward
-        $(window).on('popstate', function() {
-            const hash = window.location.hash;
-            if (hash) {
-                const tabId = hash.replace('#', '');
-                if ($('#' + tabId).length) {
-                    $('.parfume-settings-tabs .nav-tab[href="' + hash + '"]').trigger('click');
-                }
-            } else {
-                // Default to first tab if no hash
-                $('.parfume-settings-tabs .nav-tab').first().trigger('click');
-            }
-        });
+        var button = $(this);
+        var fieldId = button.data('field');
+        var wrapperId = button.data('wrapper');
+        var $field = $('#' + fieldId);
+        var $wrapper = $('#' + wrapperId);
         
-        // Initialize from URL hash on page load or default to first tab
-        const initialHash = window.location.hash;
-        if (initialHash && $(initialHash).length) {
-            $('.parfume-settings-tabs .nav-tab[href="' + initialHash + '"]').trigger('click');
-        } else {
-            // Show first tab by default
-            $('.parfume-settings-tabs .nav-tab').first().trigger('click');
+        // If the uploader object has already been created, reopen the dialog
+        if (mediaUploader) {
+            mediaUploader.open();
+            return;
         }
-    }
-
-    /**
-     * Initialize form enhancements
-     */
-    function initFormEnhancements() {
-        // Add loading state to form submission
-        $('form').on('submit', function() {
-            const $form = $(this);
-            const $submitBtn = $form.find('.button-primary');
-            
-            $submitBtn.prop('disabled', true)
-                     .text('Запазване...')
-                     .addClass('updating-message');
-            
-            $form.addClass('settings-loading');
-        });
         
-        // Auto-save indication for certain fields
-        $('.auto-save input, .auto-save select, .auto-save textarea').on('change', function() {
-            const $field = $(this);
-            const $indicator = $('<span class="save-indicator">Промяна направена</span>');
-            
-            $field.parent().find('.save-indicator').remove();
-            $field.parent().append($indicator);
-            
-            setTimeout(function() {
-                $indicator.fadeOut(function() {
-                    $indicator.remove();
-                });
-            }, 2000);
-        });
-    }
-
-    /**
-     * Initialize form validation
-     */
-    function initValidation() {
-        // Slug validation
-        $('input[name*="_slug"]').on('input', function() {
-            const $input = $(this);
-            let value = $input.val();
-            
-            // Convert to valid slug
-            value = value.toLowerCase()
-                        .replace(/[^\w\s-]/g, '') // Remove special chars
-                        .replace(/[\s_-]+/g, '-') // Replace spaces/underscores with hyphens
-                        .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-            
-            if (value !== $input.val()) {
-                $input.val(value);
-                showValidationMessage($input, 'Slug-ът е автоматично форматиран', 'info');
-            }
-            
-            // Check for empty slug
-            if (value === '') {
-                showValidationMessage($input, 'Slug-ът не може да бъде празен', 'error');
-            } else {
-                clearValidationMessage($input);
+        // Create a new media uploader
+        mediaUploader = wp.media({
+            title: 'Choose Image',
+            button: {
+                text: 'Choose Image'
+            },
+            multiple: false,
+            library: {
+                type: 'image'
             }
         });
         
-        // Numeric validation
-        $('input[type="number"]').on('input', function() {
-            const $input = $(this);
-            const value = parseInt($input.val());
-            const min = parseInt($input.attr('min')) || 0;
-            const max = parseInt($input.attr('max')) || 999;
+        // When an image is selected in the media uploader
+        mediaUploader.on('select', function() {
+            var attachment = mediaUploader.state().get('selection').first().toJSON();
             
-            if (isNaN(value) || value < min || value > max) {
-                showValidationMessage($input, `Стойността трябва да бъде между ${min} и ${max}`, 'error');
-            } else {
-                clearValidationMessage($input);
-            }
+            // Set the image URL to the input field
+            $field.val(attachment.url);
+            
+            // Display the image preview
+            var imageHtml = '<img src="' + attachment.url + '" alt="" style="max-width: 100px; height: auto; display: block; margin-bottom: 10px;">';
+            $wrapper.html(imageHtml);
+            
+            // Update button text
+            button.val('Change Image');
         });
         
-        // File upload validation
-        $('input[type="file"]').on('change', function() {
-            const $input = $(this);
-            const file = this.files[0];
+        // Open the uploader
+        mediaUploader.open();
+    });
+    
+    // Remove image functionality
+    $(document).on('click', '.pr_tax_media_remove', function(e) {
+        e.preventDefault();
+        
+        var button = $(this);
+        var fieldId = button.data('field');
+        var wrapperId = button.data('wrapper');
+        var $field = $('#' + fieldId);
+        var $wrapper = $('#' + wrapperId);
+        var $addButton = button.siblings('.pr_tax_media_button');
+        
+        // Clear the field value
+        $field.val('');
+        
+        // Clear the preview
+        $wrapper.html('');
+        
+        // Reset button text
+        $addButton.val('Add Image');
+    });
+    
+    // Initialize existing images on page load
+    $('.custom_media_url').each(function() {
+        var $field = $(this);
+        var fieldId = $field.attr('id');
+        var wrapperId = fieldId.replace(/[^a-zA-Z0-9]/g, '') + '-wrapper';
+        var $wrapper = $('#' + wrapperId);
+        var imageUrl = $field.val();
+        
+        if (imageUrl && $wrapper.length) {
+            var imageHtml = '<img src="' + imageUrl + '" alt="" style="max-width: 100px; height: auto; display: block; margin-bottom: 10px;">';
+            $wrapper.html(imageHtml);
             
-            if (file) {
-                const maxSize = 10 * 1024 * 1024; // 10MB
-                const allowedTypes = ['application/json'];
+            // Update button text
+            var $button = $wrapper.siblings('p').find('.pr_tax_media_button');
+            $button.val('Change Image');
+        }
+    });
+    
+    // Enhanced form validation for perfumer fields
+    $('form#addtag, form#edittag').on('submit', function(e) {
+        var form = $(this);
+        var errors = [];
+        
+        // Check if this is a perfumer taxonomy form
+        if (form.find('input[name="taxonomy"]').val() === 'perfumer' || 
+            window.location.href.indexOf('taxonomy=perfumer') !== -1) {
+            
+            // Validate birth date
+            var birthdate = form.find('#perfumer_birthdate').val();
+            if (birthdate) {
+                var birthdateObj = new Date(birthdate);
+                var today = new Date();
+                var minDate = new Date('1900-01-01');
                 
-                if (file.size > maxSize) {
-                    showValidationMessage($input, 'Файлът е твърде голям (макс. 10MB)', 'error');
-                    $input.val('');
-                } else if (!allowedTypes.includes(file.type) && !file.name.endsWith('.json')) {
-                    showValidationMessage($input, 'Позволени са само JSON файлове', 'error');
-                    $input.val('');
-                } else {
-                    showValidationMessage($input, 'Файлът е валиден', 'success');
+                if (birthdateObj > today) {
+                    errors.push('Birth date cannot be in the future.');
+                } else if (birthdateObj < minDate) {
+                    errors.push('Birth date seems too old. Please check the date.');
                 }
             }
-        });
-    }
-
-    /**
-     * Show validation message
-     */
-    function showValidationMessage($field, message, type) {
-        clearValidationMessage($field);
-        
-        const $message = $('<div class="validation-message validation-' + type + '">' + message + '</div>');
-        $field.after($message);
-        
-        // Auto-hide success and info messages
-        if (type === 'success' || type === 'info') {
-            setTimeout(function() {
-                $message.fadeOut(function() {
-                    $message.remove();
-                });
-            }, 3000);
-        }
-    }
-
-    /**
-     * Clear validation message
-     */
-    function clearValidationMessage($field) {
-        $field.siblings('.validation-message').remove();
-    }
-
-    /**
-     * Initialize tooltips and help text
-     */
-    function initTooltips() {
-        // Add help icons for complex fields
-        const helpTexts = {
-            'parfume_slug': 'Това е основният URL slug за архивната страница на парфюмите. Промяната изисква обновяване на permalink структурата.',
-            'archive_posts_per_page': 'Определя колко парфюма се показват на една страница в архива.',
-            'price_check_interval': 'Колко често системата проверява за промени в цените от външните магазини.'
-        };
-        
-        $.each(helpTexts, function(fieldName, helpText) {
-            const $field = $('input[name*="' + fieldName + '"], select[name*="' + fieldName + '"]');
-            if ($field.length) {
-                const $helpIcon = $('<span class="help-icon" title="' + helpText + '">?</span>');
-                $field.after($helpIcon);
-                
-                $helpIcon.on('click', function() {
-                    alert(helpText);
-                });
-            }
-        });
-    }
-
-    /**
-     * Handle view archive button clicks
-     */
-    $(document).on('click', '.view-archive-btn', function(e) {
-        const $btn = $(this);
-        
-        // Add loading state
-        $btn.addClass('loading');
-        
-        // Track click for analytics (if needed)
-        if (typeof gtag !== 'undefined') {
-            gtag('event', 'view_archive', {
-                'event_category': 'admin_settings',
-                'event_label': $btn.attr('href')
+            
+            // Validate URLs
+            var urlFields = ['perfumer_website', 'perfumer_instagram', 'perfumer_facebook', 'perfumer_twitter', 'perfumer_linkedin'];
+            urlFields.forEach(function(fieldId) {
+                var url = form.find('#' + fieldId).val();
+                if (url && !isValidUrl(url)) {
+                    errors.push('Invalid URL in field: ' + fieldId.replace('perfumer_', '').replace('_', ' '));
+                }
             });
+            
+            // Show errors if any
+            if (errors.length > 0) {
+                e.preventDefault();
+                alert('Please fix the following errors:\n\n' + errors.join('\n'));
+                return false;
+            }
         }
-        
-        // Remove loading state after a short delay
-        setTimeout(function() {
-            $btn.removeClass('loading');
-        }, 1000);
     });
-
-    /**
-     * Handle import form submission with progress
-     */
-    $(document).on('submit', 'form[action*="parfume_import"]', function(e) {
-        const $form = $(this);
-        const $submitBtn = $form.find('input[type="submit"]');
-        const $fileInput = $form.find('input[type="file"]');
-        
-        if (!$fileInput.val()) {
-            e.preventDefault();
-            alert('Моля изберете файл за импорт.');
+    
+    // URL validation helper function
+    function isValidUrl(string) {
+        try {
+            new URL(string);
+            return true;
+        } catch (_) {
             return false;
         }
-        
-        // Show progress
-        $submitBtn.prop('disabled', true)
-                  .val('Импортиране...')
-                  .addClass('updating-message');
-        
-        // Add progress indicator
-        const $progress = $('<div class="import-progress">Обработване на файла...</div>');
-        $form.append($progress);
-    });
-
-    /**
-     * Handle export button clicks
-     */
-    $(document).on('click', 'a[href*="parfume_export"]', function(e) {
-        const $btn = $(this);
-        const originalText = $btn.text();
-        
-        $btn.text('Експортиране...')
-            .addClass('updating-message')
-            .prop('disabled', true);
-        
-        // Reset button after delay (since it's a download link)
-        setTimeout(function() {
-            $btn.text(originalText)
-                .removeClass('updating-message')
-                .prop('disabled', false);
-        }, 3000);
-    });
-
-    /**
-     * Keyboard shortcuts
-     */
-    $(document).on('keydown', function(e) {
-        // Ctrl/Cmd + S to save
-        if ((e.ctrlKey || e.metaKey) && e.which === 83) {
-            e.preventDefault();
-            $('form .button-primary').click();
+    }
+    
+    // Auto-format nationality field
+    $('#perfumer_nationality').on('blur', function() {
+        var value = $(this).val();
+        if (value) {
+            // Capitalize first letter
+            var formatted = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+            $(this).val(formatted);
         }
+    });
+    
+    // Character counter for textarea fields
+    var textareaFields = ['perfumer_education', 'perfumer_signature_style', 'perfumer_awards'];
+    textareaFields.forEach(function(fieldId) {
+        var $field = $('#' + fieldId);
+        if ($field.length) {
+            // Add character counter
+            var $counter = $('<div class="character-counter" style="text-align: right; margin-top: 5px; font-size: 12px; color: #666;"></div>');
+            $field.after($counter);
+            
+            // Update counter on input
+            $field.on('input', function() {
+                var length = $(this).val().length;
+                var maxLength = 1000; // Set reasonable limit
+                
+                $counter.text(length + ' / ' + maxLength + ' characters');
+                
+                if (length > maxLength * 0.9) {
+                    $counter.css('color', '#d63638');
+                } else if (length > maxLength * 0.7) {
+                    $counter.css('color', '#dba617');
+                } else {
+                    $counter.css('color', '#666');
+                }
+            }).trigger('input');
+        }
+    });
+    
+    // Preview functionality for social media links
+    $('input[name^="perfumer_social_media"]').on('blur', function() {
+        var url = $(this).val();
+        var platform = $(this).attr('name').match(/\[(.+)\]/)[1];
         
-        // Ctrl/Cmd + number to switch tabs
-        if ((e.ctrlKey || e.metaKey) && e.which >= 49 && e.which <= 57) {
-            const tabIndex = e.which - 49;
-            const $tab = $('.parfume-settings-tabs .nav-tab').eq(tabIndex);
-            if ($tab.length) {
-                e.preventDefault();
-                $tab.click();
+        if (url && isValidUrl(url)) {
+            // Validate platform-specific URL format
+            var platformPatterns = {
+                'instagram': /instagram\.com\/[a-zA-Z0-9_.]+/,
+                'facebook': /facebook\.com\/[a-zA-Z0-9_.]+/,
+                'twitter': /twitter\.com\/[a-zA-Z0-9_]+/,
+                'linkedin': /linkedin\.com\/in\/[a-zA-Z0-9-]+/
+            };
+            
+            if (platformPatterns[platform] && !platformPatterns[platform].test(url)) {
+                $(this).css('border-color', '#d63638');
+                
+                // Show warning message
+                var $warning = $(this).siblings('.url-warning');
+                if ($warning.length === 0) {
+                    $warning = $('<div class="url-warning" style="color: #d63638; font-size: 12px; margin-top: 2px;"></div>');
+                    $(this).after($warning);
+                }
+                $warning.text('This doesn\'t look like a valid ' + platform + ' URL.');
+            } else {
+                $(this).css('border-color', '');
+                $(this).siblings('.url-warning').remove();
             }
         }
     });
-
-    /**
-     * Auto-save draft functionality
-     */
-    let autoSaveTimer;
-    function startAutoSave() {
-        clearTimeout(autoSaveTimer);
-        autoSaveTimer = setTimeout(function() {
-            const formData = $('form').serialize();
-            
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'parfume_autosave_settings',
-                    nonce: $('#_wpnonce').val(),
-                    data: formData
-                },
-                success: function(response) {
-                    if (response.success) {
-                        showNotification('Настройките са автоматично запазени', 'info');
-                    }
-                }
-            });
-        }, 30000); // Auto-save every 30 seconds
-    }
-
-    /**
-     * Show notification
-     */
-    function showNotification(message, type) {
-        const $notification = $('<div class="notice notice-' + type + ' is-dismissible"><p>' + message + '</p></div>');
-        $('.wrap > h1').after($notification);
+    
+    // Tab functionality for better organization
+    if ($('.perfumer-meta-tabs').length === 0 && $('#perfumer_nationality').length) {
+        // Create tabs for perfumer edit form
+        var $form = $('#edittag');
+        var $perfumerFields = $form.find('tr:has(#perfumer_nationality)').nextAll('tr').addBack();
         
-        setTimeout(function() {
-            $notification.fadeOut();
-        }, 3000);
+        if ($perfumerFields.length > 1) {
+            // Create tab structure
+            var $tabContainer = $('<div class="perfumer-meta-tabs" style="margin: 20px 0;"></div>');
+            var $tabNav = $('<div class="tab-nav" style="border-bottom: 1px solid #ccd0d4; margin-bottom: 20px;"></div>');
+            
+            // Tab buttons
+            var tabs = [
+                { id: 'basic-info', label: 'Basic Info', fields: ['perfumer_nationality', 'perfumer_birthdate'] },
+                { id: 'biography', label: 'Biography', fields: ['perfumer_education', 'perfumer_signature_style', 'perfumer_awards'] },
+                { id: 'online-presence', label: 'Online Presence', fields: ['perfumer_website', 'perfumer_social_media'] }
+            ];
+            
+            tabs.forEach(function(tab, index) {
+                var $tabButton = $('<button type="button" class="tab-button" data-tab="' + tab.id + '" style="padding: 10px 20px; border: none; background: none; cursor: pointer; margin-right: 10px;">' + tab.label + '</button>');
+                if (index === 0) $tabButton.addClass('active').css('border-bottom', '2px solid #0073aa');
+                $tabNav.append($tabButton);
+            });
+            
+            $tabContainer.append($tabNav);
+            
+            // Insert tabs before first perfumer field
+            $perfumerFields.first().before($tabContainer);
+            
+            // Group fields into tabs
+            tabs.forEach(function(tab, index) {
+                var $tabContent = $('<div class="tab-content" data-tab="' + tab.id + '" style="' + (index === 0 ? '' : 'display: none;') + '"></div>');
+                
+                tab.fields.forEach(function(fieldName) {
+                    var $field = $form.find('#' + fieldName).closest('tr');
+                    if ($field.length === 0) {
+                        // Handle social media fields
+                        $field = $form.find('input[name^="' + fieldName + '"]').closest('tr');
+                    }
+                    $tabContent.append($field);
+                });
+                
+                $tabContainer.append($tabContent);
+            });
+            
+            // Tab switching functionality
+            $('.tab-button').on('click', function() {
+                var targetTab = $(this).data('tab');
+                
+                // Update buttons
+                $('.tab-button').removeClass('active').css('border-bottom', 'none');
+                $(this).addClass('active').css('border-bottom', '2px solid #0073aa');
+                
+                // Update content
+                $('.tab-content').hide();
+                $('.tab-content[data-tab="' + targetTab + '"]').show();
+            });
+        }
     }
-
-    // Start auto-save on form changes
-    $('form input, form select, form textarea').on('change', startAutoSave);
-
-})(jQuery);
+});

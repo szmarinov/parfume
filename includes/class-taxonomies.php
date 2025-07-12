@@ -449,41 +449,20 @@ class Taxonomies {
         if (isset($wp->query_vars['parfume_taxonomy_archive'])) {
             $taxonomy = $wp->query_vars['parfume_taxonomy_archive'];
             
-            // Set the main query to show all posts from this taxonomy
-            $wp->query_vars['post_type'] = 'parfume';
-            $wp->query_vars['posts_per_page'] = 12;
-            
-            // Get all terms from this taxonomy
-            $terms = get_terms(array(
-                'taxonomy' => $taxonomy,
-                'hide_empty' => false,
-                'fields' => 'ids'
-            ));
-            
-            if (!empty($terms) && !is_wp_error($terms)) {
-                $wp->query_vars['tax_query'] = array(
-                    array(
-                        'taxonomy' => $taxonomy,
-                        'field' => 'term_id',
-                        'terms' => $terms,
-                        'operator' => 'IN'
-                    )
-                );
+            // Redirect to taxonomy archive
+            $taxonomy_obj = get_taxonomy($taxonomy);
+            if ($taxonomy_obj && $taxonomy_obj->public) {
+                // This will be handled by template_loader
+                $wp->query_vars['taxonomy'] = $taxonomy;
             }
-            
-            // Set a flag so we know this is a taxonomy archive
-            $wp->query_vars['is_parfume_taxonomy_archive'] = $taxonomy;
         }
     }
     
     public function template_loader($template) {
-        global $wp_query;
-        
-        // Check if this is our custom taxonomy archive
-        if (isset($wp_query->query_vars['is_parfume_taxonomy_archive'])) {
-            $taxonomy = $wp_query->query_vars['is_parfume_taxonomy_archive'];
+        // Handle taxonomy archive pages
+        if (isset($_GET['parfume_taxonomy_archive'])) {
+            $taxonomy = sanitize_key($_GET['parfume_taxonomy_archive']);
             
-            // Load the appropriate archive template
             if ($taxonomy === 'marki') {
                 $plugin_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/archive-marki.php';
                 if (file_exists($plugin_template)) {
@@ -515,6 +494,13 @@ class Taxonomies {
                 return $plugin_template;
             }
         } elseif (is_tax('perfumer')) {
+            // ВАЖНО: Perfumer използва single-perfumer.php template
+            $plugin_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/single-perfumer.php';
+            if (file_exists($plugin_template)) {
+                return $plugin_template;
+            }
+            
+            // Fallback to taxonomy-perfumer.php
             $plugin_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/taxonomy-perfumer.php';
             if (file_exists($plugin_template)) {
                 return $plugin_template;
@@ -581,19 +567,19 @@ class Taxonomies {
         $wrapper_id = $taxonomy . '-image-wrapper';
         $image_id = get_term_meta($term->term_id, $field_name, true);
         ?>
-        <tr class="form-field term-group-wrap">
+        <tr class="form-field">
             <th scope="row">
                 <label for="<?php echo esc_attr($field_name); ?>"><?php printf(__('Изображение за %s', 'parfume-reviews'), $taxonomy_obj->labels->singular_name); ?></label>
             </th>
             <td>
-                <input type="hidden" id="<?php echo esc_attr($field_name); ?>" name="<?php echo esc_attr($field_name); ?>" value="<?php echo esc_attr($image_id); ?>">
+                <input type="hidden" id="<?php echo esc_attr($field_name); ?>" name="<?php echo esc_attr($field_name); ?>" class="custom_media_url" value="<?php echo esc_attr($image_id); ?>">
                 <div id="<?php echo esc_attr($wrapper_id); ?>">
-                    <?php if ($image_id) { ?>
-                        <?php echo wp_get_attachment_image($image_id, 'thumbnail'); ?>
-                    <?php } ?>
+                    <?php if (!empty($image_id)): ?>
+                        <img src="<?php echo esc_url(wp_get_attachment_url($image_id)); ?>" alt="" style="max-width: 100px; height: auto; display: block; margin-bottom: 10px;">
+                    <?php endif; ?>
                 </div>
                 <p>
-                    <input type="button" class="button button-secondary pr_tax_media_button" data-field="<?php echo esc_attr($field_name); ?>" data-wrapper="<?php echo esc_attr($wrapper_id); ?>" value="<?php _e('Добави изображение', 'parfume-reviews'); ?>" />
+                    <input type="button" class="button button-secondary pr_tax_media_button" data-field="<?php echo esc_attr($field_name); ?>" data-wrapper="<?php echo esc_attr($wrapper_id); ?>" value="<?php _e('Промени изображение', 'parfume-reviews'); ?>" />
                     <input type="button" class="button button-secondary pr_tax_media_remove" data-field="<?php echo esc_attr($field_name); ?>" data-wrapper="<?php echo esc_attr($wrapper_id); ?>" value="<?php _e('Премахни изображение', 'parfume-reviews'); ?>" />
                 </p>
             </td>
@@ -603,7 +589,7 @@ class Taxonomies {
     
     public function add_notes_group_field($taxonomy) {
         ?>
-        <div class="form-field">
+        <div class="form-field term-group">
             <label for="note_group"><?php _e('Група', 'parfume-reviews'); ?></label>
             <select name="note_group" id="note_group">
                 <option value=""><?php _e('Избери група', 'parfume-reviews'); ?></option>
@@ -619,7 +605,7 @@ class Taxonomies {
                 <option value="Балсамови"><?php _e('Балсамови', 'parfume-reviews'); ?></option>
                 <option value="Синтетични"><?php _e('Синтетични', 'parfume-reviews'); ?></option>
             </select>
-            <p><?php _e('Изберете към коя група спада тази нотка за по-добра организация.', 'parfume-reviews'); ?></p>
+            <p class="description"><?php _e('Изберете към коя група спада тази нотка за по-добра организация.', 'parfume-reviews'); ?></p>
         </div>
         <?php
     }
@@ -651,8 +637,9 @@ class Taxonomies {
         </tr>
         <?php
     }
-    
+
     public function save_taxonomy_meta_fields($term_id, $tt_id, $taxonomy) {
+        // Save image field for all taxonomies
         $field_name = $taxonomy . '-image-id';
         if (isset($_POST[$field_name])) {
             update_term_meta($term_id, $field_name, absint($_POST[$field_name]));
