@@ -55,6 +55,9 @@ function parfume_reviews_load_classes() {
         'includes/class-settings.php' => 'Parfume_Reviews\\Settings',
         'includes/class-comparison.php' => 'Parfume_Reviews\\Comparison',
         'includes/class-collections.php' => 'Parfume_Reviews\\Collections',
+        'includes/class-blog.php' => 'Parfume_Reviews\\Blog',
+        'includes/class-product-scraper.php' => 'Parfume_Reviews\\Product_Scraper',
+        'includes/class-comments.php' => 'Parfume_Reviews\\Comments',
     );
     
     foreach ($class_files as $file => $class_name) {
@@ -114,11 +117,27 @@ function parfume_reviews_init() {
             parfume_reviews_debug_log("Collections initialized");
         }
         
+        if (class_exists('Parfume_Reviews\\Blog')) {
+            new Parfume_Reviews\Blog();
+            parfume_reviews_debug_log("Blog initialized");
+        }
+        
+        if (class_exists('Parfume_Reviews\\Product_Scraper')) {
+            new Parfume_Reviews\Product_Scraper();
+            parfume_reviews_debug_log("Product_Scraper initialized");
+        }
+        
+        if (class_exists('Parfume_Reviews\\Comments')) {
+            new Parfume_Reviews\Comments();
+            parfume_reviews_debug_log("Comments initialized");
+        }
+        
         parfume_reviews_debug_log("Plugin initialized successfully");
         
-        // Flush rewrite rules if needed
-        if (get_option('parfume_reviews_flush_rewrite_rules', false)) {
-            flush_rewrite_rules();
+        // Flush rewrite rules if needed - ПОПРАВЕНО
+        $flush_needed = get_option('parfume_reviews_flush_rewrite_rules', false);
+        if ($flush_needed) {
+            flush_rewrite_rules(false); // false за по-бързо изпълнение
             delete_option('parfume_reviews_flush_rewrite_rules');
             parfume_reviews_debug_log("Rewrite rules flushed");
         }
@@ -133,10 +152,10 @@ function parfume_reviews_init() {
     }
 }
 
-// Hook initialization
-add_action('plugins_loaded', 'parfume_reviews_init');
+// Hook initialization - ПОПРАВЕНО: променено от plugins_loaded на init
+add_action('init', 'parfume_reviews_init', 5); // приоритет 5 за ранно зареждане
 
-// Activation hook with error handling
+// Activation hook with error handling - ПОПРАВЕНО
 function parfume_reviews_activate() {
     try {
         // Load required files for activation
@@ -145,14 +164,14 @@ function parfume_reviews_activate() {
         
         // Initialize to register post types and taxonomies
         if (class_exists('Parfume_Reviews\\Post_Type')) {
-            new Parfume_Reviews\Post_Type();
+            $post_type = new Parfume_Reviews\Post_Type();
         }
         if (class_exists('Parfume_Reviews\\Taxonomies')) {
-            new Parfume_Reviews\Taxonomies();
+            $taxonomies = new Parfume_Reviews\Taxonomies();
         }
-        
-        // Flush rewrite rules
-        flush_rewrite_rules();
+        if (class_exists('Parfume_Reviews\\Blog')) {
+            $blog = new Parfume_Reviews\Blog();
+        }
         
         // Set default options
         $defaults = array(
@@ -165,12 +184,19 @@ function parfume_reviews_activate() {
             'season_slug' => 'season',
             'intensity_slug' => 'intensity',
             'price_update_interval' => 24,
+            'archive_description' => '',
+            'similar_products_count' => 4,
+            'similar_products_columns' => 4,
+            'recently_viewed_count' => 4,
+            'recently_viewed_columns' => 4,
+            'brand_products_count' => 4,
+            'brand_products_columns' => 4,
         );
         
         add_option('parfume_reviews_settings', $defaults);
         
-        // Set flag to flush rewrite rules on next page load
-        update_option('parfume_reviews_flush_rewrite_rules', true);
+        // ПОПРАВЕНО: Веднага flush rewrite rules при активация
+        flush_rewrite_rules(false);
         
         parfume_reviews_debug_log("Plugin activated successfully");
         
@@ -180,10 +206,11 @@ function parfume_reviews_activate() {
     }
 }
 
-// Deactivation hook
+// Deactivation hook - ПОПРАВЕНО
 function parfume_reviews_deactivate() {
     try {
-        flush_rewrite_rules();
+        // Flush rewrite rules при деактивация
+        flush_rewrite_rules(false);
         parfume_reviews_debug_log("Plugin deactivated successfully");
     } catch (Exception $e) {
         parfume_reviews_debug_log("Error during deactivation: " . $e->getMessage());
@@ -225,6 +252,21 @@ function parfume_reviews_check_requirements() {
 // Check requirements on admin_init
 add_action('admin_init', 'parfume_reviews_check_requirements');
 
+// НОВА ФУНКЦИЯ: Helper за получаване на price history (празна, тъй като се премахва)
+function parfume_reviews_get_price_history($post_id) {
+    // Price history функционалността е премахната
+    return array();
+}
+
+// НОВА ФУНКЦИЯ: Helper за получаване на perfumer photo
+function parfume_reviews_get_perfumer_photo($term_id) {
+    $image_id = get_term_meta($term_id, 'perfumer-image-id', true);
+    if ($image_id) {
+        return wp_get_attachment_image($image_id, 'thumbnail');
+    }
+    return '';
+}
+
 // Debug function for checking URLs and templates
 function parfume_reviews_debug_urls() {
     if (!current_user_can('manage_options')) {
@@ -265,13 +307,22 @@ function parfume_reviews_debug_urls() {
             echo '<li>❌ Post type "parfume" is NOT registered</li>';
         }
         
+        // Check post type blog
+        if (isset($post_types['parfume_blog'])) {
+            echo '<li>✅ Post type "parfume_blog" is registered</li>';
+        } else {
+            echo '<li>❌ Post type "parfume_blog" is NOT registered</li>';
+        }
+        
         // Check template files
         $template_files = array(
             'templates/taxonomy-marki.php',
             'templates/taxonomy-notes.php', 
             'templates/taxonomy-perfumer.php',
             'templates/archive-parfume.php',
-            'templates/single-parfume.php'
+            'templates/single-parfume.php',
+            'templates/archive-parfume_blog.php',
+            'templates/single-parfume_blog.php',
         );
         
         foreach ($template_files as $template) {
