@@ -117,127 +117,39 @@ class Post_Type {
             'show_ui' => true,
             'show_in_menu' => 'edit.php?post_type=parfume',
             'query_var' => true,
-            'rewrite' => array('slug' => $slug, 'with_front' => true),
+            'rewrite' => array('slug' => $slug . '/blog'),
             'capability_type' => 'post',
-            'has_archive' => false,
+            'has_archive' => true,
             'hierarchical' => false,
-            'supports' => array('title', 'editor', 'thumbnail', 'excerpt', 'comments', 'custom-fields'),
+            'menu_position' => null,
+            'supports' => array('title', 'editor', 'thumbnail', 'excerpt', 'comments', 'author', 'custom-fields'),
             'show_in_rest' => true,
-            'menu_icon' => 'dashicons-admin-post',
+            'taxonomies' => array('category', 'post_tag'),
         );
         
         register_post_type('parfume_blog', $args);
     }
     
-    // Add custom rewrite rules for single posts
     public function add_custom_rewrite_rules() {
         $settings = get_option('parfume_reviews_settings', array());
-        $slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
+        $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
         
-        // Detect subdirectory by comparing URLs
-        $home_url = home_url();
-        $site_url = site_url();
-        $subdirectory = '';
+        // Add some custom rewrite rules if needed
+        add_rewrite_rule(
+            '^' . $parfume_slug . '/([^/]+)/page/?([0-9]{1,})/?$',
+            'index.php?post_type=parfume&name=$matches[1]&paged=$matches[2]',
+            'top'
+        );
         
-        if ($home_url !== $site_url) {
-            // Extract subdirectory from home_url
-            $home_path = parse_url($home_url, PHP_URL_PATH);
-            $subdirectory = trim($home_path, '/');
-        }
-        
-        // Build patterns with subdirectory if it exists
-        if (!empty($subdirectory)) {
-            $pattern = '^' . $subdirectory . '/' . $slug . '/([^/]+)/?$';
-            $archive_pattern = '^' . $subdirectory . '/' . $slug . '/?$';
-            $archive_page_pattern = '^' . $subdirectory . '/' . $slug . '/page/([0-9]+)/?$';
-        } else {
-            $pattern = '^' . $slug . '/([^/]+)/?$';
-            $archive_pattern = '^' . $slug . '/?$';
-            $archive_page_pattern = '^' . $slug . '/page/([0-9]+)/?$';
-        }
-        
-        $rewrite = 'index.php?parfume=$matches[1]';
-        $archive_rewrite = 'index.php?post_type=parfume';
-        $archive_page_rewrite = 'index.php?post_type=parfume&paged=$matches[1]';
-        
-        // Add the rules at the top
-        add_rewrite_rule($pattern, $rewrite, 'top');
-        add_rewrite_rule($archive_pattern, $archive_rewrite, 'top');
-        add_rewrite_rule($archive_page_pattern, $archive_page_rewrite, 'top');
-        
+        // Debug output
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Custom rewrite rules added:");
-            error_log("Single: $pattern => $rewrite");
-            error_log("Archive: $archive_pattern => $archive_rewrite");
-            error_log("Archive pagination: $archive_page_pattern => $archive_page_rewrite");
-            error_log("Subdirectory: '$subdirectory'");
-            error_log("Home URL: $home_url");
-            error_log("Site URL: $site_url");
-        }
-    }
-    
-    // Debug function to check current request
-    public function debug_current_request() {
-        if (!defined('WP_DEBUG') || !WP_DEBUG) return;
-        
-        global $wp_query;
-        $request_uri = $_SERVER['REQUEST_URI'] ?? '';
-        
-        if (strpos($request_uri, 'parfiumi') !== false) {
-            error_log("Post Type Debug - Request URI: $request_uri");
-            error_log("Post Type Debug - Is 404: " . (is_404() ? 'yes' : 'no'));
-            error_log("Post Type Debug - Is singular: " . (is_singular() ? 'yes' : 'no'));
-            error_log("Post Type Debug - Is single parfume: " . (is_singular('parfume') ? 'yes' : 'no'));
-            error_log("Post Type Debug - Is post type archive: " . (is_post_type_archive('parfume') ? 'yes' : 'no'));
-            
-            $queried_object = get_queried_object();
-            if ($queried_object) {
-                error_log("Post Type Debug - Queried object type: " . get_class($queried_object));
-                if (isset($queried_object->ID)) {
-                    error_log("Post Type Debug - Queried object ID: " . $queried_object->ID);
-                }
-                if (isset($queried_object->post_type)) {
-                    error_log("Post Type Debug - Queried object post_type: " . $queried_object->post_type);
-                }
-            } else {
-                error_log("Post Type Debug - No queried object");
-            }
-            
-            if (is_404()) {
-                // Check if a post with this slug exists
-                $url_parts = explode('/', trim($request_uri, '/'));
-                $post_slug = end($url_parts);
-                
-                if ($post_slug && $post_slug !== 'parfiumi') {
-                    $post = get_page_by_path($post_slug, OBJECT, 'parfume');
-                    if ($post) {
-                        error_log("Post Type Debug - Found parfume post '$post_slug' but still 404");
-                        error_log("Post Type Debug - Post status: " . $post->post_status);
-                        error_log("Post Type Debug - Post ID: " . $post->ID);
-                        error_log("Post Type Debug - Post permalink: " . get_permalink($post->ID));
-                        
-                        // Check rewrite rules
-                        $rules = get_option('rewrite_rules', array());
-                        $matching_rules = array();
-                        foreach ($rules as $pattern => $rewrite) {
-                            if (strpos($pattern, 'parfiumi') !== false || strpos($rewrite, 'parfume') !== false) {
-                                $matching_rules[$pattern] = $rewrite;
-                            }
-                        }
-                        error_log("Post Type Debug - Parfume rewrite rules: " . print_r($matching_rules, true));
-                        
-                    } else {
-                        error_log("Post Type Debug - No parfume post found with slug '$post_slug'");
-                    }
-                }
-            }
+            error_log("Custom rewrite rules added for: $parfume_slug");
         }
     }
     
     public function modify_archive_query($query) {
         if (!is_admin() && $query->is_main_query()) {
             if (is_post_type_archive('parfume') || is_tax(array('marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'))) {
-                // Set posts per page
                 $settings = get_option('parfume_reviews_settings', array());
                 $per_page = !empty($settings['archive_posts_per_page']) ? intval($settings['archive_posts_per_page']) : 12;
                 $query->set('posts_per_page', $per_page);
@@ -258,65 +170,57 @@ class Post_Type {
                 $terms = is_array($_GET[$taxonomy]) ? $_GET[$taxonomy] : array($_GET[$taxonomy]);
                 $terms = array_map('sanitize_text_field', $terms);
                 
-                if (!empty($terms) && !in_array('all', $terms)) {
+                if (!empty($terms)) {
                     $tax_query[] = array(
                         'taxonomy' => $taxonomy,
                         'field' => 'slug',
                         'terms' => $terms,
-                        'operator' => 'IN',
+                        'operator' => 'IN'
                     );
                 }
             }
         }
         
         if (!empty($tax_query)) {
-            $existing_tax_query = $query->get('tax_query');
-            if (!empty($existing_tax_query)) {
-                $tax_query = array_merge($existing_tax_query, $tax_query);
-            }
             $tax_query['relation'] = 'AND';
             $query->set('tax_query', $tax_query);
         }
         
-        // Sort by rating if available
+        // Handle sorting
         if (!empty($_GET['orderby'])) {
             $orderby = sanitize_text_field($_GET['orderby']);
+            $order = !empty($_GET['order']) ? sanitize_text_field($_GET['order']) : 'DESC';
+            
             switch ($orderby) {
                 case 'rating':
-                    $query->set('meta_key', '_parfume_average_rating');
+                    $query->set('meta_key', '_parfume_rating');
                     $query->set('orderby', 'meta_value_num');
-                    $query->set('order', 'DESC');
-                    break;
-                case 'price_low':
-                    $query->set('meta_key', '_parfume_price');
-                    $query->set('orderby', 'meta_value_num');
-                    $query->set('order', 'ASC');
-                    break;
-                case 'price_high':
-                    $query->set('meta_key', '_parfume_price');
-                    $query->set('orderby', 'meta_value_num');
-                    $query->set('order', 'DESC');
-                    break;
-                case 'date':
-                    $query->set('orderby', 'date');
-                    $query->set('order', 'DESC');
+                    $query->set('order', $order);
                     break;
                 case 'title':
                     $query->set('orderby', 'title');
-                    $query->set('order', 'ASC');
+                    $query->set('order', $order);
+                    break;
+                case 'date':
+                default:
+                    $query->set('orderby', 'date');
+                    $query->set('order', $order);
                     break;
             }
         }
     }
     
     public function filter_posts_where($where, $query) {
+        global $wpdb;
+        
         if (!is_admin() && $query->is_main_query() && (is_post_type_archive('parfume') || is_tax(array('marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer')))) {
-            global $wpdb;
-            
-            // Search filter
+            // Handle search
             if (!empty($_GET['search'])) {
                 $search_term = sanitize_text_field($_GET['search']);
-                $where .= $wpdb->prepare(" AND ({$wpdb->posts}.post_title LIKE %s OR {$wpdb->posts}.post_content LIKE %s)", 
+                $where .= $wpdb->prepare(" AND (
+                    {$wpdb->posts}.post_title LIKE %s 
+                    OR {$wpdb->posts}.post_content LIKE %s
+                )", 
                     '%' . $search_term . '%', 
                     '%' . $search_term . '%'
                 );
@@ -341,6 +245,13 @@ class Post_Type {
     public function template_loader($template) {
         if (is_single() && get_post_type() === 'parfume') {
             $plugin_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/single-parfume.php';
+            if (file_exists($plugin_template)) {
+                return $plugin_template;
+            }
+        }
+        
+        if (is_single() && get_post_type() === 'parfume_blog') {
+            $plugin_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/single-parfume-blog.php';
             if (file_exists($plugin_template)) {
                 return $plugin_template;
             }
@@ -385,12 +296,24 @@ class Post_Type {
     
     public function enqueue_scripts() {
         if (is_singular('parfume') || is_post_type_archive('parfume') || is_tax(array('marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'))) {
+            
+            // Main frontend CSS
             wp_enqueue_style(
                 'parfume-reviews-frontend',
                 PARFUME_REVIEWS_PLUGIN_URL . 'assets/css/frontend.css',
                 array(),
                 PARFUME_REVIEWS_VERSION
             );
+            
+            // Single parfume specific CSS
+            if (is_singular('parfume')) {
+                wp_enqueue_style(
+                    'parfume-reviews-single',
+                    PARFUME_REVIEWS_PLUGIN_URL . 'assets/css/single-parfume.css',
+                    array('parfume-reviews-frontend'),
+                    PARFUME_REVIEWS_VERSION
+                );
+            }
             
             wp_enqueue_script(
                 'parfume-reviews-frontend',
@@ -462,6 +385,24 @@ class Post_Type {
         );
         
         add_meta_box(
+            'parfume_aroma_chart',
+            __('Ароматна диаграма', 'parfume-reviews'),
+            array($this, 'render_aroma_chart_meta_box'),
+            'parfume',
+            'normal',
+            'default'
+        );
+        
+        add_meta_box(
+            'parfume_pros_cons',
+            __('Плюсове и Минуси', 'parfume-reviews'),
+            array($this, 'render_pros_cons_meta_box'),
+            'parfume',
+            'normal',
+            'default'
+        );
+        
+        add_meta_box(
             'parfume_stores',
             __('Магазини', 'parfume-reviews'),
             array($this, 'render_stores_meta_box'),
@@ -498,51 +439,192 @@ class Post_Type {
         
         echo '<p><label for="parfume_rating">' . __('Рейтинг (0-5)', 'parfume-reviews') . '</label></p>';
         echo '<input type="number" id="parfume_rating" name="parfume_rating" value="' . esc_attr($rating) . '" min="0" max="5" step="0.1" style="width: 100%;" />';
+        
+        // Rating preview
+        echo '<div class="rating-preview" style="margin-top: 10px;">';
+        echo '<p><strong>' . __('Преглед:', 'parfume-reviews') . '</strong></p>';
+        echo '<div id="rating-stars-preview">';
+        for ($i = 1; $i <= 5; $i++) {
+            echo '<span class="star">★</span>';
+        }
+        echo '</div>';
+        echo '</div>';
+        
+        // Add JavaScript for live preview
+        ?>
+        <script>
+        jQuery(document).ready(function($) {
+            function updateRatingPreview() {
+                var rating = parseFloat($('#parfume_rating').val()) || 0;
+                var stars = $('#rating-stars-preview .star');
+                
+                stars.each(function(index) {
+                    var $star = $(this);
+                    if (index < Math.floor(rating)) {
+                        $star.removeClass('half').addClass('filled');
+                    } else if (index < rating) {
+                        $star.removeClass('filled').addClass('half');
+                    } else {
+                        $star.removeClass('filled half');
+                    }
+                });
+            }
+            
+            $('#parfume_rating').on('input', updateRatingPreview);
+            updateRatingPreview(); // Initial load
+        });
+        </script>
+        <?php
+    }
+    
+    public function render_aroma_chart_meta_box($post) {
+        wp_nonce_field('parfume_aroma_chart_nonce', 'parfume_aroma_chart_nonce');
+        
+        $fields = array(
+            'parfume_freshness' => __('Свежест', 'parfume-reviews'),
+            'parfume_sweetness' => __('Сладост', 'parfume-reviews'),
+            'parfume_intensity' => __('Интензивност', 'parfume-reviews'),
+            'parfume_warmth' => __('Топлина', 'parfume-reviews'),
+        );
+        
+        echo '<table class="form-table"><tbody>';
+        foreach ($fields as $field => $label) {
+            $value = get_post_meta($post->ID, '_' . $field, true);
+            echo '<tr><th scope="row"><label for="' . $field . '">' . $label . ' (0-10)</label></th>';
+            echo '<td><input type="range" id="' . $field . '" name="' . $field . '" value="' . esc_attr($value) . '" min="0" max="10" step="1" />';
+            echo '<span class="range-value">' . esc_attr($value) . '</span></td></tr>';
+        }
+        echo '</tbody></table>';
+        
+        // Add JavaScript for live value display
+        ?>
+        <script>
+        jQuery(document).ready(function($) {
+            $('input[type="range"]').on('input', function() {
+                $(this).siblings('.range-value').text($(this).val());
+            });
+        });
+        </script>
+        <?php
+    }
+    
+    public function render_pros_cons_meta_box($post) {
+        wp_nonce_field('parfume_pros_cons_nonce', 'parfume_pros_cons_nonce');
+        
+        $pros = get_post_meta($post->ID, '_parfume_pros', true);
+        $cons = get_post_meta($post->ID, '_parfume_cons', true);
+        
+        echo '<div style="display: flex; gap: 20px;">';
+        echo '<div style="flex: 1;">';
+        echo '<h4>' . __('Плюсове', 'parfume-reviews') . '</h4>';
+        echo '<textarea name="parfume_pros" rows="8" style="width: 100%;" placeholder="' . __('Един плюс на ред', 'parfume-reviews') . '">' . esc_textarea($pros) . '</textarea>';
+        echo '</div>';
+        echo '<div style="flex: 1;">';
+        echo '<h4>' . __('Минуси', 'parfume-reviews') . '</h4>';
+        echo '<textarea name="parfume_cons" rows="8" style="width: 100%;" placeholder="' . __('Един минус на ред', 'parfume-reviews') . '">' . esc_textarea($cons) . '</textarea>';
+        echo '</div>';
+        echo '</div>';
     }
     
     public function render_stores_meta_box($post) {
         wp_nonce_field('parfume_stores_nonce', 'parfume_stores_nonce');
         
         $stores = get_post_meta($post->ID, '_parfume_stores', true);
-        if (!is_array($stores)) {
-            $stores = array();
-        }
+        $stores = !empty($stores) ? $stores : array();
         
         echo '<div id="parfume-stores-container">';
         
         if (!empty($stores)) {
             foreach ($stores as $index => $store) {
-                $this->render_store_item($index, $store);
+                $this->render_store_item($store, $index);
             }
-        } else {
-            $this->render_store_item(0, array());
         }
         
         echo '</div>';
-        echo '<p><button type="button" id="add-store-btn" class="button">' . __('Добави магазин', 'parfume-reviews') . '</button></p>';
+        echo '<button type="button" id="add-store-btn" class="button button-secondary">' . __('Добави магазин', 'parfume-reviews') . '</button>';
         
         $this->render_stores_js(count($stores));
     }
     
-    private function render_store_item($index, $store) {
-        $fields = array(
-            'name' => __('Име на магазин', 'parfume-reviews'),
-            'url' => __('URL на продукт', 'parfume-reviews'),
-            'price' => __('Цена', 'parfume-reviews'),
-            'availability' => __('Наличност', 'parfume-reviews'),
-        );
-        
-        echo '<div class="store-item" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px;">';
+    private function render_store_item($store, $index) {
+        echo '<div class="store-item" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; background: #f9f9f9; border-radius: 5px;">';
         echo '<h4>' . __('Магазин', 'parfume-reviews') . ' ' . ($index + 1) . ' <button type="button" class="remove-store-btn button" style="float: right;">' . __('Премахни', 'parfume-reviews') . '</button></h4>';
         
-        foreach ($fields as $field => $label) {
-            $value = isset($store[$field]) ? $store[$field] : '';
-            echo '<p>';
-            echo '<label>' . $label . '</label><br>';
-            echo '<input type="text" name="parfume_stores[' . $index . '][' . $field . ']" value="' . esc_attr($value) . '" style="width: 100%;" />';
-            echo '</p>';
-        }
+        echo '<table class="form-table"><tbody>';
         
+        // Store Name
+        $name = isset($store['name']) ? $store['name'] : '';
+        echo '<tr><th scope="row"><label>' . __('Име на магазин', 'parfume-reviews') . '</label></th>';
+        echo '<td><input type="text" name="parfume_stores[' . $index . '][name]" value="' . esc_attr($name) . '" class="regular-text" /></td></tr>';
+        
+        // Store Logo
+        $logo = isset($store['logo']) ? $store['logo'] : '';
+        echo '<tr><th scope="row"><label>' . __('URL на лого', 'parfume-reviews') . '</label></th>';
+        echo '<td><input type="text" name="parfume_stores[' . $index . '][logo]" value="' . esc_attr($logo) . '" class="regular-text" /></td></tr>';
+        
+        // Product URL
+        $url = isset($store['url']) ? $store['url'] : '';
+        echo '<tr><th scope="row"><label>' . __('URL на продукт', 'parfume-reviews') . '</label></th>';
+        echo '<td><input type="text" name="parfume_stores[' . $index . '][url]" value="' . esc_attr($url) . '" class="regular-text" /></td></tr>';
+        
+        // Affiliate URL with options
+        $affiliate_url = isset($store['affiliate_url']) ? $store['affiliate_url'] : '';
+        $affiliate_rel = isset($store['affiliate_rel']) ? $store['affiliate_rel'] : 'nofollow';
+        $affiliate_target = isset($store['affiliate_target']) ? $store['affiliate_target'] : '_blank';
+        echo '<tr><th scope="row"><label>' . __('Affiliate URL', 'parfume-reviews') . '</label></th>';
+        echo '<td>';
+        echo '<input type="text" id="store_' . $index . '_affiliate_url" name="parfume_stores[' . $index . '][affiliate_url]" value="' . esc_attr($affiliate_url) . '" class="regular-text">';
+        echo '<label style="margin-left: 10px;"><input type="checkbox" name="parfume_stores[' . $index . '][affiliate_rel]" value="nofollow"' . checked($affiliate_rel, 'nofollow', false) . '> nofollow</label>';
+        echo '<label style="margin-left: 10px;"><input type="checkbox" name="parfume_stores[' . $index . '][affiliate_target]" value="_blank"' . checked($affiliate_target, '_blank', false) . '> _blank</label>';
+        echo '</td></tr>';
+        
+        // CSS Class
+        $affiliate_class = isset($store['affiliate_class']) ? $store['affiliate_class'] : '';
+        echo '<tr><th scope="row"><label>' . __('CSS клас', 'parfume-reviews') . '</label></th>';
+        echo '<td><input type="text" name="parfume_stores[' . $index . '][affiliate_class]" value="' . esc_attr($affiliate_class) . '" class="regular-text" /></td></tr>';
+        
+        // Anchor Text
+        $affiliate_anchor = isset($store['affiliate_anchor']) ? $store['affiliate_anchor'] : '';
+        echo '<tr><th scope="row"><label>' . __('Текст на линка', 'parfume-reviews') . '</label></th>';
+        echo '<td><input type="text" name="parfume_stores[' . $index . '][affiliate_anchor]" value="' . esc_attr($affiliate_anchor) . '" class="regular-text" /></td></tr>';
+        
+        // Promo Code
+        $promo_code = isset($store['promo_code']) ? $store['promo_code'] : '';
+        echo '<tr><th scope="row"><label>' . __('Промо код', 'parfume-reviews') . '</label></th>';
+        echo '<td><input type="text" name="parfume_stores[' . $index . '][promo_code]" value="' . esc_attr($promo_code) . '" class="regular-text" /></td></tr>';
+        
+        // Promo Text
+        $promo_text = isset($store['promo_text']) ? $store['promo_text'] : '';
+        echo '<tr><th scope="row"><label>' . __('Промо текст', 'parfume-reviews') . '</label></th>';
+        echo '<td><input type="text" name="parfume_stores[' . $index . '][promo_text]" value="' . esc_attr($promo_text) . '" class="regular-text" /></td></tr>';
+        
+        // Price with update button
+        $price = isset($store['price']) ? $store['price'] : '';
+        echo '<tr><th scope="row"><label>' . __('Цена', 'parfume-reviews') . '</label></th>';
+        echo '<td>';
+        echo '<input type="text" name="parfume_stores[' . $index . '][price]" value="' . esc_attr($price) . '" class="regular-text" style="width: 70%;" />';
+        echo '<button type="button" class="button update-price-btn" data-index="' . $index . '" style="margin-left: 10px;">' . __('Обнови цена', 'parfume-reviews') . '</button>';
+        echo '</td></tr>';
+        
+        // Size with get sizes button
+        $size = isset($store['size']) ? $store['size'] : '';
+        echo '<tr><th scope="row"><label>' . __('Размер', 'parfume-reviews') . '</label></th>';
+        echo '<td>';
+        echo '<input type="text" name="parfume_stores[' . $index . '][size]" value="' . esc_attr($size) . '" class="regular-text" style="width: 70%;" />';
+        echo '<button type="button" class="button get-sizes-btn" data-index="' . $index . '" style="margin-left: 10px;">' . __('Извлечи размери', 'parfume-reviews') . '</button>';
+        echo '</td></tr>';
+        
+        // Availability
+        $availability = isset($store['availability']) ? $store['availability'] : '';
+        echo '<tr><th scope="row"><label>' . __('Наличност', 'parfume-reviews') . '</label></th>';
+        echo '<td><input type="text" name="parfume_stores[' . $index . '][availability]" value="' . esc_attr($availability) . '" class="regular-text" /></td></tr>';
+        
+        // Shipping Cost
+        $shipping_cost = isset($store['shipping_cost']) ? $store['shipping_cost'] : '';
+        echo '<tr><th scope="row"><label>' . __('Цена на доставка', 'parfume-reviews') . '</label></th>';
+        echo '<td><input type="text" name="parfume_stores[' . $index . '][shipping_cost]" value="' . esc_attr($shipping_cost) . '" class="regular-text" /></td></tr>';
+        
+        echo '</tbody></table>';
         echo '</div>';
     }
     
@@ -553,20 +635,130 @@ class Post_Type {
             var storeIndex = <?php echo $store_count; ?>;
             
             $('#add-store-btn').on('click', function() {
-                var newStore = '<div class="store-item" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px;">' +
+                var newStoreHtml = '<div class="store-item" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; background: #f9f9f9; border-radius: 5px;">' +
                     '<h4><?php echo __('Магазин', 'parfume-reviews'); ?> ' + (storeIndex + 1) + ' <button type="button" class="remove-store-btn button" style="float: right;"><?php echo __('Премахни', 'parfume-reviews'); ?></button></h4>' +
-                    '<p><label><?php echo __('Име на магазин', 'parfume-reviews'); ?></label><br><input type="text" name="parfume_stores[' + storeIndex + '][name]" style="width: 100%;" /></p>' +
-                    '<p><label><?php echo __('URL на продукт', 'parfume-reviews'); ?></label><br><input type="text" name="parfume_stores[' + storeIndex + '][url]" style="width: 100%;" /></p>' +
-                    '<p><label><?php echo __('Цена', 'parfume-reviews'); ?></label><br><input type="text" name="parfume_stores[' + storeIndex + '][price]" style="width: 100%;" /></p>' +
-                    '<p><label><?php echo __('Наличност', 'parfume-reviews'); ?></label><br><input type="text" name="parfume_stores[' + storeIndex + '][availability]" style="width: 100%;" /></p>' +
-                    '</div>';
+                    '<table class="form-table"><tbody>' +
+                    '<tr><th scope="row"><label><?php echo __('Име на магазин', 'parfume-reviews'); ?></label></th>' +
+                    '<td><input type="text" name="parfume_stores[' + storeIndex + '][name]" class="regular-text" /></td></tr>' +
+                    '<tr><th scope="row"><label><?php echo __('URL на лого', 'parfume-reviews'); ?></label></th>' +
+                    '<td><input type="text" name="parfume_stores[' + storeIndex + '][logo]" class="regular-text" /></td></tr>' +
+                    '<tr><th scope="row"><label><?php echo __('URL на продукт', 'parfume-reviews'); ?></label></th>' +
+                    '<td><input type="text" name="parfume_stores[' + storeIndex + '][url]" class="regular-text" /></td></tr>' +
+                    '<tr><th scope="row"><label><?php echo __('Affiliate URL', 'parfume-reviews'); ?></label></th>' +
+                    '<td><input type="text" id="store_' + storeIndex + '_affiliate_url" name="parfume_stores[' + storeIndex + '][affiliate_url]" class="regular-text">' +
+                    '<label style="margin-left: 10px;"><input type="checkbox" name="parfume_stores[' + storeIndex + '][affiliate_rel]" value="nofollow" checked> nofollow</label>' +
+                    '<label style="margin-left: 10px;"><input type="checkbox" name="parfume_stores[' + storeIndex + '][affiliate_target]" value="_blank" checked> _blank</label></td></tr>' +
+                    '<tr><th scope="row"><label><?php echo __('CSS клас', 'parfume-reviews'); ?></label></th>' +
+                    '<td><input type="text" name="parfume_stores[' + storeIndex + '][affiliate_class]" class="regular-text" /></td></tr>' +
+                    '<tr><th scope="row"><label><?php echo __('Текст на линка', 'parfume-reviews'); ?></label></th>' +
+                    '<td><input type="text" name="parfume_stores[' + storeIndex + '][affiliate_anchor]" class="regular-text" /></td></tr>' +
+                    '<tr><th scope="row"><label><?php echo __('Промо код', 'parfume-reviews'); ?></label></th>' +
+                    '<td><input type="text" name="parfume_stores[' + storeIndex + '][promo_code]" class="regular-text" /></td></tr>' +
+                    '<tr><th scope="row"><label><?php echo __('Промо текст', 'parfume-reviews'); ?></label></th>' +
+                    '<td><input type="text" name="parfume_stores[' + storeIndex + '][promo_text]" class="regular-text" /></td></tr>' +
+                    '<tr><th scope="row"><label><?php echo __('Цена', 'parfume-reviews'); ?></label></th>' +
+                    '<td><input type="text" name="parfume_stores[' + storeIndex + '][price]" class="regular-text" style="width: 70%;" />' +
+                    '<button type="button" class="button update-price-btn" data-index="' + storeIndex + '" style="margin-left: 10px;"><?php echo __('Обнови цена', 'parfume-reviews'); ?></button></td></tr>' +
+                    '<tr><th scope="row"><label><?php echo __('Размер', 'parfume-reviews'); ?></label></th>' +
+                    '<td><input type="text" name="parfume_stores[' + storeIndex + '][size]" class="regular-text" style="width: 70%;" />' +
+                    '<button type="button" class="button get-sizes-btn" data-index="' + storeIndex + '" style="margin-left: 10px;"><?php echo __('Извлечи размери', 'parfume-reviews'); ?></button></td></tr>' +
+                    '<tr><th scope="row"><label><?php echo __('Наличност', 'parfume-reviews'); ?></label></th>' +
+                    '<td><input type="text" name="parfume_stores[' + storeIndex + '][availability]" class="regular-text" /></td></tr>' +
+                    '<tr><th scope="row"><label><?php echo __('Цена на доставка', 'parfume-reviews'); ?></label></th>' +
+                    '<td><input type="text" name="parfume_stores[' + storeIndex + '][shipping_cost]" class="regular-text" /></td></tr>' +
+                    '</tbody></table></div>';
                 
-                $('#parfume-stores-container').append(newStore);
+                $('#parfume-stores-container').append(newStoreHtml);
                 storeIndex++;
             });
             
             $(document).on('click', '.remove-store-btn', function() {
-                $(this).closest('.store-item').remove();
+                if (confirm('<?php echo __('Сигурни ли сте, че искате да премахнете този магазин?', 'parfume-reviews'); ?>')) {
+                    $(this).closest('.store-item').remove();
+                }
+            });
+            
+            // Handle price update button
+            $(document).on('click', '.update-price-btn', function() {
+                var button = $(this);
+                var index = button.data('index');
+                var storeNameInput = $('input[name="parfume_stores[' + index + '][name]"]');
+                var priceInput = $('input[name="parfume_stores[' + index + '][price]"]');
+                var storeName = storeNameInput.val();
+                
+                if (!storeName) {
+                    alert('<?php echo __('Моля въведете име на магазин първо.', 'parfume-reviews'); ?>');
+                    return;
+                }
+                
+                button.prop('disabled', true).text('<?php echo __('Обновява...', 'parfume-reviews'); ?>');
+                
+                $.ajax({
+                    url: parfumeReviewsAdmin.ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'update_store_price',
+                        nonce: parfumeReviewsAdmin.nonce,
+                        post_id: $('#post_ID').val(),
+                        store_index: index,
+                        store_name: storeName
+                    },
+                    success: function(response) {
+                        if (response.success && response.data.price) {
+                            priceInput.val(response.data.price);
+                            alert('<?php echo __('Цената е обновена успешно!', 'parfume-reviews'); ?>');
+                        } else {
+                            alert('<?php echo __('Грешка при обновяване на цената.', 'parfume-reviews'); ?>');
+                        }
+                    },
+                    error: function() {
+                        alert('<?php echo __('Грешка при свързване със сървъра.', 'parfume-reviews'); ?>');
+                    },
+                    complete: function() {
+                        button.prop('disabled', false).text('<?php echo __('Обнови цена', 'parfume-reviews'); ?>');
+                    }
+                });
+            });
+            
+            // Handle get sizes button
+            $(document).on('click', '.get-sizes-btn', function() {
+                var button = $(this);
+                var index = button.data('index');
+                var storeNameInput = $('input[name="parfume_stores[' + index + '][name]"]');
+                var sizeInput = $('input[name="parfume_stores[' + index + '][size]"]');
+                var storeName = storeNameInput.val();
+                
+                if (!storeName) {
+                    alert('<?php echo __('Моля въведете име на магазин първо.', 'parfume-reviews'); ?>');
+                    return;
+                }
+                
+                button.prop('disabled', true).text('<?php echo __('Извлича...', 'parfume-reviews'); ?>');
+                
+                $.ajax({
+                    url: parfumeReviewsAdmin.ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'get_store_sizes',
+                        nonce: parfumeReviewsAdmin.nonce,
+                        store: storeName
+                    },
+                    success: function(response) {
+                        if (response.success && response.data.length > 0) {
+                            var sizes = response.data.join(', ');
+                            sizeInput.val(sizes);
+                            alert('<?php echo __('Размерите са извлечени успешно!', 'parfume-reviews'); ?>');
+                        } else {
+                            alert('<?php echo __('Не са намерени размери за този магазин.', 'parfume-reviews'); ?>');
+                        }
+                    },
+                    error: function() {
+                        alert('<?php echo __('Грешка при свързване със сървъра.', 'parfume-reviews'); ?>');
+                    },
+                    complete: function() {
+                        button.prop('disabled', false).text('<?php echo __('Извлечи размери', 'parfume-reviews'); ?>');
+                    }
+                });
             });
         });
         </script>
@@ -594,8 +786,34 @@ class Post_Type {
         if (isset($_POST['parfume_rating_nonce']) && wp_verify_nonce($_POST['parfume_rating_nonce'], 'parfume_rating_nonce')) {
             if (isset($_POST['parfume_rating'])) {
                 $rating = floatval($_POST['parfume_rating']);
-                $rating = max(0, min(5, $rating));
+                $rating = max(0, min(5, $rating)); // Clamp between 0 and 5
                 update_post_meta($post_id, '_parfume_rating', $rating);
+            }
+        }
+        
+        // Save aroma chart
+        if (isset($_POST['parfume_aroma_chart_nonce']) && wp_verify_nonce($_POST['parfume_aroma_chart_nonce'], 'parfume_aroma_chart_nonce')) {
+            $chart_fields = array('parfume_freshness', 'parfume_sweetness', 'parfume_intensity', 'parfume_warmth');
+            
+            foreach ($chart_fields as $field) {
+                if (isset($_POST[$field])) {
+                    $value = intval($_POST[$field]);
+                    $value = max(0, min(10, $value)); // Clamp between 0 and 10
+                    update_post_meta($post_id, '_' . $field, $value);
+                }
+            }
+        }
+        
+        // Save pros and cons
+        if (isset($_POST['parfume_pros_cons_nonce']) && wp_verify_nonce($_POST['parfume_pros_cons_nonce'], 'parfume_pros_cons_nonce')) {
+            if (isset($_POST['parfume_pros'])) {
+                $pros = sanitize_textarea_field($_POST['parfume_pros']);
+                update_post_meta($post_id, '_parfume_pros', $pros);
+            }
+            
+            if (isset($_POST['parfume_cons'])) {
+                $cons = sanitize_textarea_field($_POST['parfume_cons']);
+                update_post_meta($post_id, '_parfume_cons', $cons);
             }
         }
         
@@ -605,19 +823,22 @@ class Post_Type {
                 $stores = array();
                 
                 foreach ($_POST['parfume_stores'] as $store_data) {
-                    if (empty($store_data['name'])) continue;
-                    
-                    $store = array();
-                    $fields = array('name', 'url', 'price', 'availability');
-                    
-                    foreach ($fields as $field) {
-                        $store[$field] = isset($store_data[$field]) ? sanitize_text_field($store_data[$field]) : '';
+                    if (!empty($store_data['name'])) {
+                        $store = array();
+                        $allowed_fields = array('name', 'logo', 'url', 'affiliate_url', 'affiliate_class', 'affiliate_rel', 'affiliate_target', 'affiliate_anchor', 'promo_code', 'promo_text', 'price', 'size', 'availability', 'shipping_cost');
+                        
+                        foreach ($allowed_fields as $field) {
+                            $store[$field] = isset($store_data[$field]) ? sanitize_text_field($store_data[$field]) : '';
+                        }
+                        
+                        $store['last_updated'] = current_time('mysql');
+                        $stores[] = $store;
                     }
-                    
-                    $stores[] = $store;
                 }
                 
                 update_post_meta($post_id, '_parfume_stores', $stores);
+            } else {
+                delete_post_meta($post_id, '_parfume_stores');
             }
         }
     }
@@ -627,26 +848,67 @@ class Post_Type {
         check_ajax_referer('parfume-reviews-admin-nonce', 'nonce');
         
         if (!current_user_can('edit_posts')) {
-            wp_die(__('Нямате достатъчно права за тази операция.', 'parfume-reviews'));
+            wp_die(__('Нямате права за тази операция.', 'parfume-reviews'));
         }
         
-        wp_send_json_success(array(
-            'price' => '99.99 лв',
-            'message' => __('Цената е обновена успешно.', 'parfume-reviews')
-        ));
+        $post_id = intval($_POST['post_id']);
+        $store_index = intval($_POST['store_index']);
+        $store_name = sanitize_text_field($_POST['store_name']);
+        
+        // Mock price update - in real implementation, this would connect to store APIs
+        $mock_prices = array(
+            'parfium' => '89.90 лв.',
+            'douglas' => '92.50 лв.',
+            'notino' => '87.00 лв.',
+            'makeup' => '85.90 лв.',
+            'strawberrynet' => '79.99 лв.',
+        );
+        
+        $store_key = strtolower($store_name);
+        $new_price = isset($mock_prices[$store_key]) ? $mock_prices[$store_key] : (rand(70, 120) . '.90 лв.');
+        
+        $stores = get_post_meta($post_id, '_parfume_stores', true);
+        
+        if (is_array($stores) && isset($stores[$store_index])) {
+            $stores[$store_index]['price'] = $new_price;
+            $stores[$store_index]['last_updated'] = current_time('mysql');
+            update_post_meta($post_id, '_parfume_stores', $stores);
+            
+            wp_send_json_success(array(
+                'message' => __('Цената е обновена успешно.', 'parfume-reviews'),
+                'price' => $new_price
+            ));
+        } else {
+            wp_send_json_error(__('Магазинът не е намерен.', 'parfume-reviews'));
+        }
     }
     
     public function ajax_get_store_sizes() {
-        check_ajax_referer('parfume-reviews-admin-nonce', 'nonce');
+        check_ajax_referer('parfume-reviews-nonce', 'nonce');
         
-        if (!current_user_can('edit_posts')) {
-            wp_die(__('Нямате достатъчно права за тази операция.', 'parfume-reviews'));
+        $store_name = sanitize_text_field($_POST['store']);
+        
+        // This would typically connect to store APIs to get available sizes
+        // For now, return mock data
+        $sizes = array(
+            'parfium' => array('30ml', '50ml', '100ml'),
+            'douglas' => array('30ml', '50ml', '75ml', '100ml'),
+            'notino' => array('30ml', '50ml', '100ml', '150ml'),
+        );
+        
+        $store_sizes = isset($sizes[strtolower($store_name)]) ? $sizes[strtolower($store_name)] : array('50ml', '100ml');
+        
+        wp_send_json_success($store_sizes);
+    }
+    
+    public function debug_current_request() {
+        if (defined('WP_DEBUG') && WP_DEBUG && is_admin()) {
+            global $wp_query;
+            
+            if (is_post_type_archive('parfume') || is_tax(array('marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'))) {
+                error_log("Parfume Query Debug: " . print_r($wp_query->query_vars, true));
+            }
         }
-        
-        wp_send_json_success(array(
-            'sizes' => array('30 мл', '50 мл', '100 мл'),
-            'message' => __('Размерите са извлечени успешно.', 'parfume-reviews')
-        ));
     }
     
     // Shortcode handlers
