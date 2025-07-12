@@ -1,6 +1,5 @@
 /* ==========================================================================
-   Single Parfume Page - Dedicated Styles
-   ОБНОВЕН С ГАЛЕРИЯ И ПОДОБРЕНИ STORES СТИЛОВЕ
+   Single Parfume Page - БЕЗ ТАБОВЕ, ЧИСТА СТРУКТУРА
    ========================================================================== */
 
 /* Main Container */
@@ -9,6 +8,8 @@
     margin: 0 auto;
     padding: 20px;
     background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     line-height: 1.6;
     color: #333;
@@ -21,10 +22,6 @@
     align-items: flex-start;
 }
 
-.parfume-main-content {
-    flex: 1;
-}
-
 .parfume-stores-sidebar {
     flex: 0 0 350px;
     position: sticky;
@@ -35,38 +32,36 @@
 
 /* Header Section */
 .parfume-header {
+    margin-bottom: 50px;
+}
+
+.parfume-main-info {
     display: flex;
     gap: 40px;
-    margin-bottom: 50px;
+    margin-bottom: 30px;
     align-items: flex-start;
 }
 
-.parfume-gallery {
+.parfume-image {
     flex: 0 0 45%;
     position: sticky;
     top: 20px;
 }
 
-.parfume-featured-image {
-    position: relative;
-    overflow: hidden;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    background: #f8f9fa;
-}
-
-.parfume-featured-image img {
+.parfume-image img.main-image {
     width: 100%;
     height: auto;
-    display: block;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease;
+    cursor: pointer;
 }
 
-.parfume-featured-image:hover img {
-    transform: scale(1.05);
+.parfume-image img.main-image:hover {
+    transform: scale(1.02);
 }
 
-.parfume-summary {
+.parfume-details {
     flex: 1;
     padding-left: 20px;
 }
@@ -118,18 +113,22 @@
     margin-right: 2px;
 }
 
-.rating-stars .star.filled {
-    color: #ffc107;
-}
-
-.rating-stars .star:not(.filled) {
-    color: #e9ecef;
-}
-
-.rating-text {
-    font-size: 1.1em;
+.rating-number {
+    font-size: 1.2em;
     font-weight: 600;
-    color: #495057;
+    color: #333;
+}
+
+/* Price Section */
+.parfume-price {
+    margin-bottom: 25px;
+}
+
+.price-value {
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #ff6b35;
+    text-shadow: 0 1px 2px rgba(255, 107, 53, 0.2);
 }
 
 /* Quick Info Grid */
@@ -137,8 +136,9 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 15px;
+    margin-top: 30px;
+    padding: 25px;
     background: #f8f9fa;
-    padding: 20px;
     border-radius: 12px;
     border: 1px solid #e9ecef;
 }
@@ -151,141 +151,403 @@
 
 .info-label {
     font-weight: 600;
-    color: #6c757d;
+    color: #666;
     font-size: 0.9em;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
 .info-value {
+    color: #333;
     font-weight: 500;
-    color: #495057;
+    font-size: 1.1em;
 }
 
-.info-value a {
+/* ==========================================================================
+   Content Sections - ВСИЧКИ ВИНАГИ ВИДИМИ
+   ========================================================================== */
+
+.parfume-content {
+    margin-top: 40px;
+}
+
+.content-section {
+    margin-bottom: 50px;
+    padding: 30px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.content-section:last-child {
+    border-bottom: none;
+}
+
+.content-section h2 {
+    color: #1a1a1a;
+    margin-bottom: 25px;
+    font-size: 2em;
+    font-weight: 600;
+    border-bottom: 3px solid #0073aa;
+    padding-bottom: 15px;
+    position: relative;
+}
+
+.content-section h2::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    width: 60px;
+    height: 3px;
+    background: #ff6b35;
+}
+
+.section-content {
+    line-height: 1.8;
+    color: #495057;
+    font-size: 1.1em;
+}
+
+/* ==========================================================================
+   Availability Badge
+   ========================================================================== */
+
+.availability-info {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.availability-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.availability-badge.status-available {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.availability-badge.status-limited {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.availability-badge.status-discontinued {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* ==========================================================================
+   Notes Sections
+   ========================================================================== */
+
+.notes-pyramid {
+    margin-bottom: 30px;
+}
+
+.notes-layer {
+    margin-bottom: 25px;
+    padding: 20px;
+    border-radius: 12px;
+    position: relative;
+}
+
+.notes-layer h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.3em;
+    font-weight: 600;
+    color: #333;
+}
+
+.notes-layer.top-notes {
+    background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+    border-left: 4px solid #2196f3;
+}
+
+.notes-layer.middle-notes {
+    background: linear-gradient(135deg, #f3e5f5, #fce4ec);
+    border-left: 4px solid #9c27b0;
+}
+
+.notes-layer.base-notes {
+    background: linear-gradient(135deg, #fce4ec, #fff3e0);
+    border-left: 4px solid #ff9800;
+}
+
+.notes-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.note-item {
+    background: white;
+    padding: 8px 12px;
+    border-radius: 20px;
+    border: 1px solid #e0e0e0;
+    font-size: 0.9em;
+    color: #555;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.note-item:hover {
+    background: #0073aa;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 115, 170, 0.3);
+}
+
+.notes-taxonomy {
+    margin-top: 30px;
+}
+
+.notes-taxonomy h3 {
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 1.4em;
+}
+
+.notes-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.note-tag {
+    background: #0073aa;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 115, 170, 0.3);
+}
+
+.note-tag:hover {
+    background: #005a87;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 115, 170, 0.4);
+}
+
+/* ==========================================================================
+   Perfumer Section
+   ========================================================================== */
+
+.perfumers-list {
+    display: grid;
+    gap: 25px;
+}
+
+.perfumer-info {
+    display: flex;
+    gap: 20px;
+    padding: 25px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    align-items: flex-start;
+}
+
+.perfumer-details {
+    flex: 1;
+}
+
+.perfumer-info h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.4em;
     color: #0073aa;
+}
+
+.perfumer-info h3 a {
+    color: inherit;
     text-decoration: none;
     transition: color 0.3s ease;
 }
 
-.info-value a:hover {
+.perfumer-info h3 a:hover {
     color: #005a87;
-    text-decoration: underline;
+}
+
+.perfumer-description {
+    color: #666;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.perfumer-photo {
+    flex: 0 0 120px;
+}
+
+.perfumer-photo img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid #0073aa;
 }
 
 /* ==========================================================================
-   ГАЛЕРИЯ СТИЛОВЕ
+   Review Section
    ========================================================================== */
 
-.parfume-additional-images {
-    margin-top: 20px;
-}
-
-.additional-images-grid {
+.performance-metrics {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-    gap: 10px;
-    max-width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+    padding: 25px;
+    background: #f8f9fa;
+    border-radius: 12px;
 }
 
-.additional-image-item {
-    aspect-ratio: 1;
-    overflow: hidden;
+.metric-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 15px;
+    background: white;
     border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
-.additional-image-item:hover {
-    transform: scale(1.05);
-    border-color: #0073aa;
-    box-shadow: 0 4px 15px rgba(0, 115, 170, 0.3);
+.metric-label {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
 }
 
-.additional-image-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
+.metric-value {
+    font-size: 1.2em;
+    font-weight: 700;
+    color: #0073aa;
 }
 
-/* Image Modal */
-.image-modal {
-    display: none;
-    position: fixed;
-    z-index: 10000;
-    padding-top: 60px;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.9);
+.pros-cons-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
 }
 
-.modal-content {
-    margin: auto;
-    display: block;
-    max-width: 90%;
-    max-height: 80%;
-    border-radius: 8px;
+.pros-section,
+.cons-section {
+    padding: 25px;
+    border-radius: 12px;
+    position: relative;
 }
 
-.close-modal {
+.pros-section {
+    background: linear-gradient(135deg, #e8f5e8, #f0f8f0);
+    border-left: 4px solid #4caf50;
+}
+
+.cons-section {
+    background: linear-gradient(135deg, #fef2f2, #fef7f7);
+    border-left: 4px solid #f44336;
+}
+
+.pros-section h3,
+.cons-section h3 {
+    margin: 0 0 20px 0;
+    font-size: 1.3em;
+    font-weight: 600;
+}
+
+.pros-section h3 {
+    color: #2e7d32;
+}
+
+.cons-section h3 {
+    color: #c62828;
+}
+
+.pros-list,
+.cons-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pros-list li,
+.cons-list li {
+    padding: 8px 0;
+    position: relative;
+    padding-left: 25px;
+}
+
+.pros-list li::before {
+    content: '✓';
     position: absolute;
-    top: 20px;
-    right: 35px;
-    color: #f1f1f1;
-    font-size: 40px;
+    left: 0;
+    color: #4caf50;
     font-weight: bold;
-    cursor: pointer;
-    transition: 0.3s;
+    font-size: 1.1em;
 }
 
-.close-modal:hover {
-    color: #bbb;
+.cons-list li::before {
+    content: '✗';
+    position: absolute;
+    left: 0;
+    color: #f44336;
+    font-weight: bold;
+    font-size: 1.1em;
 }
 
 /* ==========================================================================
-   ПОДОБРЕНИ STORES СТИЛОВЕ - КАТО НА СКРИЙНШОТА
+   Stores Sidebar
    ========================================================================== */
 
 .stores-container {
     background: #fff;
     border-radius: 12px;
-    border: 1px solid #e0e0e0;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e9ecef;
 }
 
 .stores-title {
-    background: #f8f9fa;
-    margin: 0;
+    background: linear-gradient(135deg, #0073aa, #005a87);
+    color: white;
     padding: 20px;
-    font-size: 1.2em;
+    margin: 0;
+    font-size: 1.3em;
     font-weight: 600;
-    color: #333;
-    border-bottom: 1px solid #e0e0e0;
     text-align: center;
 }
 
-.store-list {
+.stores-list {
     padding: 0;
 }
 
 .store-item {
     padding: 20px;
     border-bottom: 1px solid #f0f0f0;
-    transition: all 0.3s ease;
-    position: relative;
-}
-
-.store-item:hover {
-    background: #f8f9fa;
+    transition: background-color 0.3s ease;
 }
 
 .store-item:last-child {
     border-bottom: none;
+}
+
+.store-item:hover {
+    background: #f8f9fa;
 }
 
 .store-header {
@@ -293,99 +555,55 @@
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 15px;
-}
-
-.store-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-}
-
-.store-logo {
-    flex: 0 0 auto;
-}
-
-.store-logo img {
-    width: 50px;
-    height: 50px;
-    object-fit: contain;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-    padding: 4px;
-    background: white;
-}
-
-.store-details {
-    flex: 1;
+    gap: 15px;
 }
 
 .store-name {
+    font-size: 1.1em;
     font-weight: 600;
     color: #333;
-    font-size: 1.1em;
-    line-height: 1.2;
-}
-
-.store-size {
-    color: #666;
-    font-size: 0.9em;
-    margin-top: 2px;
-}
-
-.availability-badge {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.8em;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.availability-badge.in-stock {
-    background: #d4edda;
-    color: #155724;
-}
-
-.availability-badge.out-of-stock {
-    background: #f8d7da;
-    color: #721c24;
+    margin: 0;
+    flex: 1;
 }
 
 .store-pricing {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 15px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
 }
 
-.price-display {
-    font-size: 1.4em;
+.store-price {
+    font-size: 1.2em;
     font-weight: 700;
-    color: #333;
-    flex: 0 0 auto;
+    color: #ff6b35;
+}
+
+.store-size {
+    font-size: 0.9em;
+    color: #666;
 }
 
 .store-actions {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-end;
+    justify-content: center;
 }
 
 .store-button {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     background: #ff6b35;
     color: white;
     text-decoration: none;
-    padding: 10px 16px;
+    padding: 12px 20px;
     border-radius: 8px;
     font-weight: 600;
-    font-size: 0.9em;
+    font-size: 0.95em;
     transition: all 0.3s ease;
     box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+    width: 100%;
+    justify-content: center;
 }
 
 .store-button:hover {
@@ -403,164 +621,53 @@
     transform: translate(2px, -2px);
 }
 
-.promo-code {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.8em;
-}
-
-.promo-text {
-    color: #666;
-}
-
-.promo-code-value {
-    background: #f8f9fa;
-    border: 1px dashed #ff6b35;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: monospace;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: #ff6b35;
-    font-weight: bold;
-}
-
-.promo-code-value:hover {
-    background: #ff6b35;
-    color: white;
-}
-
-.shipping-info {
-    margin-top: 10px;
-    text-align: center;
-    color: #666;
-    border-top: 1px dotted #e0e0e0;
-    padding-top: 8px;
-}
-
 /* ==========================================================================
-   Content Tabs and Sections
+   Image Modal
    ========================================================================== */
 
-.content-tabs {
-    display: flex;
-    border-bottom: 2px solid #e9ecef;
-    margin-bottom: 30px;
-    overflow-x: auto;
-    white-space: nowrap;
-}
-
-.tab-link {
-    display: inline-block;
-    padding: 15px 25px;
-    background: none;
-    border: none;
-    color: #6c757d;
-    text-decoration: none;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    border-bottom: 3px solid transparent;
+.image-modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
     cursor: pointer;
 }
 
-.tab-link:hover {
-    color: #0073aa;
-    background: #f8f9fa;
-}
-
-.tab-link.active {
-    color: #0073aa;
-    border-bottom-color: #0073aa;
-    background: #f8f9fa;
-}
-
-.content-section {
-    display: none;
-    padding: 30px 0;
-}
-
-.content-section.active {
+.modal-content {
+    position: relative;
+    margin: auto;
     display: block;
+    max-width: 90%;
+    max-height: 90%;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
-.content-section h2 {
-    color: #333;
-    margin-bottom: 25px;
-    font-size: 1.8em;
-    border-bottom: 2px solid #0073aa;
-    padding-bottom: 10px;
+.modal-content img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
 }
 
-.section-content {
-    line-height: 1.8;
-    color: #495057;
-}
-
-/* Aroma Chart */
-.aroma-chart-container {
-    background: #f8f9fa;
-    padding: 25px;
-    border-radius: 12px;
-    margin-top: 30px;
-}
-
-.aroma-chart-container h3 {
-    margin-top: 0;
-    margin-bottom: 20px;
-    color: #333;
-    text-align: center;
-}
-
-.aroma-chart {
-    display: grid;
-    gap: 15px;
-}
-
-.chart-item {
-    display: grid;
-    grid-template-columns: 120px 1fr 50px;
-    align-items: center;
-    gap: 15px;
-}
-
-.chart-item label {
-    font-weight: 600;
-    color: #495057;
-    text-transform: capitalize;
-}
-
-.chart-bar {
-    height: 20px;
-    background: #e9ecef;
-    border-radius: 10px;
-    overflow: hidden;
-    position: relative;
-}
-
-.chart-fill {
-    height: 100%;
-    background: linear-gradient(135deg, #0073aa, #005a87);
-    border-radius: 10px;
-    transition: width 0.8s ease;
-    position: relative;
-}
-
-.chart-fill::after {
-    content: '';
+.close-button {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%);
-    background-size: 10px 10px;
+    top: 15px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
 }
 
-.chart-value {
-    font-weight: 600;
-    color: #0073aa;
-    text-align: center;
+.close-button:hover,
+.close-button:focus {
+    color: #bbb;
+    text-decoration: none;
 }
 
 /* ==========================================================================
@@ -568,21 +675,33 @@
    ========================================================================== */
 
 @media (max-width: 1024px) {
-    .parfume-header {
+    .parfume-main-info {
         flex-direction: column;
         gap: 30px;
     }
     
-    .parfume-gallery {
+    .parfume-image {
         position: static;
         width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
     }
     
-    .parfume-summary {
+    .parfume-details {
         padding-left: 0;
+        text-align: center;
     }
     
     .parfume-quick-info {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    
+    .pros-cons-container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .performance-metrics {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
 }
@@ -599,22 +718,8 @@
         margin-bottom: 30px;
     }
     
-    .store-pricing {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-    }
-    
-    .store-actions {
-        align-items: stretch;
-    }
-    
-    .store-button {
-        justify-content: center;
-    }
-    
-    .additional-images-grid {
-        grid-template-columns: repeat(4, 1fr);
+    .parfume-single {
+        padding: 15px;
     }
     
     .parfume-title {
@@ -625,71 +730,50 @@
         font-size: 1.2em;
     }
     
-    .content-tabs {
-        padding: 0 10px;
+    .content-section h2 {
+        font-size: 1.6em;
     }
     
-    .tab-link {
-        padding: 12px 15px;
-        font-size: 0.9em;
+    .perfumer-info {
+        flex-direction: column;
+        text-align: center;
     }
     
-    .chart-item {
-        grid-template-columns: 100px 1fr 40px;
-        gap: 10px;
+    .perfumer-photo {
+        flex: none;
+        align-self: center;
     }
 }
 
 @media (max-width: 480px) {
-    .parfume-single {
-        padding: 15px;
-    }
-    
-    .additional-images-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-    
     .parfume-quick-info {
         grid-template-columns: 1fr;
         gap: 10px;
     }
     
     .info-item {
-        padding: 10px;
+        padding: 15px;
         background: white;
-        border-radius: 6px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
     
-    .stores-title {
-        padding: 15px;
-        font-size: 1.1em;
+    .notes-list {
+        justify-content: center;
     }
     
-    .store-item {
-        padding: 15px;
+    .notes-grid {
+        justify-content: center;
     }
     
     .store-header {
         flex-direction: column;
         gap: 10px;
-    }
-    
-    .availability-badge {
-        align-self: flex-start;
-    }
-    
-    .chart-item {
-        grid-template-columns: 1fr;
-        gap: 8px;
         text-align: center;
     }
     
-    .chart-bar {
-        order: 2;
-    }
-    
-    .chart-value {
-        order: 3;
+    .store-pricing {
+        align-items: center;
     }
 }
 
@@ -699,7 +783,6 @@
 
 @media print {
     .parfume-stores-sidebar,
-    .content-tabs,
     .store-button,
     .image-modal {
         display: none !important;
@@ -709,12 +792,21 @@
         flex-direction: column;
     }
     
-    .content-section {
-        display: block !important;
-    }
-    
     .parfume-single {
         box-shadow: none;
         padding: 0;
+    }
+    
+    .content-section {
+        page-break-inside: avoid;
+    }
+    
+    .parfume-title {
+        color: #000 !important;
+    }
+    
+    .content-section h2 {
+        color: #000 !important;
+        border-bottom-color: #000 !important;
     }
 }
