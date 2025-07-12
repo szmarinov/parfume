@@ -1,6 +1,7 @@
 <?php
 /**
  * Template functions for Parfume Reviews
+ * ВСИЧКИ ФУНКЦИИ СА ЦЕНТРАЛИЗИРАНИ ТУК - БЕЗ ДУБЛИРАНЕ!
  */
 
 if (!defined('ABSPATH')) {
@@ -184,28 +185,198 @@ function parfume_reviews_get_pros_cons($post_id) {
 }
 
 /**
- * Get comparison button HTML
- * ТОВА Е ВАЖНАТА ФУНКЦИЯ КОЯТО ЛИПСВАШЕ!
+ * Get note description
  */
-function parfume_reviews_get_comparison_button($post_id) {
-    if (class_exists('Parfume_Reviews\\Comparison')) {
-        return Parfume_Reviews\Comparison::get_comparison_button($post_id);
-    }
-    
-    // Fallback HTML ако класът не е зареден
-    ob_start();
-    ?>
-    <button class="add-to-comparison" data-post-id="<?php echo esc_attr($post_id); ?>">
-        <?php _e('Add to comparison', 'parfume-reviews'); ?>
-    </button>
-    <?php
-    return ob_get_clean();
+function parfume_reviews_get_note_description($term_id) {
+    $description = get_term_meta($term_id, 'note_description', true);
+    return !empty($description) ? $description : '';
 }
 
 /**
- * Get collections dropdown (placeholder function)
+ * Get brand description  
  */
-function parfume_reviews_get_collections_dropdown($post_id) {
-    // Placeholder function - може да се имплементира по-късно
-    return '';
+function parfume_reviews_get_brand_description($term_id) {
+    $description = get_term_meta($term_id, 'brand_description', true);
+    return !empty($description) ? $description : '';
+}
+
+/**
+ * Get perfumer bio
+ */
+function parfume_reviews_get_perfumer_bio($term_id) {
+    $bio = get_term_meta($term_id, 'perfumer_bio', true);
+    return !empty($bio) ? $bio : '';
+}
+
+/**
+ * Get product image
+ */
+function parfume_reviews_get_product_image($post_id, $size = 'medium') {
+    $thumbnail_id = get_post_thumbnail_id($post_id);
+    if ($thumbnail_id) {
+        return wp_get_attachment_image($thumbnail_id, $size, false, array('class' => 'parfume-image'));
+    }
+    
+    // Fallback placeholder
+    return '<div class="parfume-image-placeholder">No Image</div>';
+}
+
+/**
+ * Format price
+ */
+function parfume_reviews_format_price($price) {
+    if (empty($price)) {
+        return '';
+    }
+    
+    // Extract numeric value
+    preg_match('/(\d+(?:[.,]\d+)?)/', $price, $matches);
+    if (!empty($matches[1])) {
+        $numeric_price = floatval(str_replace(',', '.', $matches[1]));
+        return number_format($numeric_price, 2) . ' лв.';
+    }
+    
+    return $price;
+}
+
+/**
+ * Get store link with affiliate tracking
+ */
+function parfume_reviews_get_store_link($store_data, $post_id) {
+    if (empty($store_data['url'])) {
+        return '#';
+    }
+    
+    $url = $store_data['url'];
+    
+    // Add affiliate parameters if configured
+    $settings = get_option('parfume_reviews_settings', array());
+    
+    if (!empty($settings['affiliate_' . strtolower($store_data['name'])]) && 
+        !empty($settings['affiliate_' . strtolower($store_data['name']) . '_id'])) {
+        
+        $affiliate_id = $settings['affiliate_' . strtolower($store_data['name']) . '_id'];
+        
+        // Add affiliate parameter based on store
+        if (strpos($url, '?') !== false) {
+            $url .= '&ref=' . urlencode($affiliate_id);
+        } else {
+            $url .= '?ref=' . urlencode($affiliate_id);
+        }
+    }
+    
+    return $url;
+}
+
+/**
+ * Check if current page is parfume related
+ * ДЕФИНИРА СЕ ТУК ЗА ДА НЕ СЕ ДУБЛИРА
+ */
+if (!function_exists('parfume_reviews_is_parfume_page')) {
+    function parfume_reviews_is_parfume_page() {
+        return (
+            is_singular('parfume') || 
+            is_post_type_archive('parfume') || 
+            is_tax(array('marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'))
+        );
+    }
+}
+
+/**
+ * Get breadcrumbs for parfume pages
+ * ДЕФИНИРА СЕ ТУК ЗА ДА НЕ СЕ ДУБЛИРА
+ */
+if (!function_exists('parfume_reviews_get_breadcrumbs')) {
+    function parfume_reviews_get_breadcrumbs() {
+        if (!parfume_reviews_is_parfume_page()) {
+            return '';
+        }
+        
+        $breadcrumbs = array();
+        $breadcrumbs[] = '<a href="' . home_url() . '">' . __('Home', 'parfume-reviews') . '</a>';
+        
+        if (is_post_type_archive('parfume')) {
+            $breadcrumbs[] = __('Parfumes', 'parfume-reviews');
+        } elseif (is_singular('parfume')) {
+            $breadcrumbs[] = '<a href="' . get_post_type_archive_link('parfume') . '">' . __('Parfumes', 'parfume-reviews') . '</a>';
+            $breadcrumbs[] = get_the_title();
+        } elseif (is_tax()) {
+            $term = get_queried_object();
+            $breadcrumbs[] = '<a href="' . get_post_type_archive_link('parfume') . '">' . __('Parfumes', 'parfume-reviews') . '</a>';
+            $breadcrumbs[] = $term->name;
+        }
+        
+        return '<nav class="parfume-breadcrumbs">' . implode(' / ', $breadcrumbs) . '</nav>';
+    }
+}
+
+/**
+ * Get comparison link
+ * ДЕФИНИРА СЕ ТУК ЗА ДА НЕ СЕ ДУБЛИРА
+ */
+if (!function_exists('parfume_reviews_get_comparison_link')) {
+    function parfume_reviews_get_comparison_link() {
+        if (class_exists('Parfume_Reviews\\Comparison')) {
+            return Parfume_Reviews\Comparison::get_comparison_link();
+        }
+        
+        // Fallback HTML
+        ob_start();
+        ?>
+        <a href="#" id="show-comparison" class="comparison-link" style="display: none;">
+            <?php _e('Comparison', 'parfume-reviews'); ?>
+            <span class="comparison-count">0</span>
+        </a>
+        <?php
+        return ob_get_clean();
+    }
+}
+
+/**
+ * Get comparison button HTML
+ * WRAPPER ФУНКЦИЯ - ВСИЧКИ TEMPLATE ФАЙЛОВЕ ИЗПОЛЗВАТ ТАЗИ
+ */
+if (!function_exists('parfume_reviews_get_comparison_button')) {
+    function parfume_reviews_get_comparison_button($post_id) {
+        if (class_exists('Parfume_Reviews\\Comparison')) {
+            return Parfume_Reviews\Comparison::get_comparison_button($post_id);
+        }
+        
+        // Fallback HTML ако класът не е зареден
+        ob_start();
+        ?>
+        <button class="add-to-comparison" data-post-id="<?php echo esc_attr($post_id); ?>">
+            <?php _e('Add to comparison', 'parfume-reviews'); ?>
+        </button>
+        <?php
+        return ob_get_clean();
+    }
+}
+
+/**
+ * Get collections dropdown 
+ * WRAPPER ФУНКЦИЯ - ВСИЧКИ TEMPLATE ФАЙЛОВЕ ИЗПОЛЗВАТ ТАЗИ
+ */
+if (!function_exists('parfume_reviews_get_collections_dropdown')) {
+    function parfume_reviews_get_collections_dropdown($post_id) {
+        if (class_exists('Parfume_Reviews\\Collections')) {
+            return Parfume_Reviews\Collections::get_collections_dropdown($post_id);
+        }
+        
+        // Fallback HTML ако класът не е зареден
+        return '';
+    }
+}
+
+
+/**
+ * Check if current page is parfume related
+ * ТОВА Е КРИТИЧНАТА ФУНКЦИЯ КОЯТО ЛИПСВАШЕ И ПРИЧИНЯВА FATAL ERROR!
+ */
+function parfume_reviews_is_parfume_page() {
+    return (
+        is_singular('parfume') || 
+        is_post_type_archive('parfume') || 
+        is_tax(array('marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'))
+    );
 }

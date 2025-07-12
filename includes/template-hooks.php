@@ -7,62 +7,66 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Add hooks only if we're not in admin and functions don't already exist
-if (!is_admin()) {
-    add_action('wp_head', 'parfume_reviews_add_schema_markup');
-    add_action('wp_footer', 'parfume_reviews_track_recently_viewed');
-}
-
 /**
- * Add schema.org markup for perfume products
+ * Add meta tags for single parfume pages
  */
-if (!function_exists('parfume_reviews_add_schema_markup')) {
-    function parfume_reviews_add_schema_markup() {
-        if (!is_singular('parfume')) {
-            return;
-        }
-        
+add_action('wp_head', function() {
+    if (is_singular('parfume')) {
         global $post;
         
-        // Check if $post exists and is valid
-        if (!$post || !is_object($post) || !isset($post->ID)) {
-            return;
-        }
-        
-        $rating = get_post_meta($post->ID, '_parfume_rating', true);
-        $brands = wp_get_post_terms($post->ID, 'marki', array('fields' => 'names'));
-        $notes = wp_get_post_terms($post->ID, 'notes', array('fields' => 'names'));
+        // Get parfume metadata
+        $description = get_post_meta($post->ID, '_parfume_description', true);
         $gender = get_post_meta($post->ID, '_parfume_gender', true);
         $release_year = get_post_meta($post->ID, '_parfume_release_year', true);
+        $notes = wp_get_post_terms($post->ID, 'notes', array('fields' => 'names'));
+        $brand = wp_get_post_terms($post->ID, 'marki', array('fields' => 'names'));
+        $rating = get_post_meta($post->ID, '_parfume_rating', true);
         
-        // Handle WP_Error for taxonomy terms
-        if (is_wp_error($brands)) {
-            $brands = array();
-        }
-        if (is_wp_error($notes)) {
-            $notes = array();
+        // Add basic meta tags
+        if (!empty($description)) {
+            echo '<meta name="description" content="' . esc_attr($description) . '">' . "\n";
         }
         
+        // Add Open Graph tags
+        echo '<meta property="og:title" content="' . esc_attr(get_the_title($post->ID)) . '">' . "\n";
+        echo '<meta property="og:type" content="product">' . "\n";
+        echo '<meta property="og:url" content="' . esc_url(get_permalink($post->ID)) . '">' . "\n";
+        
+        if (!empty($description)) {
+            echo '<meta property="og:description" content="' . esc_attr($description) . '">' . "\n";
+        }
+        
+        if (has_post_thumbnail($post->ID)) {
+            $thumbnail_url = get_the_post_thumbnail_url($post->ID, 'large');
+            if ($thumbnail_url) {
+                echo '<meta property="og:image" content="' . esc_url($thumbnail_url) . '">' . "\n";
+            }
+        }
+        
+        // Add structured data (JSON-LD) for SEO
         $schema = array(
             '@context' => 'https://schema.org',
             '@type' => 'Product',
             'name' => get_the_title($post->ID),
-            'description' => wp_strip_all_tags(get_the_excerpt($post->ID)),
+            'url' => get_permalink($post->ID),
         );
         
-        // Only add brand if we have valid brands
-        if (!empty($brands) && is_array($brands)) {
+        if (!empty($description)) {
+            $schema['description'] = $description;
+        }
+        
+        if (!empty($brand) && is_array($brand)) {
             $schema['brand'] = array(
                 '@type' => 'Brand',
-                'name' => $brands[0],
+                'name' => sanitize_text_field($brand[0]),
             );
         }
         
-        // Only add rating if it's valid
-        if (!empty($rating) && is_numeric($rating)) {
+        // Add rating if exists
+        if (!empty($rating)) {
             $schema['aggregateRating'] = array(
                 '@type' => 'AggregateRating',
-                'ratingValue' => floatval($rating),
+                'ratingValue' => sanitize_text_field($rating),
                 'bestRating' => '5',
                 'worstRating' => '1',
                 'ratingCount' => '1',
@@ -97,107 +101,6 @@ if (!function_exists('parfume_reviews_add_schema_markup')) {
         // Use wp_json_encode for better compatibility
         echo '<script type="application/ld+json">' . wp_json_encode($schema, JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
     }
-}
-
-/**
- * Track recently viewed parfumes
- */
-if (!function_exists('parfume_reviews_track_recently_viewed')) {
-    function parfume_reviews_track_recently_viewed() {
-        if (!is_singular('parfume')) {
-            return;
-        }
-        
-        global $post;
-        
-        if (!$post || !isset($post->ID)) {
-            return;
-        }
-        
-        ?>
-        <script>
-        (function() {
-            var parfumeId = <?php echo intval($post->ID); ?>;
-            var recentlyViewed = JSON.parse(localStorage.getItem('parfume_recently_viewed') || '[]');
-            
-            // Remove if already exists
-            recentlyViewed = recentlyViewed.filter(function(id) {
-                return id !== parfumeId;
-            });
-            
-            // Add to beginning
-            recentlyViewed.unshift(parfumeId);
-            
-            // Keep only last 10
-            if (recentlyViewed.length > 10) {
-                recentlyViewed = recentlyViewed.slice(0, 10);
-            }
-            
-            // Save back to localStorage
-            try {
-                localStorage.setItem('parfume_recently_viewed', JSON.stringify(recentlyViewed));
-            } catch (e) {
-                // Ignore localStorage errors
-            }
-        })();
-        </script>
-        <?php
-    }
-}
-
-/**
- * Add comparison functionality hooks
- */
-add_action('wp_footer', function() {
-    if (parfume_reviews_is_parfume_page()) {
-        echo '<div id="comparison-sidebar" style="display: none;"></div>';
-        echo parfume_reviews_get_comparison_link();
-    }
-});
-
-/**
- * Add breadcrumbs to parfume pages
- */
-add_action('parfume_reviews_before_content', function() {
-    if (parfume_reviews_is_parfume_page()) {
-        echo parfume_reviews_get_breadcrumbs();
-    }
-});
-
-/**
- * Add meta tags for SEO
- */
-add_action('wp_head', function() {
-    if (is_singular('parfume')) {
-        global $post;
-        
-        if (!$post) return;
-        
-        $description = wp_strip_all_tags(get_the_excerpt($post->ID));
-        if (empty($description)) {
-            $description = wp_trim_words(wp_strip_all_tags($post->post_content), 30);
-        }
-        
-        if (!empty($description)) {
-            echo '<meta name="description" content="' . esc_attr($description) . '">' . "\n";
-        }
-        
-        // Add Open Graph tags
-        echo '<meta property="og:title" content="' . esc_attr(get_the_title($post->ID)) . '">' . "\n";
-        echo '<meta property="og:type" content="product">' . "\n";
-        echo '<meta property="og:url" content="' . esc_url(get_permalink($post->ID)) . '">' . "\n";
-        
-        if (!empty($description)) {
-            echo '<meta property="og:description" content="' . esc_attr($description) . '">' . "\n";
-        }
-        
-        if (has_post_thumbnail($post->ID)) {
-            $thumbnail_url = get_the_post_thumbnail_url($post->ID, 'large');
-            if ($thumbnail_url) {
-                echo '<meta property="og:image" content="' . esc_url($thumbnail_url) . '">' . "\n";
-            }
-        }
-    }
 });
 
 /**
@@ -221,15 +124,61 @@ add_filter('body_class', function($classes) {
 });
 
 /**
- * Enqueue comparison scripts and styles
+ * Enqueue styles and scripts for parfume pages
+ * ОБНОВЕНО - ДОБАВЕН FILTERS.CSS!
  */
 add_action('wp_enqueue_scripts', function() {
     if (parfume_reviews_is_parfume_page()) {
+        
+        // Main frontend CSS
+        wp_enqueue_style(
+            'parfume-reviews-frontend',
+            PARFUME_REVIEWS_PLUGIN_URL . 'assets/css/frontend.css',
+            array(),
+            PARFUME_REVIEWS_VERSION
+        );
+        
+        // Filters CSS - НОВ ФАЙЛ!
+        wp_enqueue_style(
+            'parfume-reviews-filters',
+            PARFUME_REVIEWS_PLUGIN_URL . 'assets/css/filters.css',
+            array('parfume-reviews-frontend'),
+            PARFUME_REVIEWS_VERSION
+        );
+        
+        // Comparison CSS
         wp_enqueue_style(
             'parfume-comparison',
             PARFUME_REVIEWS_PLUGIN_URL . 'assets/css/comparison.css',
-            array(),
+            array('parfume-reviews-frontend'),
             PARFUME_REVIEWS_VERSION
+        );
+        
+        // Single parfume specific CSS
+        if (is_singular('parfume')) {
+            wp_enqueue_style(
+                'parfume-reviews-single',
+                PARFUME_REVIEWS_PLUGIN_URL . 'assets/css/single-parfume.css',
+                array('parfume-reviews-frontend'),
+                PARFUME_REVIEWS_VERSION
+            );
+        }
+        
+        // JavaScript files
+        wp_enqueue_script(
+            'parfume-reviews-frontend',
+            PARFUME_REVIEWS_PLUGIN_URL . 'assets/js/frontend.js',
+            array('jquery'),
+            PARFUME_REVIEWS_VERSION,
+            true
+        );
+        
+        wp_enqueue_script(
+            'parfume-reviews-filters',
+            PARFUME_REVIEWS_PLUGIN_URL . 'assets/js/filters.js',
+            array('jquery'),
+            PARFUME_REVIEWS_VERSION,
+            true
         );
         
         wp_enqueue_script(
@@ -240,6 +189,17 @@ add_action('wp_enqueue_scripts', function() {
             true
         );
         
+        // Localization
+        wp_localize_script('parfume-reviews-frontend', 'parfumeReviews', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('parfume-reviews-nonce'),
+            'strings' => array(
+                'loading' => __('Зареждане...', 'parfume-reviews'),
+                'error' => __('Възникна грешка', 'parfume-reviews'),
+                'success' => __('Успех', 'parfume-reviews'),
+            ),
+        ));
+        
         wp_localize_script('parfume-comparison', 'parfumeComparison', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('parfume-comparison-nonce'),
@@ -249,6 +209,7 @@ add_action('wp_enqueue_scripts', function() {
             'removeText' => __('Remove', 'parfume-reviews'),
             'compareText' => __('Compare', 'parfume-reviews'),
             'emptyText' => __('No items to compare', 'parfume-reviews'),
+            'alreadyAddedText' => __('Already added to comparison', 'parfume-reviews'),
         ));
     }
 });
@@ -294,136 +255,80 @@ add_action('parfume_reviews_archive_navigation', function() {
             'mid_size' => 2,
             'prev_text' => __('&laquo; Previous', 'parfume-reviews'),
             'next_text' => __('Next &raquo;', 'parfume-reviews'),
-            'screen_reader_text' => __('Parfumes navigation', 'parfume-reviews'),
+            'before_page_number' => '<span class="screen-reader-text">' . __('Page', 'parfume-reviews') . ' </span>',
         ));
     }
 });
 
 /**
- * Add filters sidebar to archive pages
+ * Add breadcrumbs for parfume pages
  */
-add_action('parfume_reviews_archive_sidebar', function() {
-    if (is_post_type_archive('parfume') || is_tax(array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity'))) {
-        $settings = get_option('parfume_reviews_settings', array());
+add_action('parfume_reviews_breadcrumbs', function() {
+    if (!is_singular('parfume') && !is_post_type_archive('parfume') && !is_tax(array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity'))) {
+        return;
+    }
+    
+    $breadcrumbs = array();
+    $breadcrumbs[] = '<a href="' . home_url() . '">' . __('Home', 'parfume-reviews') . '</a>';
+    
+    if (is_singular('parfume')) {
+        $breadcrumbs[] = '<a href="' . get_post_type_archive_link('parfume') . '">' . __('Parfumes', 'parfume-reviews') . '</a>';
+        $breadcrumbs[] = '<span>' . get_the_title() . '</span>';
+    } elseif (is_post_type_archive('parfume')) {
+        $breadcrumbs[] = '<span>' . __('Parfumes', 'parfume-reviews') . '</span>';
+    } elseif (is_tax()) {
+        $queried_object = get_queried_object();
+        $breadcrumbs[] = '<a href="' . get_post_type_archive_link('parfume') . '">' . __('Parfumes', 'parfume-reviews') . '</a>';
         
-        if (!empty($settings['show_archive_sidebar'])) {
-            // This can be implemented as a widget area or custom filters
-            dynamic_sidebar('parfume-archive-sidebar');
+        if ($queried_object && isset($queried_object->name)) {
+            $breadcrumbs[] = '<span>' . esc_html($queried_object->name) . '</span>';
         }
     }
+    
+    if (!empty($breadcrumbs)) {
+        echo '<nav class="parfume-breadcrumbs" aria-label="' . esc_attr__('Breadcrumbs', 'parfume-reviews') . '">';
+        echo '<ol class="breadcrumb-list">';
+        foreach ($breadcrumbs as $crumb) {
+            echo '<li class="breadcrumb-item">' . $crumb . '</li>';
+        }
+        echo '</ol>';
+        echo '</nav>';
+    }
 });
 
 /**
- * Recently viewed parfumes hook
+ * Add search form for parfume archives
  */
-add_action('parfume_reviews_recently_viewed', function($limit = 5) {
-    ?>
-    <div id="recently-viewed-parfumes" class="recently-viewed-section">
-        <h3><?php _e('Recently Viewed', 'parfume-reviews'); ?></h3>
-        <div class="recently-viewed-container" data-limit="<?php echo intval($limit); ?>">
-            <!-- Content will be populated via JavaScript -->
+add_action('parfume_reviews_search_form', function() {
+    if (is_post_type_archive('parfume') || is_tax(array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity'))) {
+        ?>
+        <form role="search" method="get" class="parfume-search-form" action="<?php echo esc_url(home_url('/')); ?>">
+            <label class="screen-reader-text" for="parfume-search"><?php _e('Search for:', 'parfume-reviews'); ?></label>
+            <input type="search" id="parfume-search" class="search-field" placeholder="<?php esc_attr_e('Search parfumes...', 'parfume-reviews'); ?>" value="<?php echo get_search_query(); ?>" name="s" />
+            <input type="hidden" name="post_type" value="parfume" />
+            <button type="submit" class="search-submit">
+                <span class="screen-reader-text"><?php _e('Search', 'parfume-reviews'); ?></span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 21L16.514 16.506L21 21ZM19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </form>
+        <?php
+    }
+});
+
+/**
+ * Add comparison widget to footer (if not already present)
+ */
+add_action('wp_footer', function() {
+    if (parfume_reviews_is_parfume_page()) {
+        ?>
+        <div class="comparison-widget" style="display: none;">
+            <span class="widget-icon">⚖️</span>
+            <span class="widget-text"><?php _e('Comparison', 'parfume-reviews'); ?></span>
+            <span class="widget-count">0</span>
+            <button class="widget-button"><?php _e('View', 'parfume-reviews'); ?></button>
         </div>
-    </div>
-    
-    <script>
-    (function($) {
-        $(document).ready(function() {
-            var recentlyViewed = JSON.parse(localStorage.getItem('parfume_recently_viewed') || '[]');
-            var limit = parseInt($('.recently-viewed-container').data('limit')) || 5;
-            var container = $('.recently-viewed-container');
-            
-            if (recentlyViewed.length === 0) {
-                $('#recently-viewed-parfumes').hide();
-                return;
-            }
-            
-            // Take only the requested number of items
-            var itemsToShow = recentlyViewed.slice(0, limit);
-            
-            // AJAX call to get perfume data
-            $.ajax({
-                url: '<?php echo admin_url('admin-ajax.php'); ?>',
-                type: 'POST',
-                data: {
-                    action: 'get_recently_viewed_parfumes',
-                    parfume_ids: itemsToShow,
-                    nonce: '<?php echo wp_create_nonce('parfume-recently-viewed'); ?>'
-                },
-                success: function(response) {
-                    if (response.success && response.data) {
-                        container.html(response.data);
-                    } else {
-                        $('#recently-viewed-parfumes').hide();
-                    }
-                },
-                error: function() {
-                    $('#recently-viewed-parfumes').hide();
-                }
-            });
-        });
-    })(jQuery);
-    </script>
-    <?php
+        <?php
+    }
 });
-
-/**
- * AJAX handler for recently viewed parfumes
- */
-add_action('wp_ajax_get_recently_viewed_parfumes', 'parfume_reviews_ajax_get_recently_viewed');
-add_action('wp_ajax_nopriv_get_recently_viewed_parfumes', 'parfume_reviews_ajax_get_recently_viewed');
-
-function parfume_reviews_ajax_get_recently_viewed() {
-    check_ajax_referer('parfume-recently-viewed', 'nonce');
-    
-    if (empty($_POST['parfume_ids']) || !is_array($_POST['parfume_ids'])) {
-        wp_send_json_error('Invalid parfume IDs');
-    }
-    
-    $parfume_ids = array_map('intval', $_POST['parfume_ids']);
-    $parfume_ids = array_filter($parfume_ids);
-    
-    if (empty($parfume_ids)) {
-        wp_send_json_error('No valid parfume IDs');
-    }
-    
-    $query = new WP_Query(array(
-        'post_type' => 'parfume',
-        'post__in' => $parfume_ids,
-        'orderby' => 'post__in',
-        'posts_per_page' => count($parfume_ids),
-    ));
-    
-    if (!$query->have_posts()) {
-        wp_send_json_error('No parfumes found');
-    }
-    
-    ob_start();
-    ?>
-    <div class="recently-viewed-grid">
-        <?php while ($query->have_posts()): $query->the_post(); ?>
-            <div class="recently-viewed-item">
-                <a href="<?php the_permalink(); ?>" class="recently-viewed-link">
-                    <?php if (has_post_thumbnail()): ?>
-                        <div class="recently-viewed-image">
-                            <?php the_post_thumbnail('thumbnail'); ?>
-                        </div>
-                    <?php endif; ?>
-                    <div class="recently-viewed-content">
-                        <h4 class="recently-viewed-title"><?php the_title(); ?></h4>
-                        <?php 
-                        $brands = wp_get_post_terms(get_the_ID(), 'marki', array('fields' => 'names'));
-                        if (!empty($brands) && !is_wp_error($brands)): 
-                        ?>
-                            <span class="recently-viewed-brand"><?php echo esc_html($brands[0]); ?></span>
-                        <?php endif; ?>
-                    </div>
-                </a>
-            </div>
-        <?php endwhile; ?>
-    </div>
-    <?php
-    wp_reset_postdata();
-    
-    $html = ob_get_clean();
-    wp_send_json_success($html);
-}
