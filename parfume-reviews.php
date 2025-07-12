@@ -50,6 +50,7 @@ function parfume_reviews_load_classes() {
     $class_files = array(
         'includes/class-post-type.php' => 'Parfume_Reviews\\Post_Type',
         'includes/class-taxonomies.php' => 'Parfume_Reviews\\Taxonomies',
+        'includes/class-comparison.php' => 'Parfume_Reviews\\Comparison',
         'includes/class-shortcodes.php' => 'Parfume_Reviews\\Shortcodes',
         'includes/class-import-export.php' => 'Parfume_Reviews\\Import_Export',
         'includes/class-settings.php' => 'Parfume_Reviews\\Settings',
@@ -85,6 +86,11 @@ function parfume_reviews_init() {
         if (class_exists('Parfume_Reviews\\Taxonomies')) {
             new Parfume_Reviews\Taxonomies();
             parfume_reviews_debug_log("Taxonomies initialized");
+        }
+        
+        if (class_exists('Parfume_Reviews\\Comparison')) {
+            new Parfume_Reviews\Comparison();
+            parfume_reviews_debug_log("Comparison initialized");
         }
         
         if (class_exists('Parfume_Reviews\\Shortcodes')) {
@@ -127,6 +133,19 @@ function parfume_reviews_flush_rewrite_rules() {
 // Hook initialization
 add_action('plugins_loaded', 'parfume_reviews_init');
 add_action('init', 'parfume_reviews_flush_rewrite_rules', 999); // Late priority
+
+// ВАЖНА ДОБАВКА: Форсирано flush на rewrite rules след промени
+add_action('admin_init', function() {
+    // Проверка дали има промени във версията
+    $current_version = get_option('parfume_reviews_version', '0.0.0');
+    if (version_compare($current_version, PARFUME_REVIEWS_VERSION, '<')) {
+        // Нова версия - flush rewrite rules
+        flush_rewrite_rules();
+        update_option('parfume_reviews_version', PARFUME_REVIEWS_VERSION);
+        update_option('parfume_reviews_flush_rewrite_rules', true);
+        parfume_reviews_debug_log("Version updated to " . PARFUME_REVIEWS_VERSION . " - flushed rewrite rules");
+    }
+});
 
 // Activation hook with error handling
 function parfume_reviews_activate() {
@@ -183,6 +202,9 @@ function parfume_reviews_activate() {
             add_option('parfume_reviews_settings', $defaults);
         }
         
+        // Set version
+        update_option('parfume_reviews_version', PARFUME_REVIEWS_VERSION);
+        
         // Flush rewrite rules immediately during activation
         flush_rewrite_rules();
         
@@ -202,6 +224,7 @@ function parfume_reviews_deactivate() {
     try {
         flush_rewrite_rules();
         delete_option('parfume_reviews_flush_rewrite_rules');
+        delete_option('parfume_reviews_version');
         parfume_reviews_debug_log("Plugin deactivated successfully");
     } catch (Exception $e) {
         parfume_reviews_debug_log("Error during deactivation: " . $e->getMessage());
@@ -219,6 +242,7 @@ function parfume_reviews_check_requirements() {
     $required_files = array(
         'includes/class-post-type.php',
         'includes/class-taxonomies.php',
+        'includes/class-comparison.php',
         'includes/template-functions.php',
     );
     
@@ -313,7 +337,9 @@ function parfume_reviews_debug_urls() {
         echo '<li><strong>Активни Rewrite Rules (парфюм свързани):</strong></li>';
         if ($rules) {
             foreach ($rules as $rule => $rewrite) {
-                if (strpos($rule, 'parfiumi') !== false || strpos($rewrite, 'parfume') !== false) {
+                if (strpos($rule, 'parfiumi') !== false || strpos($rewrite, 'parfume') !== false || 
+                    strpos($rule, 'marki') !== false || strpos($rule, 'notes') !== false ||
+                    strpos($rewrite, 'marki') !== false || strpos($rewrite, 'notes') !== false) {
                     echo '<li>└── ' . esc_html($rule) . ' → ' . esc_html($rewrite) . '</li>';
                 }
             }
@@ -325,96 +351,27 @@ function parfume_reviews_debug_urls() {
         
         echo '<li><strong>Примерни URL-и:</strong></li>';
         echo '<li>└── Архив: <a href="' . home_url('/' . $parfume_slug . '/') . '" target="_blank">' . home_url('/' . $parfume_slug . '/') . '</a></li>';
+        echo '<li>└── Марки: <a href="' . home_url('/marki/') . '" target="_blank">' . home_url('/marki/') . '</a></li>';
+        echo '<li>└── Ноти: <a href="' . home_url('/notes/') . '" target="_blank">' . home_url('/notes/') . '</a></li>';
         
-        // Show some sample taxonomy URLs if terms exist
-        $sample_terms = array(
-            'marki' => get_terms(array('taxonomy' => 'marki', 'number' => 1, 'hide_empty' => false)),
-            'notes' => get_terms(array('taxonomy' => 'notes', 'number' => 1, 'hide_empty' => false)),
-        );
-        
-        foreach ($sample_terms as $taxonomy => $terms) {
-            if (!empty($terms) && !is_wp_error($terms)) {
-                $term_link = get_term_link($terms[0]);
-                if (!is_wp_error($term_link)) {
-                    echo '<li>└── ' . ucfirst($taxonomy) . ' термин: <a href="' . $term_link . '" target="_blank">' . $term_link . '</a></li>';
-                }
-                
-                // Archive link
-                $archive_link = home_url('/' . $parfume_slug . '/' . $taxonomy . '/');
-                echo '<li>└── ' . ucfirst($taxonomy) . ' архив: <a href="' . $archive_link . '" target="_blank">' . $archive_link . '</a></li>';
-            }
-        }
-        
-        echo '</ul>';
-        echo '<p><a href="' . admin_url('options-permalink.php') . '" class="button button-primary">Обнови Rewrite Rules</a> ';
-        echo '<a href="' . admin_url('edit.php?post_type=parfume&page=parfume-reviews-settings') . '" class="button">Настройки на плъгина</a></p>';
-        echo '</div>';
+        echo '</ul></div>';
     }
 }
 
-// Add debug functionality
 add_action('admin_notices', 'parfume_reviews_debug_urls');
 
-// Add admin menu item for quick debug
-function parfume_reviews_add_debug_menu() {
-    if (current_user_can('manage_options')) {
-        add_management_page(
-            'Parfume Reviews Debug',
-            'Parfume Debug',
-            'manage_options',
-            'parfume-debug',
-            'parfume_reviews_debug_page'
-        );
-    }
-}
-
-function parfume_reviews_debug_page() {
-    echo '<div class="wrap">';
-    echo '<h1>Parfume Reviews Debug</h1>';
-    echo '<p>Използвайте тази страница за debug на URL и template проблеми.</p>';
-    echo '<p><a href="' . add_query_arg('parfume_debug', 'urls') . '" class="button button-primary">Покажи Debug Info</a></p>';
-    
-    // Force flush rewrite rules
-    if (isset($_POST['flush_rules']) && wp_verify_nonce($_POST['_wpnonce'], 'parfume_flush_rules')) {
+// ПРИНУДИТЕЛНО FLUSH НА REWRITE RULES - ВРЕМЕННО РЕШЕНИЕ
+add_action('admin_notices', function() {
+    if (current_user_can('manage_options') && isset($_GET['flush_parfume_rules'])) {
         flush_rewrite_rules();
-        echo '<div class="notice notice-success"><p>Rewrite rules са обновени успешно!</p></div>';
+        echo '<div class="notice notice-success"><p><strong>Parfume Reviews:</strong> Rewrite rules са изчистени и обновени!</p></div>';
     }
     
-    echo '<form method="post">';
-    wp_nonce_field('parfume_flush_rules');
-    echo '<p><input type="submit" name="flush_rules" class="button button-secondary" value="Принудително обнови Rewrite Rules"></p>';
-    echo '</form>';
-    
-    // Test URLs
-    echo '<h2>Тествай URL-и</h2>';
-    echo '<p>Кликнете върху тези линкове за да тествате дали URL-ите работят:</p>';
-    
-    $settings = get_option('parfume_reviews_settings', array());
-    $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
-    $brands_slug = !empty($settings['brands_slug']) ? $settings['brands_slug'] : 'marki';
-    $notes_slug = !empty($settings['notes_slug']) ? $settings['notes_slug'] : 'notes';
-    
-    echo '<ul>';
-    echo '<li><strong>Архиви:</strong></li>';
-    echo '<li><a href="' . home_url('/' . $parfume_slug . '/') . '" target="_blank">Главен архив</a></li>';
-    echo '<li><a href="' . home_url('/' . $parfume_slug . '/' . $brands_slug . '/') . '" target="_blank">Архив марки</a></li>';
-    echo '<li><a href="' . home_url('/' . $parfume_slug . '/' . $notes_slug . '/') . '" target="_blank">Архив нотки</a></li>';
-    
-    // Get some sample terms
-    $sample_brand = get_terms(array('taxonomy' => 'marki', 'number' => 1, 'hide_empty' => false));
-    $sample_note = get_terms(array('taxonomy' => 'notes', 'number' => 1, 'hide_empty' => false));
-    
-    if (!empty($sample_brand) && !is_wp_error($sample_brand)) {
-        echo '<li><strong>Примерни термини:</strong></li>';
-        echo '<li><a href="' . get_term_link($sample_brand[0]) . '" target="_blank">Примерна марка: ' . $sample_brand[0]->name . '</a></li>';
+    if (current_user_can('manage_options')) {
+        echo '<div class="notice notice-info"><p>';
+        echo '<strong>Parfume Reviews Debug:</strong> ';
+        echo '<a href="' . add_query_arg('flush_parfume_rules', '1') . '">Изчисти rewrite rules</a> | ';
+        echo '<a href="' . add_query_arg('parfume_debug', 'urls') . '">Покажи debug информация</a>';
+        echo '</p></div>';
     }
-    
-    if (!empty($sample_note) && !is_wp_error($sample_note)) {
-        echo '<li><a href="' . get_term_link($sample_note[0]) . '" target="_blank">Примерна нотка: ' . $sample_note[0]->name . '</a></li>';
-    }
-    
-    echo '</ul>';
-    echo '</div>';
-}
-
-add_action('admin_menu', 'parfume_reviews_add_debug_menu');
+});

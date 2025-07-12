@@ -184,28 +184,28 @@ function parfume_reviews_get_pros_cons($post_id) {
 }
 
 /**
- * Get main fragrance notes grouped by category
+ * Get comparison button HTML
+ * ТОВА Е ВАЖНАТА ФУНКЦИЯ КОЯТО ЛИПСВАШЕ!
  */
-function parfume_reviews_get_main_notes_by_group($post_id) {
-    $notes = wp_get_post_terms($post_id, 'notes');
-    if (empty($notes) || is_wp_error($notes)) {
-        return array();
+function parfume_reviews_get_comparison_button($post_id) {
+    if (class_exists('Parfume_Reviews\\Comparison')) {
+        return Parfume_Reviews\Comparison::get_comparison_button($post_id);
     }
     
-    $grouped_notes = array();
-    
-    foreach ($notes as $note) {
-        $group = get_term_meta($note->term_id, 'note_group', true);
-        if (empty($group)) {
-            $group = 'Други';
-        }
-        
-        if (!isset($grouped_notes[$group])) {
-            $grouped_notes[$group] = array();
-        }
-        
-        $grouped_notes[$group][] = $note;
-    }
-    
-    return $grouped_notes;
+    // Fallback HTML ако класът не е зареден
+    ob_start();
+    ?>
+    <button class="add-to-comparison" data-post-id="<?php echo esc_attr($post_id); ?>">
+        <?php _e('Add to comparison', 'parfume-reviews'); ?>
+    </button>
+    <?php
+    return ob_get_clean();
+}
+
+/**
+ * Get collections dropdown (placeholder function)
+ */
+function parfume_reviews_get_collections_dropdown($post_id) {
+    // Placeholder function - може да се имплементира по-късно
+    return '';
 }
