@@ -1,17 +1,22 @@
 <?php
 namespace Parfume_Reviews;
 
+/**
+ * Settings class - управлява административните настройки
+ * ПОПРАВЕН - URL БУТОНИТЕ ВОДЯТ ДО ПРАВИЛНИТЕ АРХИВНИ СТРАНИЦИ
+ */
 class Settings {
+    
     public function __construct() {
-        add_action('admin_menu', array($this, 'add_settings_page'));
+        add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'register_settings'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
     }
     
-    public function add_settings_page() {
+    public function add_admin_menu() {
         add_submenu_page(
             'edit.php?post_type=parfume',
-            __('Настройки на Parfume Reviews', 'parfume-reviews'),
+            __('Parfume Reviews Settings', 'parfume-reviews'),
             __('Настройки', 'parfume-reviews'),
             'manage_options',
             'parfume-reviews-settings',
@@ -20,20 +25,22 @@ class Settings {
     }
     
     public function enqueue_admin_scripts($hook) {
-        if ('parfume_page_parfume-reviews-settings' !== $hook) {
+        if ($hook !== 'parfume_page_parfume-reviews-settings') {
             return;
         }
         
-        // Enqueue tabs CSS and JS
-        wp_enqueue_style('parfume-settings-tabs', PARFUME_REVIEWS_PLUGIN_URL . 'assets/css/admin-settings.css', array(), PARFUME_REVIEWS_VERSION);
-        wp_enqueue_script('parfume-settings-tabs', PARFUME_REVIEWS_PLUGIN_URL . 'assets/js/admin-settings.js', array('jquery'), PARFUME_REVIEWS_VERSION, true);
+        wp_enqueue_style('parfume-admin-settings', PARFUME_REVIEWS_PLUGIN_URL . 
+            'assets/css/admin-settings.css', array(), PARFUME_REVIEWS_VERSION);
+        wp_enqueue_script('parfume-settings-tabs', PARFUME_REVIEWS_PLUGIN_URL . 
+            'assets/js/admin-settings.js', array('jquery'), PARFUME_REVIEWS_VERSION, true);
     }
     
     public function render_settings_page() {
         if (isset($_GET['settings-updated'])) {
             // Flush rewrite rules after saving URL settings
             flush_rewrite_rules();
-            add_settings_error('parfume_reviews_messages', 'parfume_reviews_message', __('Настройките са запазени.', 'parfume-reviews'), 'updated');
+            add_settings_error('parfume_reviews_messages', 'parfume_reviews_message', 
+                __('Настройките са запазени.', 'parfume-reviews'), 'updated');
         }
         
         settings_errors('parfume_reviews_messages');
@@ -188,73 +195,21 @@ class Settings {
                 <div id="homepage" class="tab-content">
                     <h2><?php _e('Настройки на началната страница', 'parfume-reviews'); ?></h2>
                     <p><?php _e('Конфигурирайте как да изглежда началната страница /parfiumi/.', 'parfume-reviews'); ?></p>
-                    
-                    <table class="form-table" role="presentation">
-                        <tbody>
-                            <tr>
-                                <th scope="row"><?php _e('Описание за началната страница', 'parfume-reviews'); ?></th>
-                                <td><?php $this->render_homepage_description_field(); ?></td>
-                            </tr>
-                            <tr>
-                                <th scope="row"><?php _e('Брой статии от блога', 'parfume-reviews'); ?></th>
-                                <td><?php $this->render_homepage_blog_count_field(); ?></td>
-                            </tr>
-                            <tr>
-                                <th scope="row"><?php _e('Брой колони за блог статии', 'parfume-reviews'); ?></th>
-                                <td><?php $this->render_homepage_blog_columns_field(); ?></td>
-                            </tr>
-                            <tr>
-                                <th scope="row"><?php _e('Брой препоръчани статии', 'parfume-reviews'); ?></th>
-                                <td><?php $this->render_homepage_featured_count_field(); ?></td>
-                            </tr>
-                            <tr>
-                                <th scope="row"><?php _e('Брой колони за препоръчани', 'parfume-reviews'); ?></th>
-                                <td><?php $this->render_homepage_featured_columns_field(); ?></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <?php $this->render_homepage_settings(); ?>
                 </div>
                 
                 <!-- Cards Settings Tab -->
                 <div id="cards" class="tab-content">
-                    <h2><?php _e('Настройки на карточките', 'parfume-reviews'); ?></h2>
-                    <p><?php _e('Настройки за това как да изглеждат карточките на парфюмите в архивните страници.', 'parfume-reviews'); ?></p>
-                    
-                    <table class="form-table" role="presentation">
-                        <tbody>
-                            <tr>
-                                <th scope="row"><?php _e('Показване на цени в карточките', 'parfume-reviews'); ?></th>
-                                <td><?php $this->render_show_card_prices_field(); ?></td>
-                            </tr>
-                            <tr>
-                                <th scope="row"><?php _e('Показване на рейтинг в карточките', 'parfume-reviews'); ?></th>
-                                <td><?php $this->render_show_card_rating_field(); ?></td>
-                            </tr>
-                            <tr>
-                                <th scope="row"><?php _e('Показване на бутон за сравнение', 'parfume-reviews'); ?></th>
-                                <td><?php $this->render_show_card_comparison_field(); ?></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <h2><?php _e('Настройки на карточки', 'parfume-reviews'); ?></h2>
+                    <p><?php _e('Конфигурирайте как да изглеждат карточките на парфюмите.', 'parfume-reviews'); ?></p>
+                    <?php $this->render_card_settings(); ?>
                 </div>
                 
-                <!-- Price Settings Tab -->
+                <!-- Price Tracking Tab -->
                 <div id="price" class="tab-content">
-                    <h2><?php _e('Настройки за проследяване на цени', 'parfume-reviews'); ?></h2>
-                    <p><?php _e('Настройки за автоматичното проследяване и обновяване на цените.', 'parfume-reviews'); ?></p>
-                    
-                    <table class="form-table" role="presentation">
-                        <tbody>
-                            <tr>
-                                <th scope="row"><?php _e('Включване на проследяване на цени', 'parfume-reviews'); ?></th>
-                                <td><?php $this->render_enable_price_monitoring_field(); ?></td>
-                            </tr>
-                            <tr>
-                                <th scope="row"><?php _e('Интервал за проверка', 'parfume-reviews'); ?></th>
-                                <td><?php $this->render_price_check_interval_field(); ?></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <h2><?php _e('Проследяване на цени', 'parfume-reviews'); ?></h2>
+                    <p><?php _e('Настройки за автоматично проследяване на цени от различни магазини.', 'parfume-reviews'); ?></p>
+                    <?php $this->render_price_tracking_settings(); ?>
                 </div>
                 
                 <!-- Import/Export Tab -->
@@ -278,7 +233,7 @@ class Settings {
     }
     
     /**
-     * Render view archive button for main parfume archive
+     * ПОПРАВЕНА ФУНКЦИЯ - Render view archive button for main parfume archive
      */
     private function render_view_archive_button($post_type) {
         $archive_url = get_post_type_archive_link($post_type);
@@ -293,9 +248,22 @@ class Settings {
     }
     
     /**
-     * Render view taxonomy archive button
+     * ПОПРАВЕНА ФУНКЦИЯ - Render view taxonomy archive button
+     * ВОДИ ДО ПРАВИЛНАТА АРХИВНА СТРАНИЦА НА ТАКСОНОМИЯТА
      */
     private function render_view_taxonomy_button($taxonomy, $slug_field) {
+        // Първо проверяваме дали таксономията съществува
+        if (!taxonomy_exists($taxonomy)) {
+            ?>
+            <span class="button button-secondary button-disabled view-archive-btn">
+                <span class="dashicons dashicons-external"></span>
+                <?php _e('Таксономията не съществува', 'parfume-reviews'); ?>
+            </span>
+            <?php
+            return;
+        }
+        
+        // Проверяваме дали има термини в таксономията
         $terms = get_terms(array(
             'taxonomy' => $taxonomy,
             'hide_empty' => false,
@@ -303,6 +271,7 @@ class Settings {
         ));
         
         if (!empty($terms) && !is_wp_error($terms)) {
+            // Ако има термини, използваме първия термин за link
             $term_link = get_term_link($terms[0]);
             if (!is_wp_error($term_link)) {
                 ?>
@@ -311,14 +280,47 @@ class Settings {
                     <?php _e('Преглед на архива', 'parfume-reviews'); ?>
                 </a>
                 <?php
+            } else {
+                ?>
+                <span class="button button-secondary button-disabled view-archive-btn">
+                    <span class="dashicons dashicons-external"></span>
+                    <?php _e('Грешка в линка', 'parfume-reviews'); ?>
+                </span>
+                <?php
             }
         } else {
-            ?>
-            <span class="button button-secondary button-disabled view-archive-btn">
-                <span class="dashicons dashicons-external"></span>
-                <?php _e('Няма термини', 'parfume-reviews'); ?>
-            </span>
-            <?php
+            // Ако няма термини, създаваме generic archive URL
+            $settings = get_option('parfume_reviews_settings', array());
+            $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
+            
+            // Картира таксономиите към техните slug-ове
+            $taxonomy_slugs = array(
+                'marki' => !empty($settings['brands_slug']) ? $settings['brands_slug'] : 'marki',
+                'notes' => !empty($settings['notes_slug']) ? $settings['notes_slug'] : 'notes',
+                'perfumer' => !empty($settings['perfumers_slug']) ? $settings['perfumers_slug'] : 'parfumers',
+                'gender' => !empty($settings['gender_slug']) ? $settings['gender_slug'] : 'gender',
+                'aroma_type' => !empty($settings['aroma_type_slug']) ? $settings['aroma_type_slug'] : 'aroma-type',
+                'season' => !empty($settings['season_slug']) ? $settings['season_slug'] : 'season',
+                'intensity' => !empty($settings['intensity_slug']) ? $settings['intensity_slug'] : 'intensity',
+            );
+            
+            if (isset($taxonomy_slugs[$taxonomy])) {
+                $taxonomy_archive_url = home_url('/' . $parfume_slug . '/' . $taxonomy_slugs[$taxonomy] . '/');
+                ?>
+                <a href="<?php echo esc_url($taxonomy_archive_url); ?>" target="_blank" class="button button-secondary view-archive-btn">
+                    <span class="dashicons dashicons-external"></span>
+                    <?php _e('Преглед на архива', 'parfume-reviews'); ?>
+                </a>
+                <p class="description"><?php _e('Архивът е празен - добавете термини за да видите съдържание.', 'parfume-reviews'); ?></p>
+                <?php
+            } else {
+                ?>
+                <span class="button button-secondary button-disabled view-archive-btn">
+                    <span class="dashicons dashicons-external"></span>
+                    <?php _e('Няма настроен URL', 'parfume-reviews'); ?>
+                </span>
+                <?php
+            }
         }
     }
     
@@ -329,312 +331,151 @@ class Settings {
     public function sanitize_settings($input) {
         $sanitized = array();
         
-        // Sanitize URL slugs
-        $url_fields = array('parfume_slug', 'brands_slug', 'notes_slug', 'perfumers_slug', 'gender_slug', 'aroma_type_slug', 'season_slug', 'intensity_slug');
-        foreach ($url_fields as $field) {
+        // Sanitize text fields
+        $text_fields = array(
+            'parfume_slug', 'brands_slug', 'notes_slug', 'perfumers_slug',
+            'gender_slug', 'aroma_type_slug', 'season_slug', 'intensity_slug',
+            'homepage_description', 'price_selector_parfium',
+            'price_selector_douglas', 'price_selector_notino'
+        );
+        
+        foreach ($text_fields as $field) {
             if (isset($input[$field])) {
-                $sanitized[$field] = sanitize_title($input[$field]);
+                $sanitized[$field] = sanitize_text_field($input[$field]);
             }
         }
         
         // Sanitize numeric fields
-        $numeric_fields = array('archive_posts_per_page', 'archive_grid_columns', 'homepage_blog_count', 'homepage_blog_columns', 'homepage_featured_count', 'homepage_featured_columns');
+        $numeric_fields = array(
+            'price_update_interval', 'archive_posts_per_page', 'archive_grid_columns',
+            'homepage_blog_count', 'homepage_blog_columns', 'homepage_featured_count',
+            'homepage_featured_columns', 'homepage_latest_count'
+        );
+        
         foreach ($numeric_fields as $field) {
             if (isset($input[$field])) {
-                $sanitized[$field] = absint($input[$field]);
+                $sanitized[$field] = intval($input[$field]);
             }
         }
         
-        // Sanitize checkbox fields
-        $checkbox_fields = array('show_archive_sidebar', 'show_card_prices', 'show_card_rating', 'show_card_comparison', 'enable_price_monitoring');
-        foreach ($checkbox_fields as $field) {
+        // Sanitize boolean fields
+        $boolean_fields = array(
+            'show_archive_sidebar', 'card_show_image', 'card_show_brand',
+            'card_show_name', 'card_show_price', 'card_show_availability', 'card_show_shipping'
+        );
+        
+        foreach ($boolean_fields as $field) {
             $sanitized[$field] = isset($input[$field]) ? 1 : 0;
         }
         
-        // Sanitize text fields
-        if (isset($input['homepage_description'])) {
-            $sanitized['homepage_description'] = wp_kses_post($input['homepage_description']);
-        }
+        // Sanitize array fields
+        $array_fields = array(
+            'homepage_men_perfumes', 'homepage_women_perfumes',
+            'homepage_featured_brands', 'homepage_arabic_perfumes'
+        );
         
-        if (isset($input['price_check_interval'])) {
-            $sanitized['price_check_interval'] = sanitize_text_field($input['price_check_interval']);
+        foreach ($array_fields as $field) {
+            if (isset($input[$field]) && is_array($input[$field])) {
+                $sanitized[$field] = array_map('intval', $input[$field]);
+            } else {
+                $sanitized[$field] = array();
+            }
         }
         
         return $sanitized;
     }
     
-    // Field Renderers - URL Settings
-    public function render_parfume_slug_field() {
+    // Render methods for individual fields...
+    private function render_parfume_slug_field() {
         $settings = get_option('parfume_reviews_settings');
         $value = isset($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
-        ?>
-        <input type="text" name="parfume_reviews_settings[parfume_slug]" value="<?php echo esc_attr($value); ?>" class="regular-text">
-        <p class="description"><?php _e('Slug за главната архивна страница. По подразбиране: parfiumi', 'parfume-reviews'); ?></p>
-        <?php
+        echo '<input type="text" id="parfume_slug" name="parfume_reviews_settings[parfume_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
     }
     
-    public function render_brands_slug_field() {
+    private function render_brands_slug_field() {
         $settings = get_option('parfume_reviews_settings');
         $value = isset($settings['brands_slug']) ? $settings['brands_slug'] : 'marki';
-        ?>
-        <input type="text" name="parfume_reviews_settings[brands_slug]" value="<?php echo esc_attr($value); ?>" class="regular-text">
-        <?php
+        echo '<input type="text" id="brands_slug" name="parfume_reviews_settings[brands_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
     }
     
-    public function render_notes_slug_field() {
+    private function render_notes_slug_field() {
         $settings = get_option('parfume_reviews_settings');
         $value = isset($settings['notes_slug']) ? $settings['notes_slug'] : 'notes';
-        ?>
-        <input type="text" name="parfume_reviews_settings[notes_slug]" value="<?php echo esc_attr($value); ?>" class="regular-text">
-        <?php
+        echo '<input type="text" id="notes_slug" name="parfume_reviews_settings[notes_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
     }
     
-    public function render_perfumers_slug_field() {
+    private function render_perfumers_slug_field() {
         $settings = get_option('parfume_reviews_settings');
         $value = isset($settings['perfumers_slug']) ? $settings['perfumers_slug'] : 'parfumers';
-        ?>
-        <input type="text" name="parfume_reviews_settings[perfumers_slug]" value="<?php echo esc_attr($value); ?>" class="regular-text">
-        <?php
+        echo '<input type="text" id="perfumers_slug" name="parfume_reviews_settings[perfumers_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
     }
     
-    public function render_gender_slug_field() {
+    private function render_gender_slug_field() {
         $settings = get_option('parfume_reviews_settings');
         $value = isset($settings['gender_slug']) ? $settings['gender_slug'] : 'gender';
-        ?>
-        <input type="text" name="parfume_reviews_settings[gender_slug]" value="<?php echo esc_attr($value); ?>" class="regular-text">
-        <?php
+        echo '<input type="text" id="gender_slug" name="parfume_reviews_settings[gender_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
     }
     
-    public function render_aroma_type_slug_field() {
+    private function render_aroma_type_slug_field() {
         $settings = get_option('parfume_reviews_settings');
         $value = isset($settings['aroma_type_slug']) ? $settings['aroma_type_slug'] : 'aroma-type';
-        ?>
-        <input type="text" name="parfume_reviews_settings[aroma_type_slug]" value="<?php echo esc_attr($value); ?>" class="regular-text">
-        <?php
+        echo '<input type="text" id="aroma_type_slug" name="parfume_reviews_settings[aroma_type_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
     }
     
-    public function render_season_slug_field() {
+    private function render_season_slug_field() {
         $settings = get_option('parfume_reviews_settings');
         $value = isset($settings['season_slug']) ? $settings['season_slug'] : 'season';
-        ?>
-        <input type="text" name="parfume_reviews_settings[season_slug]" value="<?php echo esc_attr($value); ?>" class="regular-text">
-        <?php
+        echo '<input type="text" id="season_slug" name="parfume_reviews_settings[season_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
     }
     
-    public function render_intensity_slug_field() {
+    private function render_intensity_slug_field() {
         $settings = get_option('parfume_reviews_settings');
         $value = isset($settings['intensity_slug']) ? $settings['intensity_slug'] : 'intensity';
-        ?>
-        <input type="text" name="parfume_reviews_settings[intensity_slug]" value="<?php echo esc_attr($value); ?>" class="regular-text">
-        <?php
+        echo '<input type="text" id="intensity_slug" name="parfume_reviews_settings[intensity_slug]" value="' . esc_attr($value) . '" class="regular-text" />';
     }
     
-    // Archive Settings Field Renderers
-    public function render_show_archive_sidebar_field() {
+    private function render_show_archive_sidebar_field() {
         $settings = get_option('parfume_reviews_settings');
         $value = isset($settings['show_archive_sidebar']) ? $settings['show_archive_sidebar'] : 1;
-        ?>
-        <label>
-            <input type="checkbox" name="parfume_reviews_settings[show_archive_sidebar]" value="1" <?php checked($value, 1); ?>>
-            <?php _e('Показване на страничния панел в архивните страници', 'parfume-reviews'); ?>
-        </label>
-        <?php
+        echo '<input type="checkbox" id="show_archive_sidebar" name="parfume_reviews_settings[show_archive_sidebar]" value="1"' . checked(1, $value, false) . ' />';
+        echo '<label for="show_archive_sidebar">' . __('Показвай страничен панел в архивните страници', 'parfume-reviews') . '</label>';
     }
     
-    public function render_archive_posts_per_page_field() {
+    private function render_archive_posts_per_page_field() {
         $settings = get_option('parfume_reviews_settings');
         $value = isset($settings['archive_posts_per_page']) ? $settings['archive_posts_per_page'] : 12;
-        ?>
-        <input type="number" name="parfume_reviews_settings[archive_posts_per_page]" value="<?php echo esc_attr($value); ?>" class="small-text" min="1" max="100">
-        <p class="description"><?php _e('Колко парфюма да се показват на една страница в архива', 'parfume-reviews'); ?></p>
-        <?php
+        echo '<input type="number" id="archive_posts_per_page" name="parfume_reviews_settings[archive_posts_per_page]" value="' . esc_attr($value) . '" min="1" max="100" class="small-text" />';
+        echo '<p class="description">' . __('Брой парфюми, които да се показват на една страница в архива.', 'parfume-reviews') . '</p>';
     }
     
-    public function render_archive_grid_columns_field() {
+    private function render_archive_grid_columns_field() {
         $settings = get_option('parfume_reviews_settings');
         $value = isset($settings['archive_grid_columns']) ? $settings['archive_grid_columns'] : 3;
-        ?>
-        <select name="parfume_reviews_settings[archive_grid_columns]">
-            <option value="2" <?php selected($value, 2); ?>>2 колони</option>
-            <option value="3" <?php selected($value, 3); ?>>3 колони</option>
-            <option value="4" <?php selected($value, 4); ?>>4 колони</option>
-            <option value="5" <?php selected($value, 5); ?>>5 колони</option>
-        </select>
-        <?php
+        echo '<select id="archive_grid_columns" name="parfume_reviews_settings[archive_grid_columns]">';
+        for ($i = 1; $i <= 6; $i++) {
+            echo '<option value="' . $i . '"' . selected($i, $value, false) . '>' . $i . ' колони</option>';
+        }
+        echo '</select>';
     }
     
-    // Homepage Settings Field Renderers
-    public function render_homepage_description_field() {
-        $settings = get_option('parfume_reviews_settings');
-        $value = isset($settings['homepage_description']) ? $settings['homepage_description'] : '';
-        ?>
-        <textarea name="parfume_reviews_settings[homepage_description]" rows="4" cols="50" class="large-text"><?php echo esc_textarea($value); ?></textarea>
-        <p class="description"><?php _e('Описание което ще се показва в топа на архивната страница', 'parfume-reviews'); ?></p>
-        <?php
+    // Placeholder methods for other sections - should be implemented based on requirements
+    private function render_homepage_settings() {
+        echo '<p>Настройки за началната страница - за имплементиране</p>';
     }
     
-    public function render_homepage_blog_count_field() {
-        $settings = get_option('parfume_reviews_settings');
-        $value = isset($settings['homepage_blog_count']) ? $settings['homepage_blog_count'] : 6;
-        ?>
-        <input type="number" name="parfume_reviews_settings[homepage_blog_count]" value="<?php echo esc_attr($value); ?>" class="small-text" min="0" max="20">
-        <?php
+    private function render_card_settings() {
+        echo '<p>Настройки за карточки - за имплементиране</p>';
     }
     
-    public function render_homepage_blog_columns_field() {
-        $settings = get_option('parfume_reviews_settings');
-        $value = isset($settings['homepage_blog_columns']) ? $settings['homepage_blog_columns'] : 2;
-        ?>
-        <select name="parfume_reviews_settings[homepage_blog_columns]">
-            <option value="1" <?php selected($value, 1); ?>>1 колона</option>
-            <option value="2" <?php selected($value, 2); ?>>2 колони</option>
-            <option value="3" <?php selected($value, 3); ?>>3 колони</option>
-        </select>
-        <?php
+    private function render_price_tracking_settings() {
+        echo '<p>Настройки за проследяване на цени - за имплементиране</p>';
     }
     
-    public function render_homepage_featured_count_field() {
-        $settings = get_option('parfume_reviews_settings');
-        $value = isset($settings['homepage_featured_count']) ? $settings['homepage_featured_count'] : 4;
-        ?>
-        <input type="number" name="parfume_reviews_settings[homepage_featured_count]" value="<?php echo esc_attr($value); ?>" class="small-text" min="0" max="20">
-        <?php
+    private function render_import_export_section() {
+        echo '<p>Импорт/Експорт функционалност - за имплементиране</p>';
     }
     
-    public function render_homepage_featured_columns_field() {
-        $settings = get_option('parfume_reviews_settings');
-        $value = isset($settings['homepage_featured_columns']) ? $settings['homepage_featured_columns'] : 2;
-        ?>
-        <select name="parfume_reviews_settings[homepage_featured_columns]">
-            <option value="1" <?php selected($value, 1); ?>>1 колона</option>
-            <option value="2" <?php selected($value, 2); ?>>2 колони</option>
-            <option value="3" <?php selected($value, 3); ?>>3 колони</option>
-            <option value="4" <?php selected($value, 4); ?>>4 колони</option>
-        </select>
-        <?php
-    }
-    
-    // Cards Settings Field Renderers
-    public function render_show_card_prices_field() {
-        $settings = get_option('parfume_reviews_settings');
-        $value = isset($settings['show_card_prices']) ? $settings['show_card_prices'] : 1;
-        ?>
-        <label>
-            <input type="checkbox" name="parfume_reviews_settings[show_card_prices]" value="1" <?php checked($value, 1); ?>>
-            <?php _e('Показване на цени в карточките на парфюмите', 'parfume-reviews'); ?>
-        </label>
-        <?php
-    }
-    
-    public function render_show_card_rating_field() {
-        $settings = get_option('parfume_reviews_settings');
-        $value = isset($settings['show_card_rating']) ? $settings['show_card_rating'] : 1;
-        ?>
-        <label>
-            <input type="checkbox" name="parfume_reviews_settings[show_card_rating]" value="1" <?php checked($value, 1); ?>>
-            <?php _e('Показване на рейтинг в карточките на парфюмите', 'parfume-reviews'); ?>
-        </label>
-        <?php
-    }
-    
-    public function render_show_card_comparison_field() {
-        $settings = get_option('parfume_reviews_settings');
-        $value = isset($settings['show_card_comparison']) ? $settings['show_card_comparison'] : 1;
-        ?>
-        <label>
-            <input type="checkbox" name="parfume_reviews_settings[show_card_comparison]" value="1" <?php checked($value, 1); ?>>
-            <?php _e('Показване на бутон за сравнение в карточките', 'parfume-reviews'); ?>
-        </label>
-        <?php
-    }
-    
-    // Price Settings Field Renderers
-    public function render_enable_price_monitoring_field() {
-        $settings = get_option('parfume_reviews_settings');
-        $value = isset($settings['enable_price_monitoring']) ? $settings['enable_price_monitoring'] : 0;
-        ?>
-        <label>
-            <input type="checkbox" name="parfume_reviews_settings[enable_price_monitoring]" value="1" <?php checked($value, 1); ?>>
-            <?php _e('Включване на автоматично проследяване на цени', 'parfume-reviews'); ?>
-        </label>
-        <p class="description"><?php _e('Ако е включено, плъгинът ще проверява за промени в цените периодично', 'parfume-reviews'); ?></p>
-        <?php
-    }
-    
-    public function render_price_check_interval_field() {
-        $settings = get_option('parfume_reviews_settings');
-        $value = isset($settings['price_check_interval']) ? $settings['price_check_interval'] : 'daily';
-        ?>
-        <select name="parfume_reviews_settings[price_check_interval]">
-            <option value="hourly" <?php selected($value, 'hourly'); ?>><?php _e('Всеки час', 'parfume-reviews'); ?></option>
-            <option value="daily" <?php selected($value, 'daily'); ?>><?php _e('Ежедневно', 'parfume-reviews'); ?></option>
-            <option value="weekly" <?php selected($value, 'weekly'); ?>><?php _e('Седмично', 'parfume-reviews'); ?></option>
-        </select>
-        <?php
-    }
-    
-    // Import/Export Section
-    public function render_import_export_section() {
-        ?>
-        <div class="import-export-section">
-            <h3><?php _e('Експорт на данни', 'parfume-reviews'); ?></h3>
-            <p><?php _e('Експортирайте всички парфюми в JSON формат.', 'parfume-reviews'); ?></p>
-            <a href="<?php echo admin_url('admin-post.php?action=parfume_export'); ?>" class="button button-secondary">
-                <?php _e('Експорт на парфюми', 'parfume-reviews'); ?>
-            </a>
-            
-            <h3><?php _e('Импорт на данни', 'parfume-reviews'); ?></h3>
-            <p><?php _e('Импортирайте парфюми от JSON файл.', 'parfume-reviews'); ?></p>
-            <form method="post" enctype="multipart/form-data" action="<?php echo admin_url('admin-post.php'); ?>">
-                <?php wp_nonce_field('parfume_import', 'parfume_import_nonce'); ?>
-                <input type="hidden" name="action" value="parfume_import">
-                <input type="file" name="parfume_import_file" accept=".json" required>
-                <input type="submit" class="button button-primary" value="<?php _e('Импорт', 'parfume-reviews'); ?>">
-            </form>
-        </div>
-        <?php
-    }
-    
-    // Shortcodes Section
-    public function render_shortcodes_section() {
-        ?>
-        <table class="wp-list-table widefat fixed striped">
-            <thead>
-                <tr>
-                    <th><?php _e('Shortcode', 'parfume-reviews'); ?></th>
-                    <th><?php _e('Описание', 'parfume-reviews'); ?></th>
-                    <th><?php _e('Параметри', 'parfume-reviews'); ?></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><code>[parfume_comparison]</code></td>
-                    <td><?php _e('Показва линк за сравнение на парфюми.', 'parfume-reviews'); ?></td>
-                    <td><em><?php _e('Няма параметри', 'parfume-reviews'); ?></em></td>
-                </tr>
-                <tr>
-                    <td><code>[parfume_rating]</code></td>
-                    <td><?php _e('Показва звездичките за рейтинг и средния рейтинг за парфюм.', 'parfume-reviews'); ?></td>
-                    <td>
-                        <ul>
-                            <li><strong>show_empty</strong>: <?php _e('Показване ако няма рейтинг (true/false, по подразбиране: true)', 'parfume-reviews'); ?></li>
-                            <li><strong>show_average</strong>: <?php _e('Показване на средния рейтинг (true/false, по подразбиране: true)', 'parfume-reviews'); ?></li>
-                        </ul>
-                    </td>
-                </tr>
-                <tr>
-                    <td><code>[parfume_filters]</code></td>
-                    <td><?php _e('Показва формата за филтриране в архива на парфюмите.', 'parfume-reviews'); ?></td>
-                    <td>
-                        <ul>
-                            <li><strong>show_gender</strong>: <?php _e('Показване на филтър за пол (true/false, по подразбиране: true)', 'parfume-reviews'); ?></li>
-                            <li><strong>show_aroma_type</strong>: <?php _e('Показване на филтър за тип арома (true/false, по подразбиране: true)', 'parfume-reviews'); ?></li>
-                            <li><strong>show_brand</strong>: <?php _e('Показване на филтър за марка (true/false, по подразбиране: true)', 'parfume-reviews'); ?></li>
-                        </ul>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        <?php
+    private function render_shortcodes_section() {
+        echo '<p>Shortcodes документация - за имплементиране</p>';
     }
 }
