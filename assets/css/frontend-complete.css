@@ -1,0 +1,3471 @@
+/*!
+ * Parfume Reviews Plugin - Complete Frontend Styling
+ * 
+ * Comprehensive CSS for all template components including:
+ * - Blog templates styling
+ * - Taxonomy templates (perfumer, gender, aroma, season, intensity)
+ * - Interactive components and animations
+ * - Responsive design for all screen sizes
+ * - Cross-browser compatibility
+ * 
+ * @package ParfumeReviews
+ * @version 1.0.0
+ * @author Parfume Reviews Team
+ */
+
+/* =============================================================================
+   CSS CUSTOM PROPERTIES (CSS VARIABLES)
+   ============================================================================= */
+
+:root {
+  /* Primary Color Palette */
+  --pr-primary-color: #6c5ce7;
+  --pr-secondary-color: #a29bfe;
+  --pr-accent-color: #fd79a8;
+  --pr-success-color: #00b894;
+  --pr-warning-color: #fdcb6e;
+  --pr-error-color: #e17055;
+  
+  /* Neutral Colors */
+  --pr-white: #ffffff;
+  --pr-black: #2d3436;
+  --pr-gray-50: #f8f9fa;
+  --pr-gray-100: #e9ecef;
+  --pr-gray-200: #dee2e6;
+  --pr-gray-300: #ced4da;
+  --pr-gray-400: #adb5bd;
+  --pr-gray-500: #6c757d;
+  --pr-gray-600: #495057;
+  --pr-gray-700: #343a40;
+  --pr-gray-800: #212529;
+  
+  /* Typography */
+  --pr-font-family-base: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --pr-font-family-heading: 'Georgia', 'Times New Roman', serif;
+  --pr-font-size-xs: 0.75rem;
+  --pr-font-size-sm: 0.875rem;
+  --pr-font-size-base: 1rem;
+  --pr-font-size-lg: 1.125rem;
+  --pr-font-size-xl: 1.25rem;
+  --pr-font-size-2xl: 1.5rem;
+  --pr-font-size-3xl: 1.875rem;
+  --pr-font-size-4xl: 2.25rem;
+  
+  /* Spacing */
+  --pr-spacing-xs: 0.25rem;
+  --pr-spacing-sm: 0.5rem;
+  --pr-spacing-md: 1rem;
+  --pr-spacing-lg: 1.5rem;
+  --pr-spacing-xl: 2rem;
+  --pr-spacing-2xl: 3rem;
+  --pr-spacing-3xl: 4rem;
+  
+  /* Border Radius */
+  --pr-border-radius-sm: 0.25rem;
+  --pr-border-radius-md: 0.5rem;
+  --pr-border-radius-lg: 0.75rem;
+  --pr-border-radius-xl: 1rem;
+  --pr-border-radius-full: 50%;
+  
+  /* Shadows */
+  --pr-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --pr-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --pr-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --pr-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  /* Transitions */
+  --pr-transition-fast: 0.15s ease-in-out;
+  --pr-transition-base: 0.3s ease-in-out;
+  --pr-transition-slow: 0.5s ease-in-out;
+  
+  /* Breakpoints */
+  --pr-screen-sm: 640px;
+  --pr-screen-md: 768px;
+  --pr-screen-lg: 1024px;
+  --pr-screen-xl: 1280px;
+  --pr-screen-2xl: 1536px;
+}
+
+/* =============================================================================
+   BASE STYLES
+   ============================================================================= */
+
+.parfume-reviews-container * {
+  box-sizing: border-box;
+}
+
+.parfume-reviews-container {
+  font-family: var(--pr-font-family-base);
+  line-height: 1.6;
+  color: var(--pr-gray-800);
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--pr-spacing-md);
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 0 var(--pr-spacing-lg);
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    padding: 0 var(--pr-spacing-xl);
+  }
+}
+
+/* =============================================================================
+   TYPOGRAPHY
+   ============================================================================= */
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-md);
+  margin: 0 0 var(--pr-spacing-xl) 0;
+  font-family: var(--pr-font-family-heading);
+  font-size: var(--pr-font-size-2xl);
+  font-weight: 600;
+  color: var(--pr-gray-800);
+}
+
+.section-title .title-icon {
+  font-size: var(--pr-font-size-3xl);
+  opacity: 0.8;
+}
+
+.section-title .title-text {
+  position: relative;
+}
+
+.section-title .title-text::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 60%;
+  height: 3px;
+  background: linear-gradient(90deg, var(--pr-primary-color), var(--pr-secondary-color));
+  border-radius: 2px;
+}
+
+/* =============================================================================
+   BUTTONS & INTERACTIVE ELEMENTS
+   ============================================================================= */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pr-spacing-sm);
+  padding: var(--pr-spacing-sm) var(--pr-spacing-lg);
+  font-size: var(--pr-font-size-base);
+  font-weight: 500;
+  text-decoration: none;
+  border: none;
+  border-radius: var(--pr-border-radius-md);
+  cursor: pointer;
+  transition: all var(--pr-transition-base);
+  line-height: 1.4;
+}
+
+.btn-primary {
+  background: var(--pr-primary-color);
+  color: var(--pr-white);
+}
+
+.btn-primary:hover {
+  background: var(--pr-secondary-color);
+  transform: translateY(-1px);
+  box-shadow: var(--pr-shadow-md);
+}
+
+.btn-secondary {
+  background: var(--pr-gray-100);
+  color: var(--pr-gray-700);
+}
+
+.btn-secondary:hover {
+  background: var(--pr-gray-200);
+  transform: translateY(-1px);
+}
+
+.view-toggle {
+  display: flex;
+  background: var(--pr-gray-100);
+  border-radius: var(--pr-border-radius-md);
+  overflow: hidden;
+}
+
+.view-btn {
+  padding: var(--pr-spacing-sm) var(--pr-spacing-md);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--pr-transition-base);
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-xs);
+}
+
+.view-btn.active {
+  background: var(--pr-primary-color);
+  color: var(--pr-white);
+}
+
+.view-btn:hover:not(.active) {
+  background: var(--pr-gray-200);
+}
+
+/* =============================================================================
+   CARDS & LAYOUTS
+   ============================================================================= */
+
+.analysis-card,
+.correlation-card,
+.aroma-card,
+.characteristics-card {
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-xl);
+  padding: var(--pr-spacing-xl);
+  box-shadow: var(--pr-shadow-md);
+  transition: all var(--pr-transition-base);
+  border: 1px solid var(--pr-gray-100);
+}
+
+.analysis-card:hover,
+.correlation-card:hover,
+.aroma-card:hover,
+.characteristics-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--pr-shadow-lg);
+}
+
+.card-title {
+  margin: 0 0 var(--pr-spacing-lg) 0;
+  font-size: var(--pr-font-size-xl);
+  font-weight: 600;
+  color: var(--pr-gray-800);
+}
+
+.analysis-grid,
+.correlations-grid,
+.aroma-analysis-grid,
+.characteristics-grid {
+  display: grid;
+  gap: var(--pr-spacing-xl);
+  margin-top: var(--pr-spacing-xl);
+}
+
+@media (min-width: 768px) {
+  .analysis-grid,
+  .correlations-grid,
+  .aroma-analysis-grid,
+  .characteristics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .analysis-grid,
+  .correlations-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .aroma-analysis-grid,
+  .characteristics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =============================================================================
+   BLOG TEMPLATES STYLING
+   ============================================================================= */
+
+/* Blog Archive Header */
+.blog-archive-header {
+  background: linear-gradient(135deg, var(--pr-primary-color), var(--pr-secondary-color));
+  color: var(--pr-white);
+  padding: var(--pr-spacing-3xl) 0 var(--pr-spacing-2xl) 0;
+  margin-bottom: var(--pr-spacing-2xl);
+  border-radius: 0 0 var(--pr-border-radius-xl) var(--pr-border-radius-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.blog-archive-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20"><defs><radialGradient id="a" cx="50%" cy="0%" r="100%"><stop offset="0%" stop-color="rgba(255,255,255,.1)"/><stop offset="100%" stop-color="rgba(255,255,255,0)"/></radialGradient></defs><rect width="100" height="20" fill="url(%23a)"/></svg>') repeat-x;
+  opacity: 0.1;
+}
+
+.archive-header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.archive-title {
+  margin: 0 0 var(--pr-spacing-md) 0;
+  font-size: var(--pr-font-size-4xl);
+  font-weight: 700;
+}
+
+.archive-description {
+  font-size: var(--pr-font-size-lg);
+  opacity: 0.9;
+  max-width: 600px;
+}
+
+.archive-stats {
+  display: flex;
+  gap: var(--pr-spacing-xl);
+  margin-top: var(--pr-spacing-xl);
+}
+
+.stats-item {
+  text-align: center;
+}
+
+.stats-number {
+  display: block;
+  font-size: var(--pr-font-size-3xl);
+  font-weight: 700;
+  margin-bottom: var(--pr-spacing-xs);
+}
+
+.stats-label {
+  font-size: var(--pr-font-size-sm);
+  opacity: 0.8;
+}
+
+/* Featured Posts */
+.featured-posts-section {
+  margin: var(--pr-spacing-3xl) 0;
+}
+
+.featured-posts-grid {
+  display: grid;
+  gap: var(--pr-spacing-xl);
+  margin-top: var(--pr-spacing-xl);
+}
+
+@media (min-width: 768px) {
+  .featured-posts-grid {
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: repeat(2, 1fr);
+  }
+  
+  .featured-main {
+    grid-row: span 2;
+  }
+}
+
+.featured-post {
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-xl);
+  overflow: hidden;
+  box-shadow: var(--pr-shadow-md);
+  transition: all var(--pr-transition-base);
+  position: relative;
+}
+
+.featured-post:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--pr-shadow-xl);
+}
+
+.featured-post-image {
+  position: relative;
+  overflow: hidden;
+}
+
+.featured-post-image img {
+  width: 100%;
+  height: 240px;
+  object-fit: cover;
+  transition: transform var(--pr-transition-slow);
+}
+
+.featured-main .featured-post-image img {
+  height: 320px;
+}
+
+.featured-post:hover .featured-post-image img {
+  transform: scale(1.05);
+}
+
+.featured-badge {
+  position: absolute;
+  top: var(--pr-spacing-md);
+  left: var(--pr-spacing-md);
+  background: var(--pr-accent-color);
+  color: var(--pr-white);
+  padding: var(--pr-spacing-xs) var(--pr-spacing-md);
+  border-radius: var(--pr-border-radius-full);
+  font-size: var(--pr-font-size-sm);
+  font-weight: 600;
+}
+
+.featured-post-content {
+  padding: var(--pr-spacing-xl);
+}
+
+.featured-post-title {
+  margin: 0 0 var(--pr-spacing-md) 0;
+  font-size: var(--pr-font-size-xl);
+  font-weight: 600;
+}
+
+.featured-main .featured-post-title {
+  font-size: var(--pr-font-size-2xl);
+}
+
+.featured-post-title a {
+  color: var(--pr-gray-800);
+  text-decoration: none;
+  transition: color var(--pr-transition-base);
+}
+
+.featured-post-title a:hover {
+  color: var(--pr-primary-color);
+}
+
+.post-meta {
+  display: flex;
+  gap: var(--pr-spacing-lg);
+  margin-bottom: var(--pr-spacing-md);
+  font-size: var(--pr-font-size-sm);
+  color: var(--pr-gray-500);
+}
+
+.featured-post-excerpt {
+  color: var(--pr-gray-600);
+  margin-bottom: var(--pr-spacing-lg);
+}
+
+.featured-post-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+
+.post-categories {
+  display: flex;
+  gap: var(--pr-spacing-sm);
+  flex-wrap: wrap;
+}
+
+.category-tag {
+  background: var(--pr-gray-100);
+  color: var(--pr-gray-700);
+  padding: var(--pr-spacing-xs) var(--pr-spacing-sm);
+  border-radius: var(--pr-border-radius-full);
+  font-size: var(--pr-font-size-xs);
+  font-weight: 500;
+}
+
+.read-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pr-spacing-xs);
+  color: var(--pr-primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all var(--pr-transition-base);
+}
+
+.read-more-btn:hover {
+  color: var(--pr-secondary-color);
+  transform: translateX(2px);
+}
+
+/* Blog Filters Bar */
+.blog-filters-bar {
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-lg);
+  padding: var(--pr-spacing-lg);
+  box-shadow: var(--pr-shadow-sm);
+  margin-bottom: var(--pr-spacing-xl);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--pr-spacing-lg);
+}
+
+.filters-left,
+.filters-right {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-lg);
+  flex-wrap: wrap;
+}
+
+.sort-dropdown select,
+.category-filter select {
+  padding: var(--pr-spacing-sm) var(--pr-spacing-md);
+  border: 1px solid var(--pr-gray-300);
+  border-radius: var(--pr-border-radius-md);
+  background: var(--pr-white);
+  font-size: var(--pr-font-size-sm);
+  transition: border-color var(--pr-transition-base);
+}
+
+.sort-dropdown select:focus,
+.category-filter select:focus {
+  outline: none;
+  border-color: var(--pr-primary-color);
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+}
+
+.search-box {
+  position: relative;
+}
+
+.search-box input[type="search"] {
+  padding: var(--pr-spacing-sm) var(--pr-spacing-lg) var(--pr-spacing-sm) var(--pr-spacing-xl);
+  border: 1px solid var(--pr-gray-300);
+  border-radius: var(--pr-border-radius-full);
+  background: var(--pr-white);
+  font-size: var(--pr-font-size-sm);
+  width: 250px;
+  transition: all var(--pr-transition-base);
+}
+
+.search-box input[type="search"]:focus {
+  outline: none;
+  border-color: var(--pr-primary-color);
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+  width: 300px;
+}
+
+.search-box button {
+  position: absolute;
+  left: var(--pr-spacing-sm);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--pr-gray-400);
+  cursor: pointer;
+}
+
+/* Blog Posts Grid */
+.blog-posts-container[data-view="grid"] .blog-posts-grid {
+  display: grid;
+  gap: var(--pr-spacing-xl);
+}
+
+@media (min-width: 640px) {
+  .blog-posts-container[data-view="grid"] .blog-posts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .blog-posts-container[data-view="grid"] .blog-posts-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.blog-posts-container[data-view="list"] .blog-posts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-spacing-xl);
+}
+
+.blog-posts-container[data-view="list"] .blog-post-item {
+  display: flex;
+  gap: var(--pr-spacing-lg);
+  align-items: flex-start;
+}
+
+.blog-posts-container[data-view="list"] .post-image {
+  flex-shrink: 0;
+  width: 200px;
+}
+
+.blog-posts-container[data-view="list"] .post-content {
+  flex: 1;
+}
+
+.blog-post-item {
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-xl);
+  overflow: hidden;
+  box-shadow: var(--pr-shadow-md);
+  transition: all var(--pr-transition-base);
+}
+
+.blog-post-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--pr-shadow-lg);
+}
+
+.post-image {
+  position: relative;
+  overflow: hidden;
+}
+
+.post-image img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  transition: transform var(--pr-transition-slow);
+}
+
+.blog-post-item:hover .post-image img {
+  transform: scale(1.05);
+}
+
+.post-image-placeholder {
+  width: 100%;
+  height: 200px;
+  background: var(--pr-gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pr-gray-400);
+  font-size: var(--pr-font-size-3xl);
+}
+
+.post-format-icon {
+  position: absolute;
+  top: var(--pr-spacing-md);
+  right: var(--pr-spacing-md);
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--pr-white);
+  padding: var(--pr-spacing-sm);
+  border-radius: var(--pr-border-radius-full);
+  font-size: var(--pr-font-size-sm);
+}
+
+.post-content {
+  padding: var(--pr-spacing-xl);
+}
+
+.post-title {
+  margin: 0 0 var(--pr-spacing-md) 0;
+  font-size: var(--pr-font-size-xl);
+  font-weight: 600;
+}
+
+.post-title a {
+  color: var(--pr-gray-800);
+  text-decoration: none;
+  transition: color var(--pr-transition-base);
+}
+
+.post-title a:hover {
+  color: var(--pr-primary-color);
+}
+
+.post-excerpt {
+  color: var(--pr-gray-600);
+  margin-bottom: var(--pr-spacing-lg);
+  line-height: 1.6;
+}
+
+.post-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: auto;
+}
+
+.post-categories {
+  display: flex;
+  gap: var(--pr-spacing-sm);
+  flex-wrap: wrap;
+}
+
+.category-link {
+  background: var(--pr-gray-100);
+  color: var(--pr-gray-700);
+  padding: var(--pr-spacing-xs) var(--pr-spacing-sm);
+  border-radius: var(--pr-border-radius-full);
+  font-size: var(--pr-font-size-xs);
+  text-decoration: none;
+  transition: all var(--pr-transition-base);
+}
+
+.category-link:hover {
+  background: var(--pr-primary-color);
+  color: var(--pr-white);
+}
+
+.post-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-spacing-sm);
+  align-items: flex-end;
+}
+
+.read-more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pr-spacing-xs);
+  color: var(--pr-primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: var(--pr-font-size-sm);
+  transition: all var(--pr-transition-base);
+}
+
+.read-more:hover {
+  color: var(--pr-secondary-color);
+  transform: translateX(2px);
+}
+
+.related-parfumes-quick {
+  font-size: var(--pr-font-size-xs);
+  color: var(--pr-gray-500);
+  text-align: right;
+}
+
+.related-label {
+  font-weight: 600;
+  margin-right: var(--pr-spacing-xs);
+}
+
+.more-count {
+  background: var(--pr-gray-200);
+  color: var(--pr-gray-600);
+  padding: 1px var(--pr-spacing-xs);
+  border-radius: var(--pr-border-radius-sm);
+  font-weight: 600;
+}
+
+/* Blog Pagination */
+.blog-pagination {
+  display: flex;
+  justify-content: center;
+  margin: var(--pr-spacing-3xl) 0;
+}
+
+.blog-pagination .pagination-list {
+  display: flex;
+  gap: var(--pr-spacing-sm);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.blog-pagination a,
+.blog-pagination span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 var(--pr-spacing-md);
+  background: var(--pr-white);
+  border: 1px solid var(--pr-gray-300);
+  border-radius: var(--pr-border-radius-md);
+  text-decoration: none;
+  color: var(--pr-gray-600);
+  font-weight: 500;
+  transition: all var(--pr-transition-base);
+}
+
+.blog-pagination a:hover {
+  background: var(--pr-primary-color);
+  border-color: var(--pr-primary-color);
+  color: var(--pr-white);
+  transform: translateY(-1px);
+}
+
+.blog-pagination .current {
+  background: var(--pr-primary-color);
+  border-color: var(--pr-primary-color);
+  color: var(--pr-white);
+}
+
+/* No Posts Found */
+.no-posts-found {
+  text-align: center;
+  padding: var(--pr-spacing-3xl);
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-xl);
+  box-shadow: var(--pr-shadow-md);
+}
+
+.no-posts-icon {
+  font-size: var(--pr-font-size-4xl);
+  color: var(--pr-gray-400);
+  margin-bottom: var(--pr-spacing-lg);
+}
+
+.no-posts-found h3 {
+  margin: 0 0 var(--pr-spacing-md) 0;
+  color: var(--pr-gray-700);
+}
+
+.no-posts-found p {
+  color: var(--pr-gray-500);
+  margin-bottom: var(--pr-spacing-xl);
+}
+
+.no-posts-suggestions h4 {
+  margin: var(--pr-spacing-xl) 0 var(--pr-spacing-lg) 0;
+  color: var(--pr-gray-700);
+}
+
+.suggestion-posts {
+  display: flex;
+  gap: var(--pr-spacing-lg);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.suggestion-item {
+  text-align: center;
+  max-width: 150px;
+}
+
+.suggestion-item a {
+  display: block;
+  text-decoration: none;
+  color: var(--pr-gray-700);
+  transition: color var(--pr-transition-base);
+}
+
+.suggestion-item a:hover {
+  color: var(--pr-primary-color);
+}
+
+.suggestion-item img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border-radius: var(--pr-border-radius-md);
+  margin-bottom: var(--pr-spacing-sm);
+}
+
+.suggestion-title {
+  font-size: var(--pr-font-size-sm);
+  font-weight: 600;
+}
+
+/* =============================================================================
+   TAXONOMY TEMPLATES STYLING
+   ============================================================================= */
+
+/* Common Taxonomy Header Styling */
+.perfumer-header,
+.gender-header,
+.aroma-header,
+.season-header,
+.intensity-header {
+  position: relative;
+  background: linear-gradient(135deg, var(--pr-primary-color), var(--pr-secondary-color));
+  color: var(--pr-white);
+  padding: var(--pr-spacing-3xl) 0;
+  margin-bottom: var(--pr-spacing-2xl);
+  border-radius: 0 0 var(--pr-border-radius-xl) var(--pr-border-radius-xl);
+  overflow: hidden;
+}
+
+/* Dynamic color theming for different taxonomies */
+.gender-male .gender-header {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.gender-female .gender-header {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.gender-unisex .gender-header {
+  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
+.season-spring .season-header {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+}
+
+.season-summer .season-header {
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+}
+
+.season-autumn .season-header {
+  background: linear-gradient(135deg, #d35400, #e67e22);
+}
+
+.season-winter .season-header {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.intensity-light .intensity-header {
+  background: linear-gradient(135deg, #a8e6cf, #88d8a3);
+}
+
+.intensity-moderate .intensity-header {
+  background: linear-gradient(135deg, #ffd93d, #ffcd02);
+}
+
+.intensity-strong .intensity-header {
+  background: linear-gradient(135deg, #ff8b94, #ff6b9d);
+}
+
+.intensity-very_strong .intensity-header {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+}
+
+.taxonomy-header-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.1;
+}
+
+.header-content,
+.perfumer-header-content,
+.gender-header-content,
+.aroma-header-content,
+.season-header-content,
+.intensity-header-content {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: var(--pr-spacing-xl);
+}
+
+@media (min-width: 768px) {
+  .header-content,
+  .perfumer-header-content,
+  .gender-header-content,
+  .aroma-header-content,
+  .season-header-content,
+  .intensity-header-content {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+}
+
+/* Perfumer Profile Styling */
+.perfumer-photo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pr-spacing-lg);
+}
+
+.perfumer-photo,
+.perfumer-photo-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: var(--pr-border-radius-full);
+  overflow: hidden;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--pr-shadow-lg);
+}
+
+.perfumer-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.perfumer-photo-placeholder {
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--pr-font-size-3xl);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.perfumer-social-links {
+  display: flex;
+  gap: var(--pr-spacing-md);
+}
+
+.social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--pr-border-radius-full);
+  color: var(--pr-white);
+  text-decoration: none;
+  transition: all var(--pr-transition-base);
+}
+
+.social-link:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.perfumer-info-section {
+  flex: 1;
+}
+
+.perfumer-name,
+.gender-title,
+.aroma-title,
+.season-title,
+.intensity-title {
+  margin: 0 0 var(--pr-spacing-md) 0;
+  font-size: var(--pr-font-size-4xl);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.perfumer-tagline,
+.gender-tagline,
+.aroma-tagline,
+.season-tagline,
+.intensity-tagline {
+  font-size: var(--pr-font-size-lg);
+  opacity: 0.9;
+  margin-bottom: var(--pr-spacing-lg);
+}
+
+.perfumer-basic-info {
+  display: grid;
+  gap: var(--pr-spacing-md);
+}
+
+@media (min-width: 640px) {
+  .perfumer-basic-info {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-sm);
+}
+
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-xs);
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.info-value {
+  opacity: 0.9;
+}
+
+/* Statistics Cards */
+.perfumer-stats-section,
+.gender-key-stats,
+.aroma-quick-stats,
+.season-quick-stats,
+.intensity-quick-stats {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--pr-border-radius-lg);
+  padding: var(--pr-spacing-xl);
+  margin-top: var(--pr-spacing-xl);
+}
+
+.stats-grid,
+.quick-stats-grid,
+.key-stats-grid {
+  display: grid;
+  gap: var(--pr-spacing-lg);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.stat-card,
+.quick-stat-item,
+.key-stat-item {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--pr-border-radius-md);
+  padding: var(--pr-spacing-lg);
+  transition: all var(--pr-transition-base);
+}
+
+.stat-card:hover,
+.quick-stat-item:hover,
+.key-stat-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.stat-number,
+.stat-content .stat-number {
+  display: block;
+  font-size: var(--pr-font-size-3xl);
+  font-weight: 700;
+  margin-bottom: var(--pr-spacing-xs);
+}
+
+.stat-label,
+.stat-content .stat-label {
+  font-size: var(--pr-font-size-sm);
+  opacity: 0.8;
+}
+
+.stat-icon {
+  font-size: var(--pr-font-size-2xl);
+  margin-bottom: var(--pr-spacing-sm);
+  opacity: 0.8;
+}
+
+/* Content Sections */
+.perfumer-content-area,
+.gender-content-area,
+.aroma-content-area,
+.season-content-area,
+.intensity-content-area {
+  display: grid;
+  gap: var(--pr-spacing-xl);
+}
+
+@media (min-width: 1024px) {
+  .perfumer-content-area,
+  .gender-content-area,
+  .aroma-content-area,
+  .season-content-area,
+  .intensity-content-area {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-spacing-2xl);
+}
+
+/* Biography Section */
+.perfumer-biography-section {
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-xl);
+  padding: var(--pr-spacing-xl);
+  box-shadow: var(--pr-shadow-md);
+}
+
+.biography-content {
+  color: var(--pr-gray-700);
+  line-height: 1.7;
+}
+
+.biography-content p {
+  margin-bottom: var(--pr-spacing-lg);
+}
+
+/* Signature Notes */
+.perfumer-signature-notes-section {
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-xl);
+  padding: var(--pr-spacing-xl);
+  box-shadow: var(--pr-shadow-md);
+}
+
+.signature-notes-grid {
+  display: grid;
+  gap: var(--pr-spacing-md);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.signature-note-item {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-sm);
+  background: var(--pr-gray-50);
+  padding: var(--pr-spacing-md);
+  border-radius: var(--pr-border-radius-md);
+  transition: all var(--pr-transition-base);
+}
+
+.signature-note-item:hover {
+  background: var(--pr-primary-color);
+  color: var(--pr-white);
+  transform: translateY(-1px);
+}
+
+.note-icon {
+  font-size: var(--pr-font-size-lg);
+}
+
+.note-name {
+  font-weight: 500;
+}
+
+/* Awards & Achievements */
+.perfumer-awards-section {
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-xl);
+  padding: var(--pr-spacing-xl);
+  box-shadow: var(--pr-shadow-md);
+}
+
+.awards-timeline {
+  position: relative;
+  padding-left: var(--pr-spacing-xl);
+}
+
+.awards-timeline::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--pr-primary-color);
+}
+
+.award-item {
+  position: relative;
+  display: flex;
+  gap: var(--pr-spacing-lg);
+  margin-bottom: var(--pr-spacing-xl);
+  padding-bottom: var(--pr-spacing-xl);
+  border-bottom: 1px solid var(--pr-gray-100);
+}
+
+.award-item::before {
+  content: '';
+  position: absolute;
+  left: -26px;
+  top: 8px;
+  width: 12px;
+  height: 12px;
+  background: var(--pr-primary-color);
+  border-radius: var(--pr-border-radius-full);
+  border: 3px solid var(--pr-white);
+  box-shadow: 0 0 0 2px var(--pr-primary-color);
+}
+
+.award-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.award-year {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--pr-primary-color);
+  font-size: var(--pr-font-size-lg);
+  min-width: 60px;
+}
+
+.award-content {
+  flex: 1;
+}
+
+.award-title {
+  margin: 0 0 var(--pr-spacing-sm) 0;
+  font-size: var(--pr-font-size-lg);
+  font-weight: 600;
+  color: var(--pr-gray-800);
+}
+
+.award-description {
+  color: var(--pr-gray-600);
+  margin-bottom: var(--pr-spacing-sm);
+  line-height: 1.6;
+}
+
+.award-organization {
+  font-size: var(--pr-font-size-sm);
+  color: var(--pr-primary-color);
+  font-weight: 600;
+}
+
+/* Quotes Carousel */
+.perfumer-quotes-section {
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-xl);
+  padding: var(--pr-spacing-xl);
+  box-shadow: var(--pr-shadow-md);
+  position: relative;
+}
+
+.quotes-carousel {
+  position: relative;
+  min-height: 150px;
+}
+
+.quote-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  opacity: 0;
+  transition: opacity var(--pr-transition-slow);
+  text-align: center;
+}
+
+.quote-item.active {
+  opacity: 1;
+}
+
+.quote-text {
+  font-size: var(--pr-font-size-xl);
+  font-style: italic;
+  color: var(--pr-gray-700);
+  line-height: 1.6;
+  margin: 0 0 var(--pr-spacing-lg) 0;
+}
+
+.quote-source {
+  display: block;
+  font-size: var(--pr-font-size-sm);
+  color: var(--pr-gray-500);
+  font-weight: 600;
+}
+
+.quotes-navigation {
+  display: flex;
+  justify-content: center;
+  gap: var(--pr-spacing-md);
+  margin-top: var(--pr-spacing-xl);
+}
+
+.quote-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--pr-gray-100);
+  border: none;
+  border-radius: var(--pr-border-radius-full);
+  cursor: pointer;
+  transition: all var(--pr-transition-base);
+}
+
+.quote-nav-btn:hover {
+  background: var(--pr-primary-color);
+  color: var(--pr-white);
+  transform: translateY(-1px);
+}
+
+/* =============================================================================
+   CHARTS & VISUALIZATIONS
+   ============================================================================= */
+
+/* Price Distribution Charts */
+.price-distribution-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-spacing-lg);
+}
+
+.price-range-item {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-md);
+}
+
+.range-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-width: 120px;
+}
+
+.range-label {
+  font-weight: 600;
+  color: var(--pr-gray-700);
+}
+
+.range-count {
+  font-size: var(--pr-font-size-sm);
+  color: var(--pr-gray-500);
+}
+
+.range-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--pr-gray-100);
+  border-radius: var(--pr-border-radius-sm);
+  overflow: hidden;
+  margin: 0 var(--pr-spacing-md);
+}
+
+.range-fill {
+  height: 100%;
+  border-radius: var(--pr-border-radius-sm);
+  transition: width var(--pr-transition-slow);
+}
+
+.range-fill.range-budget {
+  background: linear-gradient(90deg, #00b894, #00cec9);
+}
+
+.range-fill.range-mid {
+  background: linear-gradient(90deg, #fdcb6e, #e17055);
+}
+
+.range-fill.range-luxury {
+  background: linear-gradient(90deg, #6c5ce7, #a29bfe);
+}
+
+.range-fill.range-niche {
+  background: linear-gradient(90deg, #fd79a8, #e84393);
+}
+
+.range-percentage {
+  font-weight: 600;
+  color: var(--pr-gray-600);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Seasonal Charts */
+.seasonal-chart,
+.seasonal-distribution-chart {
+  display: grid;
+  gap: var(--pr-spacing-lg);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.season-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pr-spacing-sm);
+  background: var(--pr-gray-50);
+  padding: var(--pr-spacing-lg);
+  border-radius: var(--pr-border-radius-lg);
+  transition: all var(--pr-transition-base);
+}
+
+.season-item:hover {
+  background: var(--pr-gray-100);
+  transform: translateY(-2px);
+}
+
+.season-icon {
+  font-size: var(--pr-font-size-3xl);
+  margin-bottom: var(--pr-spacing-sm);
+}
+
+.season-info {
+  text-align: center;
+}
+
+.season-name {
+  font-weight: 600;
+  color: var(--pr-gray-700);
+  margin-bottom: var(--pr-spacing-xs);
+}
+
+.season-stats {
+  font-size: var(--pr-font-size-sm);
+  color: var(--pr-gray-500);
+}
+
+.season-count {
+  font-weight: 600;
+}
+
+.season-percentage {
+  opacity: 0.8;
+}
+
+/* Intensity Level Charts */
+.intensity-chart,
+.intensity-levels-card .intensity-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--pr-spacing-md);
+  height: 200px;
+  padding: var(--pr-spacing-lg) 0;
+}
+
+.intensity-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pr-spacing-sm);
+  height: 100%;
+}
+
+.intensity-bar {
+  width: 100%;
+  background: var(--pr-primary-color);
+  border-radius: var(--pr-border-radius-sm) var(--pr-border-radius-sm) 0 0;
+  transition: height var(--pr-transition-slow);
+  min-height: 20px;
+  margin-top: auto;
+}
+
+.intensity-bar.intensity-light {
+  background: linear-gradient(to top, #a8e6cf, #88d8a3);
+}
+
+.intensity-bar.intensity-moderate {
+  background: linear-gradient(to top, #ffd93d, #ffcd02);
+}
+
+.intensity-bar.intensity-strong {
+  background: linear-gradient(to top, #ff8b94, #ff6b9d);
+}
+
+.intensity-bar.intensity-very_strong {
+  background: linear-gradient(to top, #ff6b6b, #ee5a52);
+}
+
+.intensity-label {
+  font-size: var(--pr-font-size-xs);
+  font-weight: 600;
+  color: var(--pr-gray-600);
+  text-align: center;
+  margin-top: auto;
+}
+
+.intensity-count {
+  font-size: var(--pr-font-size-sm);
+  font-weight: 600;
+  color: var(--pr-gray-700);
+}
+
+/* Release Years Trend */
+.years-trend-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--pr-spacing-sm);
+  height: 150px;
+  padding: var(--pr-spacing-lg) 0;
+}
+
+.year-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pr-spacing-xs);
+  height: 100%;
+}
+
+.year-bar {
+  width: 100%;
+  background: linear-gradient(to top, var(--pr-primary-color), var(--pr-secondary-color));
+  border-radius: var(--pr-border-radius-sm) var(--pr-border-radius-sm) 0 0;
+  transition: height var(--pr-transition-slow);
+  min-height: 10px;
+  margin-top: auto;
+}
+
+.year-label {
+  font-size: var(--pr-font-size-xs);
+  font-weight: 600;
+  color: var(--pr-gray-600);
+  transform: rotate(-45deg);
+  margin-top: var(--pr-spacing-sm);
+}
+
+.year-count {
+  font-size: var(--pr-font-size-xs);
+  color: var(--pr-gray-500);
+}
+
+/* =============================================================================
+   HIGHLIGHTS & FEATURED CONTENT
+   ============================================================================= */
+
+.highlight-parfume,
+.featured-products-grid,
+.highlights-grid,
+.highlights-showcase,
+.intensity-highlights-showcase {
+  display: grid;
+  gap: var(--pr-spacing-xl);
+  margin-top: var(--pr-spacing-xl);
+}
+
+@media (min-width: 768px) {
+  .featured-products-grid,
+  .highlights-grid,
+  .highlights-showcase,
+  .intensity-highlights-showcase {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .featured-products-grid,
+  .highlights-grid,
+  .highlights-showcase,
+  .intensity-highlights-showcase {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.highlight-card,
+.featured-product-card,
+.intensity-highlight-card {
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-xl);
+  overflow: hidden;
+  box-shadow: var(--pr-shadow-md);
+  transition: all var(--pr-transition-base);
+  position: relative;
+}
+
+.highlight-card:hover,
+.featured-product-card:hover,
+.intensity-highlight-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--pr-shadow-xl);
+}
+
+.card-badge {
+  position: absolute;
+  top: var(--pr-spacing-md);
+  left: var(--pr-spacing-md);
+  padding: var(--pr-spacing-xs) var(--pr-spacing-md);
+  border-radius: var(--pr-border-radius-full);
+  font-size: var(--pr-font-size-xs);
+  font-weight: 600;
+  color: var(--pr-white);
+  z-index: 2;
+}
+
+.badge-rating {
+  background: var(--pr-success-color);
+}
+
+.badge-longevity {
+  background: var(--pr-primary-color);
+}
+
+.badge-popular {
+  background: var(--pr-accent-color);
+}
+
+.badge-versatile {
+  background: var(--pr-warning-color);
+  color: var(--pr-gray-800);
+}
+
+.badge-representative {
+  background: var(--pr-secondary-color);
+}
+
+.highlight-image,
+.product-image {
+  position: relative;
+  overflow: hidden;
+  height: 200px;
+}
+
+.highlight-image img,
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--pr-transition-slow);
+}
+
+.highlight-card:hover .highlight-image img,
+.featured-product-card:hover .product-image img,
+.intensity-highlight-card:hover .highlight-image img {
+  transform: scale(1.05);
+}
+
+.highlight-content,
+.product-info {
+  padding: var(--pr-spacing-xl);
+}
+
+.highlight-title,
+.product-title {
+  margin: 0 0 var(--pr-spacing-sm) 0;
+  font-size: var(--pr-font-size-lg);
+  font-weight: 600;
+}
+
+.highlight-title a,
+.product-title a {
+  color: var(--pr-gray-800);
+  text-decoration: none;
+  transition: color var(--pr-transition-base);
+}
+
+.highlight-title a:hover,
+.product-title a:hover {
+  color: var(--pr-primary-color);
+}
+
+.highlight-brand,
+.product-brand {
+  font-size: var(--pr-font-size-sm);
+  color: var(--pr-gray-500);
+  font-weight: 500;
+  margin-bottom: var(--pr-spacing-md);
+}
+
+.highlight-rating,
+.product-rating {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-sm);
+  margin-bottom: var(--pr-spacing-md);
+}
+
+.rating-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.star {
+  font-size: var(--pr-font-size-sm);
+  color: var(--pr-gray-300);
+}
+
+.star.filled {
+  color: #fbbf24;
+}
+
+.star.half {
+  color: #fbbf24;
+}
+
+.rating-number {
+  font-weight: 600;
+  color: var(--pr-gray-700);
+}
+
+.highlight-excerpt,
+.product-stats {
+  color: var(--pr-gray-600);
+  font-size: var(--pr-font-size-sm);
+  line-height: 1.5;
+}
+
+.highlight-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pr-spacing-xs);
+  color: var(--pr-primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: var(--pr-font-size-sm);
+  margin-top: var(--pr-spacing-md);
+  transition: all var(--pr-transition-base);
+}
+
+.highlight-link:hover {
+  color: var(--pr-secondary-color);
+  transform: translateX(2px);
+}
+
+.link-arrow,
+.arrow {
+  transition: transform var(--pr-transition-base);
+}
+
+.highlight-link:hover .link-arrow,
+.read-more:hover .arrow {
+  transform: translateX(2px);
+}
+
+/* =============================================================================
+   PARFUMES GRID & FILTERING
+   ============================================================================= */
+
+/* Advanced Filters */
+.parfumes-advanced-filters,
+.blog-filters-bar,
+.aroma-filters,
+.season-filters,
+.intensity-filters {
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-lg);
+  padding: var(--pr-spacing-lg);
+  box-shadow: var(--pr-shadow-md);
+  margin-bottom: var(--pr-spacing-xl);
+}
+
+.filters-row {
+  display: flex;
+  gap: var(--pr-spacing-lg);
+  flex-wrap: wrap;
+  align-items: end;
+  margin-bottom: var(--pr-spacing-lg);
+}
+
+.filters-row:last-child {
+  margin-bottom: 0;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-spacing-sm);
+  min-width: 120px;
+}
+
+.filter-group label {
+  font-size: var(--pr-font-size-sm);
+  font-weight: 600;
+  color: var(--pr-gray-700);
+}
+
+.filter-group select {
+  padding: var(--pr-spacing-sm) var(--pr-spacing-md);
+  border: 1px solid var(--pr-gray-300);
+  border-radius: var(--pr-border-radius-md);
+  background: var(--pr-white);
+  font-size: var(--pr-font-size-sm);
+  transition: all var(--pr-transition-base);
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: var(--pr-primary-color);
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+}
+
+.view-controls {
+  display: flex;
+  gap: var(--pr-spacing-md);
+  align-items: center;
+}
+
+.items-per-page select {
+  padding: var(--pr-spacing-sm);
+  border: 1px solid var(--pr-gray-300);
+  border-radius: var(--pr-border-radius-md);
+  background: var(--pr-white);
+  font-size: var(--pr-font-size-sm);
+}
+
+.filters-reset-btn,
+.reset-filters-btn,
+.reset-season-filters,
+.reset-intensity-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-xs);
+  padding: var(--pr-spacing-sm) var(--pr-spacing-md);
+  background: var(--pr-gray-100);
+  border: 1px solid var(--pr-gray-300);
+  border-radius: var(--pr-border-radius-md);
+  color: var(--pr-gray-600);
+  font-size: var(--pr-font-size-sm);
+  cursor: pointer;
+  transition: all var(--pr-transition-base);
+}
+
+.filters-reset-btn:hover,
+.reset-filters-btn:hover,
+.reset-season-filters:hover,
+.reset-intensity-filters:hover {
+  background: var(--pr-gray-200);
+  border-color: var(--pr-gray-400);
+}
+
+.filters-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--pr-spacing-lg);
+  border-top: 1px solid var(--pr-gray-200);
+}
+
+.results-info,
+.season-results-info,
+.intensity-results-info {
+  font-size: var(--pr-font-size-sm);
+  color: var(--pr-gray-600);
+}
+
+.results-count,
+.season-results-count,
+.intensity-results-count {
+  font-weight: 600;
+}
+
+/* Active Filters Display */
+.active-filters {
+  background: var(--pr-gray-50);
+  border-radius: var(--pr-border-radius-md);
+  padding: var(--pr-spacing-md);
+  margin-bottom: var(--pr-spacing-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-md);
+  flex-wrap: wrap;
+}
+
+.active-filters-label {
+  font-size: var(--pr-font-size-sm);
+  font-weight: 600;
+  color: var(--pr-gray-700);
+}
+
+.active-filters-list {
+  display: flex;
+  gap: var(--pr-spacing-sm);
+  flex-wrap: wrap;
+}
+
+.active-filter-tag {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-xs);
+  background: var(--pr-primary-color);
+  color: var(--pr-white);
+  padding: var(--pr-spacing-xs) var(--pr-spacing-sm);
+  border-radius: var(--pr-border-radius-full);
+  font-size: var(--pr-font-size-xs);
+  font-weight: 500;
+}
+
+.remove-filter {
+  background: none;
+  border: none;
+  color: var(--pr-white);
+  cursor: pointer;
+  padding: 0;
+  margin-left: var(--pr-spacing-xs);
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--pr-border-radius-full);
+  transition: background-color var(--pr-transition-base);
+}
+
+.remove-filter:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.clear-all-filters {
+  background: var(--pr-error-color);
+  color: var(--pr-white);
+  border: none;
+  padding: var(--pr-spacing-xs) var(--pr-spacing-sm);
+  border-radius: var(--pr-border-radius-md);
+  font-size: var(--pr-font-size-xs);
+  cursor: pointer;
+  transition: background-color var(--pr-transition-base);
+}
+
+.clear-all-filters:hover {
+  background: #d63031;
+}
+
+/* Parfumes Grid */
+.parfumes-grid-container[data-view="grid"] .parfumes-grid,
+.season-parfumes-container[data-view="grid"] .parfumes-grid,
+.intensity-parfumes-container[data-view="grid"] .parfumes-grid,
+.aroma-parfumes-container[data-view="grid"] .parfumes-grid {
+  display: grid;
+  gap: var(--pr-spacing-xl);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.parfumes-grid-container[data-view="list"] .parfumes-grid,
+.season-parfumes-container[data-view="list"] .parfumes-grid,
+.intensity-parfumes-container[data-view="list"] .parfumes-grid,
+.aroma-parfumes-container[data-view="list"] .parfumes-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-spacing-lg);
+}
+
+.parfume-item {
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-xl);
+  overflow: hidden;
+  box-shadow: var(--pr-shadow-md);
+  transition: all var(--pr-transition-base);
+  position: relative;
+}
+
+.parfume-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--pr-shadow-lg);
+}
+
+.parfumes-grid-container[data-view="list"] .parfume-item,
+.season-parfumes-container[data-view="list"] .parfume-item,
+.intensity-parfumes-container[data-view="list"] .parfume-item,
+.aroma-parfumes-container[data-view="list"] .parfume-item {
+  display: flex;
+  gap: var(--pr-spacing-lg);
+  align-items: flex-start;
+}
+
+.parfume-image {
+  position: relative;
+  overflow: hidden;
+}
+
+.parfumes-grid-container[data-view="grid"] .parfume-image,
+.season-parfumes-container[data-view="grid"] .parfume-image,
+.intensity-parfumes-container[data-view="grid"] .parfume-image,
+.aroma-parfumes-container[data-view="grid"] .parfume-image {
+  height: 240px;
+}
+
+.parfumes-grid-container[data-view="list"] .parfume-image,
+.season-parfumes-container[data-view="list"] .parfume-image,
+.intensity-parfumes-container[data-view="list"] .parfume-image,
+.aroma-parfumes-container[data-view="list"] .parfume-image {
+  flex-shrink: 0;
+  width: 160px;
+  height: 120px;
+}
+
+.parfume-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--pr-transition-slow);
+}
+
+.parfume-item:hover .parfume-image img {
+  transform: scale(1.05);
+}
+
+.parfume-image-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--pr-gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pr-gray-400);
+  font-size: var(--pr-font-size-3xl);
+}
+
+.parfume-quick-actions {
+  position: absolute;
+  top: var(--pr-spacing-md);
+  right: var(--pr-spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-spacing-sm);
+  opacity: 0;
+  transition: opacity var(--pr-transition-base);
+}
+
+.parfume-item:hover .parfume-quick-actions {
+  opacity: 1;
+}
+
+.quick-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: var(--pr-border-radius-full);
+  color: var(--pr-gray-600);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--pr-transition-base);
+  backdrop-filter: blur(4px);
+}
+
+.quick-action:hover {
+  background: var(--pr-primary-color);
+  color: var(--pr-white);
+  transform: scale(1.1);
+}
+
+.add-to-comparison.added {
+  background: var(--pr-success-color);
+  color: var(--pr-white);
+}
+
+.parfume-content {
+  padding: var(--pr-spacing-xl);
+  flex: 1;
+}
+
+.parfumes-grid-container[data-view="list"] .parfume-content,
+.season-parfumes-container[data-view="list"] .parfume-content,
+.intensity-parfumes-container[data-view="list"] .parfume-content,
+.aroma-parfumes-container[data-view="list"] .parfume-content {
+  padding: var(--pr-spacing-lg);
+}
+
+.parfume-brand {
+  font-size: var(--pr-font-size-sm);
+  color: var(--pr-gray-500);
+  font-weight: 500;
+  margin-bottom: var(--pr-spacing-sm);
+}
+
+.parfume-brand a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--pr-transition-base);
+}
+
+.parfume-brand a:hover {
+  color: var(--pr-primary-color);
+}
+
+.parfume-title {
+  margin: 0 0 var(--pr-spacing-md) 0;
+  font-size: var(--pr-font-size-lg);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.parfume-title a {
+  color: var(--pr-gray-800);
+  text-decoration: none;
+  transition: color var(--pr-transition-base);
+}
+
+.parfume-title a:hover {
+  color: var(--pr-primary-color);
+}
+
+.parfume-meta {
+  display: flex;
+  gap: var(--pr-spacing-md);
+  margin-bottom: var(--pr-spacing-md);
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-xs);
+  font-size: var(--pr-font-size-sm);
+  color: var(--pr-gray-500);
+}
+
+.parfume-rating {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-sm);
+  margin-bottom: var(--pr-spacing-md);
+}
+
+.parfume-excerpt {
+  color: var(--pr-gray-600);
+  font-size: var(--pr-font-size-sm);
+  line-height: 1.5;
+  margin-bottom: var(--pr-spacing-lg);
+}
+
+/* Loading States */
+.parfumes-loading,
+.season-loading,
+.intensity-loading,
+.aroma-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--pr-spacing-3xl);
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-xl);
+  box-shadow: var(--pr-shadow-md);
+  margin: var(--pr-spacing-xl) 0;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pr-spacing-lg);
+  text-align: center;
+}
+
+.loading-spinner {
+  font-size: var(--pr-font-size-3xl);
+  animation: spin 2s linear infinite;
+}
+
+.loading-spinner .spin,
+.loading-spinner .dashicons-update {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.parfumes-grid.filtering {
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity var(--pr-transition-base);
+}
+
+/* Pagination */
+.parfumes-pagination,
+.season-pagination,
+.intensity-pagination,
+.aroma-pagination {
+  display: flex;
+  justify-content: center;
+  margin: var(--pr-spacing-3xl) 0;
+}
+
+.parfumes-pagination .page-numbers,
+.season-pagination .page-numbers,
+.intensity-pagination .page-numbers,
+.aroma-pagination .page-numbers {
+  display: flex;
+  gap: var(--pr-spacing-sm);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.parfumes-pagination a,
+.parfumes-pagination span,
+.season-pagination a,
+.season-pagination span,
+.intensity-pagination a,
+.intensity-pagination span,
+.aroma-pagination a,
+.aroma-pagination span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 var(--pr-spacing-md);
+  background: var(--pr-white);
+  border: 1px solid var(--pr-gray-300);
+  border-radius: var(--pr-border-radius-md);
+  text-decoration: none;
+  color: var(--pr-gray-600);
+  font-weight: 500;
+  transition: all var(--pr-transition-base);
+}
+
+.parfumes-pagination a:hover,
+.season-pagination a:hover,
+.intensity-pagination a:hover,
+.aroma-pagination a:hover {
+  background: var(--pr-primary-color);
+  border-color: var(--pr-primary-color);
+  color: var(--pr-white);
+  transform: translateY(-1px);
+}
+
+.parfumes-pagination .current,
+.season-pagination .current,
+.intensity-pagination .current,
+.aroma-pagination .current {
+  background: var(--pr-primary-color);
+  border-color: var(--pr-primary-color);
+  color: var(--pr-white);
+}
+
+/* No Results Found */
+.no-parfumes-found,
+.no-season-parfumes,
+.no-intensity-parfumes,
+.no-aroma-parfumes {
+  text-align: center;
+  padding: var(--pr-spacing-3xl);
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-xl);
+  box-shadow: var(--pr-shadow-md);
+}
+
+.no-content-icon {
+  font-size: var(--pr-font-size-4xl);
+  color: var(--pr-gray-400);
+  margin-bottom: var(--pr-spacing-lg);
+}
+
+.browse-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pr-spacing-sm);
+  padding: var(--pr-spacing-md) var(--pr-spacing-xl);
+  background: var(--pr-primary-color);
+  color: var(--pr-white);
+  text-decoration: none;
+  border-radius: var(--pr-border-radius-md);
+  font-weight: 600;
+  transition: all var(--pr-transition-base);
+  margin-top: var(--pr-spacing-lg);
+}
+
+.browse-all-btn:hover {
+  background: var(--pr-secondary-color);
+  transform: translateY(-1px);
+  box-shadow: var(--pr-shadow-md);
+}
+
+/* =============================================================================
+   SPECIALIZED TAXONOMY VISUALIZATIONS
+   ============================================================================= */
+
+/* Fragrance Pyramid (Aroma Type) */
+.fragrance-pyramid {
+  background: linear-gradient(135deg, var(--pr-gray-50), var(--pr-white));
+  border-radius: var(--pr-border-radius-lg);
+  padding: var(--pr-spacing-xl);
+  position: relative;
+}
+
+.pyramid-level {
+  margin-bottom: var(--pr-spacing-xl);
+  padding: var(--pr-spacing-lg);
+  border-radius: var(--pr-border-radius-md);
+  position: relative;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all var(--pr-transition-slow);
+}
+
+.pyramid-level.animated {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pyramid-level.top-notes {
+  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+  border-left: 4px solid #fdcb6e;
+}
+
+.pyramid-level.middle-notes {
+  background: linear-gradient(135deg, #d1ecf1, #74b9ff);
+  border-left: 4px solid #0984e3;
+}
+
+.pyramid-level.base-notes {
+  background: linear-gradient(135deg, #d4edda, #00b894);
+  border-left: 4px solid #00b894;
+}
+
+.level-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--pr-spacing-md);
+}
+
+.level-title {
+  margin: 0;
+  font-size: var(--pr-font-size-lg);
+  font-weight: 600;
+  color: var(--pr-gray-800);
+}
+
+.level-timing {
+  font-size: var(--pr-font-size-sm);
+  color: var(--pr-gray-600);
+  font-style: italic;
+}
+
+.notes-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pr-spacing-sm);
+  min-height: 60px;
+  align-items: center;
+}
+
+.note-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pr-spacing-xs);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+  padding: var(--pr-spacing-sm) var(--pr-spacing-md);
+  border-radius: var(--pr-border-radius-full);
+  font-size: var(--pr-font-size-sm);
+  font-weight: 500;
+  color: var(--pr-gray-700);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: all var(--pr-transition-base);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.note-bubble.animated {
+  opacity: 1;
+}
+
+.note-bubble:hover {
+  background: var(--pr-white);
+  border-color: var(--pr-primary-color);
+  transform: translateY(-1px);
+  box-shadow: var(--pr-shadow-sm);
+}
+
+.note-bubble.small {
+  font-size: var(--pr-font-size-xs);
+  padding: var(--pr-spacing-xs) var(--pr-spacing-sm);
+}
+
+.note-bubble.medium {
+  font-size: var(--pr-font-size-sm);
+}
+
+.note-bubble.large {
+  font-size: var(--pr-font-size-base);
+  font-weight: 600;
+}
+
+.note-count {
+  background: rgba(108, 92, 231, 0.2);
+  color: var(--pr-primary-color);
+  padding: 2px var(--pr-spacing-xs);
+  border-radius: var(--pr-border-radius-full);
+  font-size: var(--pr-font-size-xs);
+  font-weight: 600;
+  margin-left: var(--pr-spacing-xs);
+}
+
+.no-notes {
+  color: var(--pr-gray-500);
+  font-style: italic;
+  text-align: center;
+  width: 100%;
+  padding: var(--pr-spacing-lg);
+}
+
+/* Seasonal Radar Chart */
+.seasonal-radar {
+  position: relative;
+  padding: var(--pr-spacing-xl);
+}
+
+.radar-chart {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  margin: 0 auto;
+  border: 2px solid var(--pr-gray-200);
+  border-radius: var(--pr-border-radius-full);
+  background: radial-gradient(circle, var(--pr-gray-50) 0%, transparent 70%);
+}
+
+.radar-chart::before,
+.radar-chart::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--pr-gray-200);
+  border-radius: var(--pr-border-radius-full);
+}
+
+.radar-chart::before {
+  width: 200px;
+  height: 200px;
+}
+
+.radar-chart::after {
+  width: 100px;
+  height: 100px;
+}
+
+.radar-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: var(--pr-primary-color);
+  border-radius: var(--pr-border-radius-full);
+}
+
+.radar-point {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(var(--angle)) translateY(calc(-1 * var(--radius))) rotate(calc(-1 * var(--angle)));
+  transition: all var(--pr-transition-slow);
+  opacity: 0;
+}
+
+.radar-point.animated {
+  opacity: 1;
+}
+
+.season-marker {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  background: var(--pr-white);
+  border: 3px solid var(--pr-primary-color);
+  border-radius: var(--pr-border-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--pr-font-size-lg);
+  cursor: pointer;
+  transition: all var(--pr-transition-base);
+  box-shadow: var(--pr-shadow-md);
+}
+
+.season-marker:hover {
+  transform: scale(1.1);
+  box-shadow: var(--pr-shadow-lg);
+}
+
+.season-marker.season-spring {
+  border-color: #2ecc71;
+}
+
+.season-marker.season-summer {
+  border-color: #f39c12;
+}
+
+.season-marker.season-autumn {
+  border-color: #d35400;
+}
+
+.season-marker.season-winter {
+  border-color: #3498db;
+}
+
+.season-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: var(--pr-spacing-sm);
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--pr-transition-base);
+}
+
+.season-tooltip.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tooltip-content {
+  background: var(--pr-gray-800);
+  color: var(--pr-white);
+  padding: var(--pr-spacing-sm) var(--pr-spacing-md);
+  border-radius: var(--pr-border-radius-md);
+  font-size: var(--pr-font-size-sm);
+  white-space: nowrap;
+  position: relative;
+}
+
+.tooltip-content::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--pr-gray-800);
+}
+
+.seasonal-legend {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--pr-spacing-md);
+  margin-top: var(--pr-spacing-xl);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-spacing-sm);
+  padding: var(--pr-spacing-sm);
+  background: var(--pr-gray-50);
+  border-radius: var(--pr-border-radius-md);
+}
+
+.legend-emoji {
+  font-size: var(--pr-font-size-lg);
+}
+
+.legend-name {
+  font-weight: 600;
+  color: var(--pr-gray-700);
+}
+
+.legend-stats {
+  font-size: var(--pr-font-size-sm);
+  color: var(--pr-gray-500);
+}
+
+/* Projection Visualization (Intensity) */
+.projection-diagram {
+  position: relative;
+  width: 400px;
+  height: 400px;
+  margin: 0 auto;
+  padding: var(--pr-spacing-xl);
+}
+
+.person-silhouette {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+.person-icon {
+  font-size: var(--pr-font-size-4xl);
+  color: var(--pr-gray-600);
+}
+
+.projection-circles {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.projection-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid;
+  border-radius: var(--pr-border-radius-full);
+  opacity: 0.6;
+  transition: all var(--pr-transition-slow);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: var(--pr-spacing-sm);
+}
+
+.projection-circle.animated {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.projection-circle.active {
+  opacity: 1;
+  border-width: 3px;
+}
+
+.projection-circle.inactive {
+  opacity: 0.3;
+  border-style: dashed;
+}
+
+.projection-circle.intimate {
+  border-color: #a8e6cf;
+  background: rgba(168, 230, 207, 0.1);
+}
+
+.projection-circle.moderate {
+  border-color: #ffd93d;
+  background: rgba(255, 217, 61, 0.1);
+}
+
+.projection-circle.strong {
+  border-color: #ff8b94;
+  background: rgba(255, 139, 148, 0.1);
+}
+
+.projection-circle.very_strong {
+  border-color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.projection-label {
+  font-size: var(--pr-font-size-xs);
+  font-weight: 600;
+  color: var(--pr-gray-600);
+  background: var(--pr-white);
+  padding: var(--pr-spacing-xs);
+  border-radius: var(--pr-border-radius-sm);
+  box-shadow: var(--pr-shadow-sm);
+}
+
+.projection-legend {
+  display: flex;
+  justify-content: center;
+  gap: var(--pr-spacing-lg);
+  margin-top: var(--pr-spacing-xl);
+  flex-wrap: wrap;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--pr-border-radius-full);
+  margin-right: var(--pr-spacing-sm);
+}
+
+.legend-dot.active {
+  background: var(--pr-success-color);
+}
+
+.legend-dot.inactive {
+  background: var(--pr-gray-300);
+}
+
+.legend-text {
+  font-size: var(--pr-font-size-sm);
+  color: var(--pr-gray-600);
+}
+
+/* Environmental Suitability */
+.environmental-grid {
+  display: grid;
+  gap: var(--pr-spacing-lg);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.environment-item {
+  background: var(--pr-gray-50);
+  border-radius: var(--pr-border-radius-lg);
+  padding: var(--pr-spacing-lg);
+  transition: all var(--pr-transition-base);
+  border: 2px solid transparent;
+}
+
+.environment-item:hover,
+.environment-item.environment-hover {
+  background: var(--pr-white);
+  border-color: var(--pr-primary-color);
+  transform: translateY(-2px);
+  box-shadow: var(--pr-shadow-md);
+}
+
+.environment-item.compatibility-high {
+  background: linear-gradient(135deg, #d4edda, #c3e6cb);
+}
+
+.environment-item.compatibility-medium {
+  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+}
+
+.environment-item.compatibility-low {
+  background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+}
+
+.environment-icon {
+  font-size: var(--pr-font-size-3xl);
+  text-align: center;
+  margin-bottom: var(--pr-spacing-md);
+}
+
+.environment-info {
+  text-align: center;
+}
+
+.environment-name {
+  font-weight: 600;
+  color: var(--pr-gray-700);
+  margin-bottom: var(--pr-spacing-sm);
+}
+
+.compatibility-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--pr-gray-200);
+  border-radius: var(--pr-border-radius-sm);
+  overflow: hidden;
+  margin: var(--pr-spacing-sm) 0;
+}
+
+.compatibility-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--pr-success-color), var(--pr-primary-color));
+  border-radius: var(--pr-border-radius-sm);
+  transition: width var(--pr-transition-slow);
+}
+
+.compatibility-percentage {
+  font-size: var(--pr-font-size-sm);
+  font-weight: 600;
+  color: var(--pr-gray-600);
+}
+
+/* =============================================================================
+   SIDEBAR STYLING
+   ============================================================================= */
+
+.blog-sidebar,
+.perfumer-sidebar,
+.taxonomy-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-spacing-xl);
+}
+
+.sidebar-widget {
+  background: var(--pr-white);
+  border-radius: var(--pr-border-radius-xl);
+  padding: var(--pr-spacing-xl);
+  box-shadow: var(--pr-shadow-md);
+  transition: all var(--pr-transition-base);
+}
+
+.sidebar-widget:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--pr-shadow-lg);
+}
+
+.widget-title {
+  margin: 0 0 var(--pr-spacing-lg) 0;
+  font-size: var(--pr-font-size-lg);
+  font-weight: 600;
+  color: var(--pr-gray-800);
+  border-bottom: 2px solid var(--pr-gray-100);
+  padding-bottom: var(--pr-spacing-md);
+}
+
+/* Categories Widget */
+.category-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.category-list li {
+  border-bottom: 1px solid var(--pr-gray-100);
+}
+
+.category-list li:last-child {
+  border-bottom: none;
+}
+
+.category-list a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--pr-spacing-md) 0;
+  color: var(--pr-gray-700);
+  text-decoration: none;
+  transition: all var(--pr-transition-base);
+}
+
+.category-list a:hover {
+  color: var(--pr-primary-color);
+  padding-left: var(--pr-spacing-sm);
+}
+
+.category-count {
+  background: var(--pr-gray-100);
+  color: var(--pr-gray-600);
+  padding: var(--pr-spacing-xs) var(--pr-spacing-sm);
+  border-radius: var(--pr-border-radius-full);
+  font-size: var(--pr-font-size-xs);
+  font-weight: 600;
+}
+
+/* Recent Posts Widget */
+.recent-posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-spacing-lg);
+}
+
+.recent-post-item {
+  display: flex;
+  gap: var(--pr-spacing-md);
+  align-items: flex-start;
+}
+
+.recent-post-thumb {
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  border-radius: var(--pr-border-radius-md);
+  overflow: hidden;
+}
+
+.recent-post-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.recent-post-content {
+  flex: 1;
+}
+
+.recent-post-title {
+  margin: 0 0 var(--pr-spacing-xs) 0;
+  font-size: var(--pr-font-size-sm);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.recent-post-title a {
+  color: var(--pr-gray-700);
+  text-decoration: none;
+  transition: color var(--pr-transition-base);
+}
+
+.recent-post-title a:hover {
+  color: var(--pr-primary-color);
+}
+
+.recent-post-meta {
+  font-size: var(--pr-font-size-xs);
+  color: var(--pr-gray-500);
+}
+
+.recent-post-date {
+  font-weight: 500;
+}
+
+/* Tags Widget */
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pr-spacing-sm);
+}
+
+.tag-cloud a {
+  background: var(--pr-gray-100);
+  color: var(--pr-gray-700);
+  padding: var(--pr-spacing-xs) var(--pr-spacing-md);
+  border-radius: var(--pr-border-radius-full);
+  text-decoration: none;
+  font-size: var(--pr-font-size-sm);
+  font-weight: 500;
+  transition: all var(--pr-transition-base);
+  border: 1px solid transparent;
+}
+
+.tag-cloud a:hover {
+  background: var(--pr-primary-color);
+  color: var(--pr-white);
+  transform: translateY(-1px);
+}
+
+/* Archive Widget */
+.archive-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.archive-list li {
+  border-bottom: 1px solid var(--pr-gray-100);
+}
+
+.archive-list li:last-child {
+  border-bottom: none;
+}
+
+.archive-list a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--pr-spacing-sm) 0;
+  color: var(--pr-gray-700);
+  text-decoration: none;
+  transition: all var(--pr-transition-base);
+}
+
+.archive-list a:hover {
+  color: var(--pr-primary-color);
+  padding-left: var(--pr-spacing-sm);
+}
+
+/* Related Perfumers Widget */
+.related-perfumers-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-spacing-lg);
+}
+
+.related-perfumer-item {
+  display: flex;
+  gap: var(--pr-spacing-md);
+  align-items: center;
+}
+
+.related-perfumer-avatar {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border-radius: var(--pr-border-radius-full);
+  overflow: hidden;
+}
+
+.related-perfumer-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--pr-gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pr-gray-400);
+  font-size: var(--pr-font-size-lg);
+}
+
+.related-perfumer-info {
+  flex: 1;
+}
+
+.related-perfumer-name {
+  margin: 0 0 var(--pr-spacing-xs) 0;
+  font-size: var(--pr-font-size-sm);
+  font-weight: 600;
+}
+
+.related-perfumer-name a {
+  color: var(--pr-gray-700);
+  text-decoration: none;
+  transition: color var(--pr-transition-base);
+}
+
+.related-perfumer-name a:hover {
+  color: var(--pr-primary-color);
+}
+
+.related-perfumer-count {
+  font-size: var(--pr-font-size-xs);
+  color: var(--pr-gray-500);
+}
+
+/* Brands Worked With Widget */
+.brands-worked-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pr-spacing-sm);
+}
+
+.brand-tag {
+  background: var(--pr-gray-100);
+  color: var(--pr-gray-700);
+  padding: var(--pr-spacing-xs) var(--pr-spacing-sm);
+  border-radius: var(--pr-border-radius-full);
+  font-size: var(--pr-font-size-xs);
+  font-weight: 500;
+  border: 1px solid var(--pr-gray-200);
+  transition: all var(--pr-transition-base);
+}
+
+.brand-tag:hover {
+  background: var(--pr-primary-color);
+  color: var(--pr-white);
+  border-color: var(--pr-primary-color);
+}
+
+/* Newsletter Widget */
+.newsletter-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-spacing-md);
+}
+
+.newsletter-form input[type="email"] {
+  width: 100%;
+  padding: var(--pr-spacing-md);
+  border: 1px solid var(--pr-gray-300);
+  border-radius: var(--pr-border-radius-md);
+  font-size: var(--pr-font-size-sm);
+  transition: border-color var(--pr-transition-base);
+}
+
+.newsletter-form input[type="email"]:focus {
+  outline: none;
+  border-color: var(--pr-primary-color);
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+}
+
+.newsletter-form button {
+  padding: var(--pr-spacing-md);
+  background: var(--pr-primary-color);
+  color: var(--pr-white);
+  border: none;
+  border-radius: var(--pr-border-radius-md);
+  font-size: var(--pr-font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--pr-transition-base);
+}
+
+.newsletter-form button:hover {
+  background: var(--pr-secondary-color);
+  transform: translateY(-1px);
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================= */
+
+/* Mobile First - Base styles above are mobile */
+
+/* Small tablets and large phones */
+@media (max-width: 640px) {
+  .container {
+    padding: 0 var(--pr-spacing-sm);
+  }
+  
+  .section-title {
+    font-size: var(--pr-font-size-xl);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--pr-spacing-sm);
+  }
+  
+  .section-title .title-icon {
+    font-size: var(--pr-font-size-2xl);
+  }
+  
+  .blog-filters-bar,
+  .parfumes-advanced-filters {
+    padding: var(--pr-spacing-md);
+  }
+  
+  .filters-left,
+  .filters-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .filter-group {
+    min-width: auto;
+    flex: 1;
+  }
+  
+  .search-box input[type="search"] {
+    width: 200px;
+  }
+  
+  .search-box input[type="search"]:focus {
+    width: 220px;
+  }
+  
+  .perfumer-header-content,
+  .gender-header-content,
+  .aroma-header-content,
+  .season-header-content,
+  .intensity-header-content {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: var(--pr-spacing-lg);
+  }
+  
+  .perfumer-name,
+  .gender-title,
+  .aroma-title,
+  .season-title,
+  .intensity-title {
+    font-size: var(--pr-font-size-3xl);
+  }
+  
+  .stats-grid,
+  .quick-stats-grid,
+  .key-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .analysis-grid,
+  .correlations-grid,
+  .aroma-analysis-grid,
+  .characteristics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .featured-posts-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .featured-main {
+    grid-row: auto;
+  }
+  
+  .projection-diagram {
+    width: 300px;
+    height: 300px;
+  }
+  
+  .radar-chart {
+    width: 250px;
+    height: 250px;
+  }
+  
+  .seasonal-legend {
+    grid-template-columns: 1fr;
+  }
+  
+  .environmental-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Medium screens */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .perfumer-content-area,
+  .gender-content-area,
+  .aroma-content-area,
+  .season-content-area,
+  .intensity-content-area {
+    grid-template-columns: 1fr;
+  }
+  
+  .blog-posts-container[data-view="grid"] .blog-posts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .parfumes-grid-container[data-view="grid"] .parfumes-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Large screens */
+@media (min-width: 1024px) {
+  .blog-posts-container[data-view="grid"] .blog-posts-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .parfumes-grid-container[data-view="grid"] .parfumes-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Extra large screens */
+@media (min-width: 1280px) {
+  .parfumes-grid-container[data-view="grid"] .parfumes-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* =============================================================================
+   ANIMATIONS & INTERACTIONS
+   ============================================================================= */
+
+/* Fade in animation for cards */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.analysis-card,
+.correlation-card,
+.aroma-card,
+.characteristics-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* Hover effects for interactive elements */
+.interactive-element:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--pr-shadow-lg);
+}
+
+/* Loading animation improvements */
+.loading-spinner .season-icon,
+.loading-spinner .intensity-icon {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.7; 
+    transform: scale(1.1);
+  }
+}
+
+/* Chart animation triggers */
+.chart-element {
+  transition: all var(--pr-transition-slow);
+}
+
+.chart-element.animated {
+  animation: chartGrow 0.8s ease-out;
+}
+
+@keyframes chartGrow {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Hover enhancements */
+.hover-enhanced:hover {
+  background: linear-gradient(135deg, var(--pr-white), var(--pr-gray-50));
+  border-color: var(--pr-primary-color);
+}
+
+.highlight-hover:hover {
+  box-shadow: 0 8px 25px rgba(108, 92, 231, 0.15);
+}
+
+.intensity-highlight-hover:hover {
+  transform: translateY(-3px) scale(1.02);
+}
+
+.family-hover:hover {
+  background: linear-gradient(135deg, var(--pr-primary-color), var(--pr-secondary-color));
+  color: var(--pr-white);
+}
+
+.note-hover:hover {
+  background: var(--pr-primary-color);
+  color: var(--pr-white);
+  transform: scale(1.05);
+}
+
+.recommendation-hover:hover {
+  background: var(--pr-primary-color);
+  color: var(--pr-white);
+  transform: translateX(4px);
+}
+
+/* =============================================================================
+   PRINT STYLES
+   ============================================================================= */
+
+@media print {
+  .parfume-reviews-container {
+    color: black;
+    background: white;
+  }
+  
+  .parfume-reviews-container * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  .blog-filters-bar,
+  .parfumes-advanced-filters,
+  .view-toggle,
+  .parfume-quick-actions,
+  .quotes-navigation,
+  .loading-spinner,
+  .sidebar-widget {
+    display: none !important;
+  }
+  
+  .parfumes-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem !important;
+  }
+  
+  .parfume-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  
+  .section-title {
+    border-bottom: 2px solid black;
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* =============================================================================
+   ACCESSIBILITY ENHANCEMENTS
+   ============================================================================= */
+
+/* Focus indicators */
+.parfume-reviews-container button:focus,
+.parfume-reviews-container select:focus,
+.parfume-reviews-container input:focus,
+.parfume-reviews-container a:focus {
+  outline: 2px solid var(--pr-primary-color);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --pr-primary-color: #000080;
+    --pr-secondary-color: #000040;
+    --pr-gray-100: #f0f0f0;
+    --pr-gray-800: #000000;
+  }
+  
+  .analysis-card,
+  .correlation-card,
+  .aroma-card,
+  .characteristics-card {
+    border: 2px solid var(--pr-gray-800);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .loading-spinner,
+  .quote-item,
+  .chart-element {
+    animation: none !important;
+  }
+}
+
+/* Screen reader optimizations */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* =============================================================================
+   DARK MODE SUPPORT (Future Enhancement)
+   ============================================================================= */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pr-white: #1a1a1a;
+    --pr-black: #ffffff;
+    --pr-gray-50: #262626;
+    --pr-gray-100: #404040;
+    --pr-gray-200: #525252;
+    --pr-gray-300: #737373;
+    --pr-gray-400: #a3a3a3;
+    --pr-gray-500: #d4d4d4;
+    --pr-gray-600: #e5e5e5;
+    --pr-gray-700: #f5f5f5;
+    --pr-gray-800: #ffffff;
+  }
+  
+  .parfume-reviews-container {
+    background: var(--pr-white);
+    color: var(--pr-gray-800);
+  }
+}

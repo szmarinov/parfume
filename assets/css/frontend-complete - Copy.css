@@ -1,0 +1,1085 @@
+/*!
+ * Parfume Reviews Plugin - Responsive Mobile Optimization
+ * 
+ * Advanced responsive design refinements for mobile and tablet devices
+ * Includes touch optimizations, mobile-specific layouts, and performance enhancements
+ * 
+ * @package ParfumeReviews
+ * @version 1.0.0
+ * @author Parfume Reviews Team
+ */
+
+/* =============================================================================
+   MOBILE-FIRST VARIABLES & ADJUSTMENTS
+   ============================================================================= */
+
+:root {
+  /* Mobile-optimized spacing */
+  --pr-mobile-spacing-xs: 0.125rem;
+  --pr-mobile-spacing-sm: 0.375rem;
+  --pr-mobile-spacing-md: 0.75rem;
+  --pr-mobile-spacing-lg: 1rem;
+  --pr-mobile-spacing-xl: 1.5rem;
+  --pr-mobile-spacing-2xl: 2rem;
+  
+  /* Touch-friendly sizing */
+  --pr-touch-target-min: 44px;
+  --pr-touch-target-comfortable: 48px;
+  --pr-touch-target-large: 56px;
+  
+  /* Mobile typography scaling */
+  --pr-mobile-font-scale: 0.9;
+  --pr-mobile-line-height: 1.5;
+  
+  /* Mobile-specific animations */
+  --pr-mobile-transition-fast: 0.2s ease-out;
+  --pr-mobile-transition-normal: 0.3s ease-out;
+  
+  /* Mobile viewport units */
+  --pr-vh-fallback: 100vh;
+  --pr-vh-mobile: 100dvh; /* Dynamic viewport height */
+}
+
+/* =============================================================================
+   FOUNDATION - MOBILE CONTAINER & BASE ADJUSTMENTS
+   ============================================================================= */
+
+/* Enhanced mobile container */
+@media (max-width: 640px) {
+  .container {
+    padding-left: var(--pr-mobile-spacing-md);
+    padding-right: var(--pr-mobile-spacing-md);
+    max-width: 100%;
+  }
+  
+  /* Improve readability on small screens */
+  .parfume-reviews-container {
+    font-size: calc(var(--pr-font-size-base) * var(--pr-mobile-font-scale));
+    line-height: var(--pr-mobile-line-height);
+  }
+  
+  /* Optimize viewport for mobile browsers */
+  .parfume-reviews-container {
+    min-height: var(--pr-vh-mobile);
+    min-height: var(--pr-vh-fallback);
+  }
+}
+
+/* =============================================================================
+   TOUCH-OPTIMIZED INTERACTIVE ELEMENTS
+   ============================================================================= */
+
+/* Enhanced touch targets for mobile */
+@media (max-width: 768px) {
+  
+  /* Buttons and interactive elements */
+  .btn,
+  .view-btn,
+  .filter-group select,
+  .quick-action,
+  .pagination a,
+  .pagination span {
+    min-height: var(--pr-touch-target-min);
+    min-width: var(--pr-touch-target-min);
+    padding: var(--pr-mobile-spacing-sm) var(--pr-mobile-spacing-lg);
+  }
+  
+  /* Enhanced touch feedback */
+  .btn:active,
+  .view-btn:active,
+  .quick-action:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease-out;
+  }
+  
+  /* Improved search input for mobile */
+  .search-box input[type="search"] {
+    min-height: var(--pr-touch-target-min);
+    font-size: 16px; /* Prevents zoom on iOS */
+    width: 100%;
+    max-width: none;
+  }
+  
+  .search-box input[type="search"]:focus {
+    width: 100%;
+  }
+  
+  /* Mobile-friendly select dropdowns */
+  .filter-group select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23666" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
+    padding-right: 40px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+  }
+}
+
+/* =============================================================================
+   MOBILE NAVIGATION & HEADER OPTIMIZATIONS
+   ============================================================================= */
+
+/* Blog Archive Header - Mobile Optimization */
+@media (max-width: 640px) {
+  .blog-archive-header,
+  .perfumer-header,
+  .gender-header,
+  .aroma-header,
+  .season-header,
+  .intensity-header {
+    padding: var(--pr-mobile-spacing-xl) 0;
+    margin-bottom: var(--pr-mobile-spacing-xl);
+    text-align: center;
+  }
+  
+  .archive-title,
+  .perfumer-name,
+  .gender-title,
+  .aroma-title,
+  .season-title,
+  .intensity-title {
+    font-size: var(--pr-font-size-2xl);
+    line-height: 1.2;
+    margin-bottom: var(--pr-mobile-spacing-md);
+  }
+  
+  .archive-description,
+  .perfumer-tagline,
+  .gender-tagline,
+  .aroma-tagline,
+  .season-tagline,
+  .intensity-tagline {
+    font-size: var(--pr-font-size-base);
+    margin-bottom: var(--pr-mobile-spacing-lg);
+  }
+  
+  /* Mobile-optimized stats grid */
+  .archive-stats,
+  .stats-grid,
+  .quick-stats-grid,
+  .key-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--pr-mobile-spacing-md);
+    margin-top: var(--pr-mobile-spacing-lg);
+  }
+  
+  .stats-item,
+  .stat-card,
+  .quick-stat-item,
+  .key-stat-item {
+    padding: var(--pr-mobile-spacing-md);
+    min-height: 80px;
+  }
+  
+  .stats-number,
+  .stat-number {
+    font-size: var(--pr-font-size-xl);
+    margin-bottom: var(--pr-mobile-spacing-xs);
+  }
+  
+  .stats-label,
+  .stat-label {
+    font-size: var(--pr-font-size-xs);
+  }
+}
+
+/* =============================================================================
+   MOBILE FILTERING & SEARCH INTERFACE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  
+  /* Responsive filters layout */
+  .blog-filters-bar,
+  .parfumes-advanced-filters,
+  .aroma-filters,
+  .season-filters,
+  .intensity-filters {
+    padding: var(--pr-mobile-spacing-md);
+    border-radius: var(--pr-border-radius-md);
+  }
+  
+  .filters-row {
+    flex-direction: column;
+    gap: var(--pr-mobile-spacing-md);
+    margin-bottom: var(--pr-mobile-spacing-md);
+  }
+  
+  .filter-group {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .filter-group label {
+    font-size: var(--pr-font-size-sm);
+    font-weight: 600;
+    margin-bottom: var(--pr-mobile-spacing-xs);
+  }
+  
+  /* Enhanced mobile view toggle */
+  .view-controls {
+    justify-content: center;
+    margin: var(--pr-mobile-spacing-lg) 0;
+  }
+  
+  .view-toggle {
+    width: 100%;
+    max-width: 200px;
+  }
+  
+  .view-btn {
+    flex: 1;
+    justify-content: center;
+    padding: var(--pr-mobile-spacing-md);
+    font-size: var(--pr-font-size-sm);
+  }
+  
+  /* Improved mobile filters actions */
+  .filters-actions {
+    flex-direction: column;
+    gap: var(--pr-mobile-spacing-md);
+    text-align: center;
+    padding-top: var(--pr-mobile-spacing-md);
+  }
+  
+  .filters-reset-btn,
+  .reset-filters-btn,
+  .reset-season-filters,
+  .reset-intensity-filters {
+    width: 100%;
+    justify-content: center;
+    padding: var(--pr-mobile-spacing-md);
+  }
+  
+  /* Mobile-friendly active filters */
+  .active-filters {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--pr-mobile-spacing-md);
+  }
+  
+  .active-filters-list {
+    justify-content: center;
+    margin: var(--pr-mobile-spacing-sm) 0;
+  }
+  
+  .active-filter-tag {
+    margin-bottom: var(--pr-mobile-spacing-xs);
+  }
+  
+  .clear-all-filters {
+    align-self: center;
+    min-width: 120px;
+  }
+}
+
+/* =============================================================================
+   MOBILE CONTENT LAYOUTS
+   ============================================================================= */
+
+/* Blog Posts Mobile Layout */
+@media (max-width: 640px) {
+  
+  /* Force single column layout on very small screens */
+  .blog-posts-container[data-view="grid"] .blog-posts-grid,
+  .parfumes-grid-container[data-view="grid"] .parfumes-grid,
+  .season-parfumes-container[data-view="grid"] .parfumes-grid,
+  .intensity-parfumes-container[data-view="grid"] .parfumes-grid,
+  .aroma-parfumes-container[data-view="grid"] .parfumes-grid {
+    grid-template-columns: 1fr;
+    gap: var(--pr-mobile-spacing-lg);
+  }
+  
+  /* Optimize list view for mobile */
+  .blog-posts-container[data-view="list"] .blog-post-item,
+  .parfumes-grid-container[data-view="list"] .parfume-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .blog-posts-container[data-view="list"] .post-image,
+  .parfumes-grid-container[data-view="list"] .parfume-image {
+    width: 100%;
+    height: 200px;
+    flex-shrink: 1;
+  }
+  
+  /* Mobile card optimization */
+  .blog-post-item,
+  .parfume-item,
+  .featured-post,
+  .highlight-card,
+  .featured-product-card {
+    margin-bottom: var(--pr-mobile-spacing-lg);
+    border-radius: var(--pr-border-radius-lg);
+  }
+  
+  .post-content,
+  .parfume-content,
+  .featured-post-content,
+  .highlight-content {
+    padding: var(--pr-mobile-spacing-lg);
+  }
+  
+  /* Optimized mobile typography in cards */
+  .post-title,
+  .parfume-title,
+  .featured-post-title,
+  .highlight-title {
+    font-size: var(--pr-font-size-lg);
+    line-height: 1.3;
+    margin-bottom: var(--pr-mobile-spacing-sm);
+  }
+  
+  .post-excerpt,
+  .parfume-excerpt,
+  .featured-post-excerpt {
+    font-size: var(--pr-font-size-sm);
+    line-height: 1.5;
+    margin-bottom: var(--pr-mobile-spacing-md);
+  }
+  
+  /* Mobile meta information */
+  .post-meta,
+  .parfume-meta {
+    flex-direction: column;
+    gap: var(--pr-mobile-spacing-xs);
+    margin-bottom: var(--pr-mobile-spacing-md);
+  }
+  
+  .meta-item {
+    font-size: var(--pr-font-size-xs);
+  }
+  
+  /* Mobile footer actions */
+  .post-footer,
+  .featured-post-footer {
+    flex-direction: column;
+    gap: var(--pr-mobile-spacing-md);
+    align-items: stretch;
+  }
+  
+  .post-categories,
+  .related-parfumes-quick {
+    text-align: center;
+    margin-bottom: var(--pr-mobile-spacing-sm);
+  }
+  
+  .post-actions {
+    align-items: center;
+    text-align: center;
+  }
+}
+
+/* =============================================================================
+   MOBILE FEATURED CONTENT & HIGHLIGHTS
+   ============================================================================= */
+
+@media (max-width: 640px) {
+  
+  /* Featured posts mobile layout */
+  .featured-posts-section {
+    margin: var(--pr-mobile-spacing-xl) 0;
+  }
+  
+  .featured-posts-grid,
+  .highlights-grid,
+  .highlights-showcase,
+  .intensity-highlights-showcase {
+    grid-template-columns: 1fr;
+    gap: var(--pr-mobile-spacing-lg);
+  }
+  
+  .featured-main,
+  .featured-secondary {
+    grid-row: auto;
+    grid-column: auto;
+  }
+  
+  /* Mobile image optimization */
+  .featured-post-image,
+  .highlight-image,
+  .product-image {
+    height: 180px;
+  }
+  
+  .featured-main .featured-post-image {
+    height: 200px;
+  }
+  
+  /* Mobile badge positioning */
+  .featured-badge,
+  .card-badge {
+    top: var(--pr-mobile-spacing-sm);
+    left: var(--pr-mobile-spacing-sm);
+    padding: var(--pr-mobile-spacing-xs) var(--pr-mobile-spacing-sm);
+    font-size: var(--pr-font-size-xs);
+  }
+  
+  /* Mobile quick actions */
+  .parfume-quick-actions {
+    top: var(--pr-mobile-spacing-sm);
+    right: var(--pr-mobile-spacing-sm);
+    gap: var(--pr-mobile-spacing-xs);
+  }
+  
+  .quick-action {
+    width: 36px;
+    height: 36px;
+    font-size: var(--pr-font-size-sm);
+  }
+}
+
+/* =============================================================================
+   MOBILE SIDEBAR & WIDGETS OPTIMIZATION
+   ============================================================================= */
+
+@media (max-width: 1024px) {
+  
+  /* Move sidebar below content on tablets and mobile */
+  .perfumer-content-area,
+  .gender-content-area,
+  .aroma-content-area,
+  .season-content-area,
+  .intensity-content-area {
+    grid-template-columns: 1fr;
+    gap: var(--pr-mobile-spacing-xl);
+  }
+  
+  .blog-sidebar,
+  .perfumer-sidebar,
+  .taxonomy-sidebar {
+    order: 2; /* Move sidebar after main content */
+  }
+  
+  .content-wrapper {
+    order: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  
+  /* Mobile sidebar styling */
+  .blog-sidebar,
+  .perfumer-sidebar,
+  .taxonomy-sidebar {
+    gap: var(--pr-mobile-spacing-lg);
+  }
+  
+  .sidebar-widget {
+    padding: var(--pr-mobile-spacing-lg);
+    border-radius: var(--pr-border-radius-lg);
+  }
+  
+  .widget-title {
+    font-size: var(--pr-font-size-lg);
+    margin-bottom: var(--pr-mobile-spacing-md);
+    padding-bottom: var(--pr-mobile-spacing-sm);
+  }
+  
+  /* Mobile widget content */
+  .recent-posts-list {
+    gap: var(--pr-mobile-spacing-md);
+  }
+  
+  .recent-post-item {
+    padding: var(--pr-mobile-spacing-sm) 0;
+    border-bottom: 1px solid var(--pr-gray-100);
+  }
+  
+  .recent-post-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  
+  .recent-post-thumb {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .recent-post-title {
+    font-size: var(--pr-font-size-sm);
+    line-height: 1.3;
+  }
+  
+  /* Mobile category lists */
+  .category-list a,
+  .archive-list a {
+    padding: var(--pr-mobile-spacing-sm) 0;
+    font-size: var(--pr-font-size-sm);
+  }
+  
+  /* Mobile tag cloud */
+  .tag-cloud {
+    gap: var(--pr-mobile-spacing-xs);
+  }
+  
+  .tag-cloud a {
+    padding: var(--pr-mobile-spacing-xs) var(--pr-mobile-spacing-sm);
+    font-size: var(--pr-font-size-xs);
+  }
+  
+  /* Mobile related perfumers */
+  .related-perfumers-list {
+    gap: var(--pr-mobile-spacing-md);
+  }
+  
+  .related-perfumer-item {
+    padding: var(--pr-mobile-spacing-sm);
+    background: var(--pr-gray-50);
+    border-radius: var(--pr-border-radius-md);
+  }
+  
+  .related-perfumer-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  
+  /* Mobile newsletter form */
+  .newsletter-form {
+    gap: var(--pr-mobile-spacing-md);
+  }
+  
+  .newsletter-form input[type="email"],
+  .newsletter-form button {
+    padding: var(--pr-mobile-spacing-md);
+    font-size: 16px; /* Prevent zoom on iOS */
+    border-radius: var(--pr-border-radius-md);
+  }
+}
+
+/* =============================================================================
+   MOBILE CHARTS & VISUALIZATIONS
+   ============================================================================= */
+
+@media (max-width: 640px) {
+  
+  /* Analysis cards mobile layout */
+  .analysis-grid,
+  .correlations-grid,
+  .aroma-analysis-grid,
+  .characteristics-grid {
+    grid-template-columns: 1fr;
+    gap: var(--pr-mobile-spacing-lg);
+  }
+  
+  .analysis-card,
+  .correlation-card,
+  .aroma-card,
+  .characteristics-card {
+    padding: var(--pr-mobile-spacing-lg);
+    border-radius: var(--pr-border-radius-lg);
+  }
+  
+  .card-title {
+    font-size: var(--pr-font-size-lg);
+    margin-bottom: var(--pr-mobile-spacing-md);
+  }
+  
+  /* Mobile fragrance pyramid */
+  .fragrance-pyramid {
+    padding: var(--pr-mobile-spacing-md);
+  }
+  
+  .pyramid-level {
+    padding: var(--pr-mobile-spacing-md);
+    margin-bottom: var(--pr-mobile-spacing-md);
+  }
+  
+  .level-title {
+    font-size: var(--pr-font-size-base);
+  }
+  
+  .level-timing {
+    font-size: var(--pr-font-size-xs);
+  }
+  
+  .notes-cloud {
+    gap: var(--pr-mobile-spacing-xs);
+    min-height: 40px;
+  }
+  
+  .note-bubble {
+    padding: var(--pr-mobile-spacing-xs) var(--pr-mobile-spacing-sm);
+    font-size: var(--pr-font-size-xs);
+  }
+  
+  .note-bubble.small {
+    padding: 2px var(--pr-mobile-spacing-xs);
+    font-size: 10px;
+  }
+  
+  /* Mobile seasonal radar */
+  .seasonal-radar {
+    padding: var(--pr-mobile-spacing-md);
+  }
+  
+  .radar-chart {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .radar-chart::before {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .radar-chart::after {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .season-marker {
+    width: 30px;
+    height: 30px;
+    font-size: var(--pr-font-size-sm);
+  }
+  
+  .seasonal-legend {
+    grid-template-columns: 1fr;
+    gap: var(--pr-mobile-spacing-sm);
+    margin-top: var(--pr-mobile-spacing-md);
+  }
+  
+  .legend-item {
+    padding: var(--pr-mobile-spacing-sm);
+    font-size: var(--pr-font-size-sm);
+  }
+  
+  /* Mobile projection diagram */
+  .projection-diagram {
+    width: 250px;
+    height: 250px;
+    padding: var(--pr-mobile-spacing-md);
+  }
+  
+  .person-icon {
+    font-size: var(--pr-font-size-2xl);
+  }
+  
+  .projection-label {
+    font-size: 10px;
+    padding: 2px var(--pr-mobile-spacing-xs);
+  }
+  
+  .projection-legend {
+    flex-direction: column;
+    gap: var(--pr-mobile-spacing-sm);
+    text-align: center;
+  }
+  
+  /* Mobile environmental grid */
+  .environmental-grid {
+    grid-template-columns: 1fr;
+    gap: var(--pr-mobile-spacing-md);
+  }
+  
+  .environment-item {
+    padding: var(--pr-mobile-spacing-md);
+  }
+  
+  .environment-icon {
+    font-size: var(--pr-font-size-2xl);
+    margin-bottom: var(--pr-mobile-spacing-sm);
+  }
+  
+  .environment-name {
+    font-size: var(--pr-font-size-sm);
+    margin-bottom: var(--pr-mobile-spacing-xs);
+  }
+}
+
+/* =============================================================================
+   MOBILE PAGINATION & LOADING STATES
+   ============================================================================= */
+
+@media (max-width: 640px) {
+  
+  /* Mobile pagination */
+  .blog-pagination,
+  .parfumes-pagination,
+  .season-pagination,
+  .intensity-pagination,
+  .aroma-pagination {
+    margin: var(--pr-mobile-spacing-xl) 0;
+    padding: 0 var(--pr-mobile-spacing-md);
+  }
+  
+  .blog-pagination .pagination-list,
+  .parfumes-pagination .page-numbers {
+    gap: var(--pr-mobile-spacing-xs);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .blog-pagination a,
+  .blog-pagination span,
+  .parfumes-pagination a,
+  .parfumes-pagination span {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 var(--pr-mobile-spacing-sm);
+    font-size: var(--pr-font-size-sm);
+  }
+  
+  /* Hide some pagination numbers on very small screens */
+  .page-numbers .page-numbers:nth-child(n+6):nth-last-child(n+6) {
+    display: none;
+  }
+  
+  /* Mobile loading states */
+  .parfumes-loading,
+  .season-loading,
+  .intensity-loading,
+  .aroma-loading {
+    padding: var(--pr-mobile-spacing-xl) var(--pr-mobile-spacing-md);
+    margin: var(--pr-mobile-spacing-lg) 0;
+  }
+  
+  .loading-content {
+    gap: var(--pr-mobile-spacing-md);
+  }
+  
+  .loading-spinner {
+    font-size: var(--pr-font-size-2xl);
+  }
+  
+  .loading-content p {
+    font-size: var(--pr-font-size-sm);
+    text-align: center;
+  }
+}
+
+/* =============================================================================
+   MOBILE PERFORMANCE OPTIMIZATIONS
+   ============================================================================= */
+
+/* Reduce animations on mobile for better performance */
+@media (max-width: 768px) {
+  
+  /* Simplified hover effects for touch devices */
+  .parfume-item:hover,
+  .blog-post-item:hover,
+  .featured-post:hover,
+  .highlight-card:hover {
+    transform: none;
+  }
+  
+  /* Reduce complex animations on mobile */
+  .note-bubble,
+  .pyramid-level,
+  .radar-point {
+    animation-duration: 0.3s;
+  }
+  
+  /* Optimize image transitions */
+  .parfume-image img,
+  .post-image img,
+  .featured-post-image img {
+    transition: transform 0.3s ease-out;
+  }
+  
+  /* Simplify chart animations on mobile */
+  .range-fill,
+  .compatibility-fill,
+  .longevity-bar,
+  .intensity-bar {
+    transition-duration: 0.4s;
+  }
+}
+
+/* Optimize for very low-end devices */
+@media (max-width: 480px) {
+  
+  /* Reduce resource-intensive effects */
+  .blog-archive-header::before,
+  .perfumer-header::before,
+  .gender-header::before {
+    display: none;
+  }
+  
+  /* Simplify gradients for better performance */
+  .blog-archive-header,
+  .perfumer-header,
+  .gender-header,
+  .aroma-header,
+  .season-header,
+  .intensity-header {
+    background: var(--pr-primary-color);
+  }
+  
+  /* Reduce box shadows on very small screens */
+  .analysis-card,
+  .sidebar-widget,
+  .parfume-item {
+    box-shadow: var(--pr-shadow-sm);
+  }
+}
+
+/* =============================================================================
+   MOBILE ACCESSIBILITY ENHANCEMENTS
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  
+  /* Enhanced focus indicators for mobile */
+  .parfume-reviews-container button:focus,
+  .parfume-reviews-container select:focus,
+  .parfume-reviews-container input:focus,
+  .parfume-reviews-container a:focus {
+    outline: 3px solid var(--pr-primary-color);
+    outline-offset: 2px;
+  }
+  
+  /* Improved touch feedback */
+  .btn:focus,
+  .view-btn:focus,
+  .quick-action:focus {
+    background: var(--pr-primary-color);
+    color: var(--pr-white);
+  }
+  
+  /* Better contrast for mobile screens */
+  .post-meta,
+  .parfume-meta,
+  .meta-item {
+    color: var(--pr-gray-600);
+  }
+  
+  /* Ensure readable text sizes */
+  .category-tag,
+  .brand-tag,
+  .note-count {
+    font-size: var(--pr-font-size-xs);
+    min-height: 24px;
+    line-height: 1.5;
+  }
+}
+
+/* =============================================================================
+   MOBILE BROWSER SPECIFIC FIXES
+   ============================================================================= */
+
+/* iOS Safari specific fixes */
+@supports (-webkit-appearance: none) {
+  @media (max-width: 768px) {
+    
+    /* Fix iOS input zoom */
+    .search-box input[type="search"],
+    .filter-group select,
+    .newsletter-form input[type="email"] {
+      font-size: 16px !important;
+    }
+    
+    /* Fix iOS viewport height issues */
+    .parfume-reviews-container {
+      min-height: -webkit-fill-available;
+    }
+    
+    /* Prevent iOS scroll bounce on fixed elements */
+    .blog-filters-bar,
+    .parfumes-advanced-filters {
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+}
+
+/* Android Chrome specific fixes */
+@media (max-width: 768px) and (orientation: portrait) {
+  
+  /* Fix Android Chrome viewport issues */
+  .parfume-reviews-container {
+    min-height: calc(100vh - env(keyboard-inset-height, 0px));
+  }
+  
+  /* Optimize for Android Chrome's bottom bar */
+  .blog-pagination,
+  .parfumes-pagination {
+    padding-bottom: calc(var(--pr-mobile-spacing-xl) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* =============================================================================
+   MOBILE LANDSCAPE ORIENTATION
+   ============================================================================= */
+
+@media (max-width: 768px) and (orientation: landscape) {
+  
+  /* Optimize for landscape mode */
+  .blog-archive-header,
+  .perfumer-header,
+  .gender-header,
+  .aroma-header,
+  .season-header,
+  .intensity-header {
+    padding: var(--pr-mobile-spacing-lg) 0;
+  }
+  
+  /* Two-column layout in landscape */
+  .blog-posts-container[data-view="grid"] .blog-posts-grid,
+  .parfumes-grid-container[data-view="grid"] .parfumes-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--pr-mobile-spacing-md);
+  }
+  
+  /* Horizontal filter layout in landscape */
+  .filters-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .filter-group {
+    flex: 1;
+    min-width: 140px;
+  }
+  
+  /* Optimize charts for landscape */
+  .radar-chart {
+    width: 180px;
+    height: 180px;
+  }
+  
+  .projection-diagram {
+    width: 220px;
+    height: 220px;
+  }
+  
+  /* Landscape sidebar optimization */
+  .analysis-grid,
+  .correlations-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =============================================================================
+   TABLET SPECIFIC OPTIMIZATIONS
+   ============================================================================= */
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  
+  /* Tablet container optimization */
+  .container {
+    padding-left: var(--pr-spacing-lg);
+    padding-right: var(--pr-spacing-lg);
+  }
+  
+  /* Tablet grid layouts */
+  .blog-posts-container[data-view="grid"] .blog-posts-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--pr-spacing-lg);
+  }
+  
+  .parfumes-grid-container[data-view="grid"] .parfumes-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--pr-spacing-lg);
+  }
+  
+  /* Tablet analysis grids */
+  .analysis-grid,
+  .correlations-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  /* Tablet featured content */
+  .featured-posts-grid,
+  .highlights-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  /* Tablet sidebar */
+  .perfumer-content-area,
+  .gender-content-area,
+  .aroma-content-area,
+  .season-content-area,
+  .intensity-content-area {
+    grid-template-columns: 2fr 1fr;
+    gap: var(--pr-spacing-xl);
+  }
+  
+  /* Tablet filters */
+  .filters-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--pr-spacing-md);
+  }
+  
+  .filter-group {
+    flex: 1;
+    min-width: 160px;
+  }
+  
+  /* Tablet touch targets */
+  .btn,
+  .view-btn,
+  .quick-action {
+    min-height: var(--pr-touch-target-comfortable);
+    min-width: var(--pr-touch-target-comfortable);
+  }
+}
+
+/* =============================================================================
+   HIGH-DPI DISPLAY OPTIMIZATIONS
+   ============================================================================= */
+
+@media (min-resolution: 2dppx), (-webkit-min-device-pixel-ratio: 2) {
+  
+  /* Optimize for retina displays */
+  .parfume-image img,
+  .post-image img,
+  .featured-post-image img,
+  .highlight-image img {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+  
+  /* High-DPI border optimizations */
+  .analysis-card,
+  .sidebar-widget,
+  .parfume-item {
+    border: 0.5px solid var(--pr-gray-200);
+  }
+  
+  /* Sharper text rendering */
+  .parfume-reviews-container {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* =============================================================================
+   PRINT OPTIMIZATIONS FOR MOBILE
+   ============================================================================= */
+
+@media print {
+  
+  /* Mobile-friendly print styles */
+  .parfume-reviews-container {
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+  
+  .parfumes-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.5cm !important;
+  }
+  
+  .parfume-item,
+  .blog-post-item {
+    break-inside: avoid;
+    margin-bottom: 0.5cm;
+    border: 1pt solid #ccc;
+    padding: 0.3cm;
+  }
+  
+  /* Hide mobile-specific elements in print */
+  .mobile-only,
+  .touch-only,
+  .view-toggle,
+  .filters-row,
+  .pagination {
+    display: none !important;
+  }
+}
