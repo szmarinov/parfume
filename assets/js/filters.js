@@ -1,6 +1,7 @@
 /**
  * Parfume Reviews - Filters Functionality
  * Обработка на филтрите без 404 грешки
+ * МОДИФИЦИРАН ЗА МНОЖЕСТВЕНО ФИЛТРИРАНЕ БЕЗ АВТОМАТИЧНО ПРЕНАСОЧВАНЕ
  */
 jQuery(document).ready(function($) {
     
@@ -14,15 +15,21 @@ jQuery(document).ready(function($) {
             applyFilters();
         });
         
-        // Handle individual filter changes
+        // ПРЕМАХНАТО АВТОМАТИЧНОТО ПРЕНАСОЧВАНЕ ПРИ ПРОМЯНА НА ФИЛТРИ
+        // Сега филтрите се прилагат само при submit на формата или кликване на бутон "Филтрирай"
         $('.parfume-filters input, .parfume-filters select').on('change', function() {
-            if ($(this).hasClass('auto-submit')) {
-                applyFilters();
-            }
+            // Само актуализираме визуалния интерфейс, БЕЗ да прилагаме филтрите
+            updateFilterPreview();
+        });
+        
+        // Handle explicit filter apply button click
+        $('.filter-submit .button-primary, .filter-button').on('click', function(e) {
+            e.preventDefault();
+            applyFilters();
         });
         
         // Handle filter reset
-        $('.filter-reset, .button-secondary').on('click', function(e) {
+        $('.filter-reset, .button-secondary, .reset-button').on('click', function(e) {
             e.preventDefault();
             resetFilters();
         });
@@ -53,6 +60,138 @@ jQuery(document).ready(function($) {
         
         // Navigate to filtered URL
         window.location.href = url;
+    }
+    
+    // НОВА ФУНКЦИЯ ЗА PREVIEW НА ФИЛТРИТЕ БЕЗ ПРЕНАСОЧВАНЕ
+    function updateFilterPreview() {
+        var filters = collectFilters();
+        var selectedCount = 0;
+        
+        // Преброяваме избраните филтри
+        for (var key in filters) {
+            if (filters.hasOwnProperty(key)) {
+                if (Array.isArray(filters[key])) {
+                    selectedCount += filters[key].length;
+                } else if (filters[key] !== '') {
+                    selectedCount++;
+                }
+            }
+        }
+        
+        // Актуализираме бутона за филтриране
+        var $submitBtn = $('.filter-submit .button-primary, .filter-button');
+        if (selectedCount > 0) {
+            $submitBtn.text('Филтрирай (' + selectedCount + ')').addClass('has-filters');
+        } else {
+            $submitBtn.text('Филтрирай').removeClass('has-filters');
+        }
+        
+        // Показваме preview на избраните филтри (опционално)
+        createFilterPreview(filters);
+    }
+    
+    // НОВА ФУНКЦИЯ ЗА PREVIEW НА ИЗБРАНИТЕ ФИЛТРИ
+    function createFilterPreview(filters) {
+        var $previewContainer = $('.filter-preview');
+        if ($previewContainer.length === 0) {
+            // Създаваме контейнер за preview ако не съществува
+            $previewContainer = $('<div class="filter-preview" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; display: none;"></div>');
+            $('.filter-submit').before($previewContainer);
+        }
+        
+        $previewContainer.empty();
+        
+        var hasFilters = false;
+        var previewHtml = '<small><strong>Избрани филтри:</strong> ';
+        var previewItems = [];
+        
+        for (var key in filters) {
+            if (filters.hasOwnProperty(key)) {
+                var value = filters[key];
+                if (Array.isArray(value) && value.length > 0) {
+                    hasFilters = true;
+                    var humanReadableValues = [];
+                    
+                    // Получаваме човешки четими имена за всяка стойност
+                    value.forEach(function(val) {
+                        var humanName = getHumanReadableName(key, val);
+                        humanReadableValues.push(humanName);
+                    });
+                    
+                    var filterLabel = getFilterLabel(key);
+                    previewItems.push(filterLabel + ': ' + humanReadableValues.join(', '));
+                } else if (value !== '') {
+                    hasFilters = true;
+                    var humanName = getHumanReadableName(key, value);
+                    var filterLabel = getFilterLabel(key);
+                    previewItems.push(filterLabel + ': ' + humanName);
+                }
+            }
+        }
+        
+        if (hasFilters) {
+            previewHtml += previewItems.join(' | ') + '</small>';
+            $previewContainer.html(previewHtml).show();
+        } else {
+            $previewContainer.hide();
+        }
+    }
+    
+    // НОВА ФУНКЦИЯ ЗА ПОЛУЧАВАНЕ НА ЧОВЕШКИ ЧЕТИМИ ИМЕНА
+    function getHumanReadableName(filterType, value) {
+        // Първо декодираме URL encoding
+        var decodedValue = decodeURIComponent(value);
+        
+        // Търсим съответния label в DOM
+        var $matchingOption = $('.parfume-filters input[name="' + filterType + '[]"][value="' + value + '"]').closest('.filter-option');
+        if ($matchingOption.length === 0) {
+            // Пробваме с декодираната стойност
+            $matchingOption = $('.parfume-filters input[value="' + decodedValue + '"]').closest('.filter-option');
+        }
+        
+        if ($matchingOption.length > 0) {
+            var labelText = $matchingOption.find('label').clone();
+            // Премахваме count-а ако има
+            labelText.find('.count, .filter-count').remove();
+            var cleanText = labelText.text().trim();
+            if (cleanText) {
+                return cleanText;
+            }
+        }
+        
+        // Ако не намерим в DOM, пробваме да декодираме и форматираме
+        try {
+            // Двойно декодиране за случай че е двойно кодирано
+            var doubleDecoded = decodeURIComponent(decodedValue);
+            if (doubleDecoded !== decodedValue) {
+                return doubleDecoded;
+            }
+        } catch (e) {
+            // Игнорираме грешките при декодиране
+        }
+        
+        // Ако всичко останало не е работило, поне заменяме тиретата с интервали и капитализираме
+        return decodedValue.replace(/-/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+    }
+    
+    // НОВА ФУНКЦИЯ ЗА ПОЛУЧАВАНЕ НА LABELS НА ФИЛТРИТЕ
+    function getFilterLabel(filterType) {
+        var filterLabels = {
+            'gender': 'Категория',
+            'aroma_type': 'Тип арома', 
+            'marki': 'Марка',
+            'season': 'Сезон',
+            'intensity': 'Интензивност',
+            'notes': 'Нотки',
+            'perfumer': 'Парфюмер',
+            'min_price': 'Мин. цена',
+            'max_price': 'Макс. цена',
+            'min_rating': 'Мин. рейтинг',
+            'orderby': 'Сортиране',
+            'order': 'Посока'
+        };
+        
+        return filterLabels[filterType] || filterType;
     }
     
     function collectFilters() {
@@ -156,6 +295,12 @@ jQuery(document).ready(function($) {
         $('.parfume-filters select').val('');
         $('.parfume-filters input[type="text"], .parfume-filters input[type="number"]').val('');
         
+        // Hide preview
+        $('.filter-preview').hide();
+        
+        // Reset button text
+        $('.filter-submit .button-primary, .filter-button').text('Филтрирай').removeClass('has-filters');
+        
         // Navigate to clean URL
         var baseUrl = window.location.pathname;
         if (baseUrl.indexOf('?') !== -1) {
@@ -180,7 +325,7 @@ jQuery(document).ready(function($) {
                 $input.val('');
             }
             
-            // Apply filters
+            // Apply filters ВЕДНАГА при премахване на таг
             applyFilters();
         }
     }
@@ -218,12 +363,12 @@ jQuery(document).ready(function($) {
     
     function showLoadingState() {
         $('.parfume-filters').addClass('filters-loading');
-        $('.filter-submit .button-primary').text('Зареждане...');
+        $('.filter-submit .button-primary, .filter-button').text('Зареждане...');
     }
     
     function hideLoadingState() {
         $('.parfume-filters').removeClass('filters-loading');
-        $('.filter-submit .button-primary').text('Филтрирай');
+        $('.filter-submit .button-primary, .filter-button').text('Филтрирай');
     }
     
     // Initialize filter state from URL on page load
@@ -241,6 +386,9 @@ jQuery(document).ready(function($) {
                 $input.val(decodeURIComponent(value));
             }
         });
+        
+        // Актуализираме preview при зареждане
+        updateFilterPreview();
     }
     
     // Create active filter tags
@@ -259,9 +407,8 @@ jQuery(document).ready(function($) {
                 var cleanKey = key.replace('[]', '');
                 var decodedValue = decodeURIComponent(value);
                 
-                // Get human readable name
-                var $option = $('.parfume-filters input[value="' + decodedValue + '"]').parent();
-                var displayName = $option.find('label').text() || decodedValue;
+                // Получаваме човешки четимо име
+                var displayName = getHumanReadableName(cleanKey, value);
                 
                 var $tag = $('<span class="filter-tag">' + 
                            displayName + 

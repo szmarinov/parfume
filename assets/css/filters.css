@@ -1,6 +1,7 @@
 /* ==========================================================================
    Parfume Reviews Plugin - Filters Styles
    Стилове за филтърната система
+   КОМПЛЕТЕН ФАЙЛ С ВСИЧКИ НОВИ СТИЛОВЕ ЗА МНОЖЕСТВЕНО ФИЛТРИРАНЕ
    ========================================================================== */
 
 /* Основни стилове за филтри */
@@ -461,7 +462,95 @@
     100% { transform: rotate(360deg); }
 }
 
-/* Mobile and Tablet Responsive */
+/* ==========================================================================
+   НОВИ СТИЛОВЕ ЗА МНОЖЕСТВЕНО ФИЛТРИРАНЕ
+   ========================================================================== */
+
+/* Filter Preview стилове */
+.filter-preview {
+    margin-top: 15px;
+    padding: 12px 15px;
+    background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
+    border: 1px solid #bbdefb;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #1565c0;
+    line-height: 1.4;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.filter-preview strong {
+    color: #0d47a1;
+    font-weight: 600;
+}
+
+/* Enhanced Filter Button стилове */
+.filter-submit .button-primary.has-filters,
+.filter-button.has-filters {
+    background: linear-gradient(135deg, #4caf50, #2e7d32);
+    color: white;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+    animation: pulse-green 2s infinite;
+}
+
+.filter-submit .button-primary.has-filters:hover,
+.filter-button.has-filters:hover {
+    background: linear-gradient(135deg, #2e7d32, #1b5e20);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.5);
+}
+
+@keyframes pulse-green {
+    0% {
+        box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+    }
+    50% {
+        box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6);
+    }
+    100% {
+        box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+    }
+}
+
+/* Enhanced Loading State за филтри */
+.parfume-filters.filters-loading {
+    opacity: 0.7;
+    pointer-events: none;
+    position: relative;
+}
+
+.parfume-filters.filters-loading::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    z-index: 10;
+    border-radius: 12px;
+}
+
+.parfume-filters.filters-loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 11;
+}
+
+/* ==========================================================================
+   Mobile and Tablet Responsive
+   ========================================================================== */
+
 @media (max-width: 1024px) {
     .parfume-filters {
         padding: 20px;
@@ -488,7 +577,9 @@
     }
     
     .filter-submit .button {
+        flex: none;
         padding: 10px 16px;
+        margin-bottom: 8px;
     }
     
     .price-range {
@@ -506,6 +597,11 @@
     
     .scrollable-options {
         max-height: 180px;
+    }
+    
+    .filter-preview {
+        padding: 10px;
+        font-size: 12px;
     }
 }
 
@@ -541,6 +637,21 @@
         padding: 4px 8px;
         font-size: 11px;
     }
+}
+
+/* ==========================================================================
+   Accessibility and Special Cases
+   ========================================================================== */
+
+/* Accessibility improvements */
+.filter-submit .button:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+}
+
+.filter-preview {
+    role: status;
+    aria-live: polite;
 }
 
 /* Print Styles */
@@ -591,5 +702,11 @@
     
     .filters-loading:before {
         animation: none;
+    }
+    
+    @keyframes pulse-green {
+        0%, 100% {
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
     }
 }

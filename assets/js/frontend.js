@@ -1,5 +1,6 @@
 /**
  * Parfume Reviews Frontend JavaScript
+ * МОДИФИЦИРАН ЗА ДА СЕ ПРЕМАХНЕ АВТОМАТИЧНОТО ФИЛТРИРАНЕ
  */
 
 (function($) {
@@ -14,6 +15,8 @@
         initRatingDisplay();
         initAromaChart();
         initSectionScrollspy();
+        initComparison();
+        initRecentlyViewed();
     });
 
     /**
@@ -107,51 +110,58 @@
     }
 
     /**
-     * Initialize archive filters
+     * Initialize archive filters - МОДИФИЦИРАНО!
+     * ПРЕМАХНАТО АВТОМАТИЧНОТО ПОДАВАНЕ НА ФОРМАТА
      */
     function initFilters() {
         const $filterForm = $('.parfume-filters form');
         
         if ($filterForm.length === 0) return;
 
-        // Auto-submit on filter change
-        $filterForm.on('change', 'select, input', function() {
-            const $this = $(this);
-            
-            // Add small delay to prevent too many requests
-            clearTimeout($this.data('timer'));
-            $this.data('timer', setTimeout(function() {
-                $filterForm.submit();
-            }, 300));
+        // ПРЕМАХНАТО: Auto-submit on filter change
+        // Сега филтрите се прилагат само при explicit submit
+
+        // Handle explicit filter button clicks
+        $filterForm.find('.filter-button, .button-primary').on('click', function(e) {
+            e.preventDefault();
+            $filterForm.submit();
         });
 
         // Clear filters
-        $('.clear-filters').on('click', function(e) {
+        $('.clear-filters, .reset-button, .button-secondary').on('click', function(e) {
             e.preventDefault();
             
             $filterForm.find('select').val('');
             $filterForm.find('input[type="text"], input[type="number"]').val('');
+            $filterForm.find('input[type="checkbox"]').prop('checked', false);
+            
+            // Submit form to apply cleared filters
             $filterForm.submit();
         });
 
-        // Price range slider
-        const $priceMin = $('#price_min');
-        const $priceMax = $('#price_max');
-        
-        if ($priceMin.length && $priceMax.length) {
-            $priceMin.add($priceMax).on('input', function() {
-                const min = parseInt($priceMin.val()) || 0;
-                const max = parseInt($priceMax.val()) || 1000;
-                
-                if (min > max) {
-                    if (this === $priceMin[0]) {
-                        $priceMax.val(min);
-                    } else {
-                        $priceMin.val(max);
-                    }
+        // Handle form submission
+        $filterForm.on('submit', function(e) {
+            e.preventDefault();
+            
+            // Get current action URL or use current page
+            let actionUrl = $(this).attr('action') || window.location.pathname;
+            
+            // Build query string from form data
+            const formData = new FormData(this);
+            const queryParams = new URLSearchParams();
+            
+            for (let [key, value] of formData.entries()) {
+                if (value && value.trim() !== '') {
+                    queryParams.append(key, value);
                 }
-            });
-        }
+            }
+            
+            // Navigate to filtered URL
+            const queryString = queryParams.toString();
+            const finalUrl = actionUrl + (queryString ? '?' + queryString : '');
+            
+            window.location.href = finalUrl;
+        });
     }
 
     /**
@@ -163,14 +173,9 @@
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         const img = entry.target;
-                        const src = img.dataset.src;
-                        
-                        if (src) {
-                            img.src = src;
-                            img.classList.remove('lazy');
-                            img.classList.add('loaded');
-                            imageObserver.unobserve(img);
-                        }
+                        img.src = img.dataset.src;
+                        img.classList.remove('lazy');
+                        observer.unobserve(img);
                     }
                 });
             });
@@ -185,135 +190,122 @@
      * Initialize smooth scrolling
      */
     function initSmoothScrolling() {
-        $('a[href^="#"]').on('click', function(e) {
-            const target = $(this.getAttribute('href'));
-            
-            if (target.length) {
-                e.preventDefault();
-                
-                $('html, body').animate({
-                    scrollTop: target.offset().top - 100
-                }, 600, 'easeInOutCubic');
+        $('a[href*="#"]:not([href="#"])').click(function() {
+            if (location.pathname.replace(/^\//, '') == this.pathname.replace(/^\//, '') && location.hostname == this.hostname) {
+                var target = $(this.hash);
+                target = target.length ? target : $('[name=' + this.hash.slice(1) + ']');
+                if (target.length) {
+                    $('html, body').animate({
+                        scrollTop: target.offset().top - 80
+                    }, 1000);
+                    return false;
+                }
             }
         });
     }
 
     /**
-     * Initialize rating display animations
+     * Initialize rating display
      */
     function initRatingDisplay() {
         $('.rating-stars').each(function() {
-            const $this = $(this);
-            const rating = parseFloat($this.data('rating')) || 0;
+            const $stars = $(this);
+            const rating = parseFloat($stars.data('rating')) || 0;
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = rating % 1 >= 0.5;
             
-            // Animate stars on load
-            $this.find('.star').each(function(index) {
-                const $star = $(this);
-                
-                setTimeout(() => {
-                    if (index < Math.floor(rating)) {
-                        $star.addClass('filled');
-                    } else if (index < rating) {
-                        $star.addClass('half');
-                    }
-                }, index * 100);
-            });
+            $stars.empty();
+            
+            // Add full stars
+            for (let i = 0; i < fullStars; i++) {
+                $stars.append('<span class="star full">★</span>');
+            }
+            
+            // Add half star if needed
+            if (hasHalfStar) {
+                $stars.append('<span class="star half">★</span>');
+            }
+            
+            // Add empty stars
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+            for (let i = 0; i < emptyStars; i++) {
+                $stars.append('<span class="star empty">☆</span>');
+            }
         });
     }
 
     /**
-     * Initialize aroma chart animations
+     * Initialize aroma chart
      */
     function initAromaChart() {
-        const $chartItems = $('.chart-item');
-        
-        if ($chartItems.length === 0) return;
-
-        // Animate chart bars when in viewport
-        const chartObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const $item = $(entry.target);
-                    const $fill = $item.find('.chart-fill');
-                    const value = parseInt($item.find('.chart-value').text()) || 0;
-                    const width = (value / 10) * 100;
-                    
-                    setTimeout(() => {
-                        $fill.css('width', width + '%');
-                    }, Math.random() * 500);
-                    
-                    chartObserver.unobserve(entry.target);
+        const $aromaChart = $('#aroma-chart');
+        if ($aromaChart.length && typeof Chart !== 'undefined') {
+            const ctx = $aromaChart[0].getContext('2d');
+            const data = $aromaChart.data('chart-data');
+            
+            new Chart(ctx, {
+                type: 'radar',
+                data: data,
+                options: {
+                    responsive: true,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
                 }
             });
-        });
-
-        $chartItems.each(function() {
-            chartObserver.observe(this);
-        });
+        }
     }
 
     /**
-     * Show notification message
+     * Show notification
      */
-    function showNotification(message, type) {
-        const $notification = $('<div class="parfume-notification"></div>')
-            .addClass('notification-' + type)
-            .text(message)
-            .css({
-                position: 'fixed',
-                top: '20px',
-                right: '20px',
-                padding: '15px 20px',
-                backgroundColor: type === 'success' ? '#28a745' : '#dc3545',
-                color: 'white',
-                borderRadius: '6px',
-                zIndex: 9999,
-                opacity: 0,
-                transform: 'translateX(100%)'
-            });
-
+    function showNotification(message, type = 'info') {
+        const $notification = $('<div class="parfume-notification ' + type + '">' + message + '</div>');
+        
         $('body').append($notification);
-
-        // Animate in
-        $notification.animate({
-            opacity: 1,
-            transform: 'translateX(0)'
-        }, 300);
-
-        // Auto remove after 3 seconds
+        
         setTimeout(() => {
-            $notification.animate({
-                opacity: 0,
-                transform: 'translateX(100%)'
-            }, 300, function() {
-                $(this).remove();
-            });
+            $notification.addClass('show');
+        }, 100);
+        
+        setTimeout(() => {
+            $notification.removeClass('show');
+            setTimeout(() => {
+                $notification.remove();
+            }, 300);
         }, 3000);
     }
 
     /**
-     * Initialize comparison functionality
+     * Comparison functionality
      */
     function initComparison() {
         let comparisonItems = JSON.parse(localStorage.getItem('parfume_comparison') || '[]');
 
+        // Add to comparison
         $('.add-to-comparison').on('click', function(e) {
             e.preventDefault();
             
             const $button = $(this);
-            const postId = $button.data('post-id');
-            const postTitle = $button.data('post-title');
+            const postId = parseInt($button.data('post-id'));
+            const postTitle = $button.data('post-title') || document.title;
             
+            // Check if already added
             if (comparisonItems.find(item => item.id === postId)) {
-                showNotification('Този парфюм вече е добавен за сравнение', 'error');
+                showNotification('Вече е добавен за сравнение', 'warning');
                 return;
             }
             
-            if (comparisonItems.length >= 4) {
-                showNotification('Можете да сравнявате максимум 4 парфюма', 'error');
+            // Check limit
+            if (comparisonItems.length >= 3) {
+                showNotification('Максимум 3 парфюма за сравнение', 'error');
                 return;
             }
             
+            // Add to comparison
             comparisonItems.push({
                 id: postId,
                 title: postTitle,
@@ -365,97 +357,5 @@
             }
         }
     }
-
-    /**
-     * Initialize search functionality
-     */
-    function initSearch() {
-        const $searchInput = $('.parfume-search');
-        
-        if ($searchInput.length === 0) return;
-
-        let searchTimeout;
-        
-        $searchInput.on('input', function() {
-            const query = $(this).val();
-            
-            clearTimeout(searchTimeout);
-            
-            if (query.length >= 3) {
-                searchTimeout = setTimeout(() => {
-                    performSearch(query);
-                }, 300);
-            } else {
-                hideSearchResults();
-            }
-        });
-
-        function performSearch(query) {
-            $.ajax({
-                url: parfumeReviews.ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'parfume_search',
-                    query: query,
-                    nonce: parfumeReviews.nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        showSearchResults(response.data);
-                    }
-                }
-            });
-        }
-
-        function showSearchResults(results) {
-            let $resultsContainer = $('.search-results');
-            
-            if ($resultsContainer.length === 0) {
-                $resultsContainer = $('<div class="search-results"></div>');
-                $searchInput.after($resultsContainer);
-            }
-            
-            let html = '';
-            
-            if (results.length > 0) {
-                results.forEach(item => {
-                    html += `
-                        <div class="search-result-item">
-                            <a href="${item.url}">
-                                <div class="result-title">${item.title}</div>
-                                <div class="result-brand">${item.brand}</div>
-                            </a>
-                        </div>
-                    `;
-                });
-            } else {
-                html = '<div class="no-results">Няма намерени резултати</div>';
-            }
-            
-            $resultsContainer.html(html).show();
-        }
-
-        function hideSearchResults() {
-            $('.search-results').hide();
-        }
-
-        // Hide results when clicking outside
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest('.parfume-search, .search-results').length) {
-                hideSearchResults();
-            }
-        });
-    }
-
-    // Initialize all functionality
-    initComparison();
-    initRecentlyViewed();
-    initSearch();
-
-    // Custom easing function
-    $.easing.easeInOutCubic = function(x, t, b, c, d) {
-        if ((t /= d / 2) < 1) return c / 2 * t * t * t + b;
-        return c / 2 * ((t -= 2) * t * t + 2) + b;
-    };
 
 })(jQuery);
