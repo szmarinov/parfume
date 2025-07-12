@@ -1,5 +1,19 @@
 <?php
+/**
+ * Product Scraper Class for Parfume Reviews Plugin
+ * 
+ * Handles automatic scraping of product data from store URLs
+ * 
+ * @package Parfume_Reviews
+ * @since 1.0.0
+ */
+
 namespace Parfume_Reviews;
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
 
 class Product_Scraper {
     
@@ -8,6 +22,8 @@ class Product_Scraper {
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     );
+    
+    private $store_schemas = array();
     
     public function __construct() {
         // WP Cron за автоматично скрейпване
@@ -18,6 +34,8 @@ class Product_Scraper {
         add_action('wp_ajax_manual_scrape_product', array($this, 'manual_scrape_product'));
         add_action('wp_ajax_test_scraper_url', array($this, 'test_scraper_url'));
         add_action('wp_ajax_save_store_schema', array($this, 'save_store_schema'));
+        add_action('wp_ajax_scrape_store_data', array($this, 'ajax_scrape_store_data'));
+        add_action('wp_ajax_manual_scrape_all_products', array($this, 'ajax_manual_scrape_all'));
         
         // Admin страница за мониториране
         add_action('admin_menu', array($this, 'add_admin_menu'));
@@ -29,20 +47,698 @@ class Product_Scraper {
         
         // Settings integration
         add_action('admin_init', array($this, 'register_scraper_settings'));
+        
+        // Initialize store schemas
+        $this->init_store_schemas();
     }
     
+    /**
+     * Initialize predefined store schemas
+     */
+    private function init_store_schemas() {
+        $this->store_schemas = array(
+            'douglas' => array(
+                'name' => 'Douglas',
+                'price_selector' => '.price-value',
+                'old_price_selector' => '.price-old',
+                'availability_selector' => '.availability-text',
+                'variants_selector' => '.variant-item',
+                'variant_ml_selector' => '.variant-size',
+                'variant_price_selector' => '.variant-price'
+            ),
+            'notino' => array(
+                'name' => 'Notino',
+                'price_selector' => '.price-current',
+                'old_price_selector' => '.price-original',
+                'availability_selector' => '.stock-info',
+                'variants_selector' => '.product-variants .variant',
+                'variant_ml_selector' => '.variant-title',
+                'variant_price_selector' => '.variant-price'
+            ),
+            'generic' => array(
+                'name' => 'Generic Store',
+                'price_selector' => '[class*="price"]:not([class*="old"])',
+                'old_price_selector' => '[class*="old"], [class*="original"]',
+                'availability_selector' => '[class*="stock"], [class*="availability"]',
+                'variants_selector' => '.variant, .option, .size-option',
+                'variant_ml_selector' => '.size, .ml, .volume',
+                'variant_price_selector' => '.price'
+            )
+        );
+    }
+    
+    /**
+     * Schedule scraping cron job
+     */
     public function schedule_scraping() {
         if (!wp_next_scheduled('parfume_scraper_cron')) {
             $settings = get_option('parfume_reviews_settings', array());
             $interval = isset($settings['scrape_interval']) ? intval($settings['scrape_interval']) : 24;
             
-            // Конвертираме часове в секунди
-            $interval_seconds = $interval * 3600;
-            
             wp_schedule_event(time(), 'hourly', 'parfume_scraper_cron');
         }
     }
     
+    /**
+     * Run batch scraping from cron
+     */
+    public function run_batch_scraping() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $batch_size = isset($settings['batch_size']) ? intval($settings['batch_size']) : 10;
+        
+        $scrape_queue = get_option('parfume_scraper_queue', array());
+        $processed = 0;
+        
+        foreach ($scrape_queue as $index => $item) {
+            if ($processed >= $batch_size) break;
+            
+            if ($item['status'] === 'pending') {
+                $result = $this->scrape_product_url($item['url'], $item['store_id']);
+                
+                if ($result) {
+                    $this->save_scraped_data($item['post_id'], $item['store_index'], $result);
+                    $scrape_queue[$index]['status'] = 'completed';
+                    $scrape_queue[$index]['completed_at'] = current_time('mysql');
+                } else {
+                    $scrape_queue[$index]['status'] = 'error';
+                    $scrape_queue[$index]['error_at'] = current_time('mysql');
+                }
+                
+                $processed++;
+            }
+        }
+        
+        // Clean up old completed items
+        $scrape_queue = array_filter($scrape_queue, function($item) {
+            return $item['status'] !== 'completed' || 
+                   strtotime($item['completed_at']) > strtotime('-7 days');
+        });
+        
+        update_option('parfume_scraper_queue', array_values($scrape_queue));
+    }
+    
+    /**
+     * Scrape product data from URL
+     */
+    public function scrape_product_url($url, $store_id = 'generic') {
+        if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
+            return false;
+        }
+        
+        $schema = isset($this->store_schemas[$store_id]) ? 
+                 $this->store_schemas[$store_id] : 
+                 $this->store_schemas['generic'];
+        
+        try {
+            $settings = get_option('parfume_reviews_settings', array());
+            $user_agent = isset($settings['user_agent']) ? 
+                         $settings['user_agent'] : 
+                         $this->user_agents[array_rand($this->user_agents)];
+            
+            $response = wp_remote_get($url, array(
+                'timeout' => 30,
+                'user-agent' => $user_agent,
+                'headers' => array(
+                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language' => 'bg-BG,bg;q=0.9,en;q=0.8',
+                    'Accept-Encoding' => 'gzip, deflate',
+                    'Cache-Control' => 'no-cache',
+                )
+            ));
+            
+            if (is_wp_error($response)) {
+                error_log("Scraping error for $url: " . $response->get_error_message());
+                return false;
+            }
+            
+            $html = wp_remote_retrieve_body($response);
+            if (empty($html)) return false;
+            
+            // Parse HTML
+            $dom = new \DOMDocument();
+            libxml_use_internal_errors(true);
+            @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
+            libxml_clear_errors();
+            
+            $xpath = new \DOMXPath($dom);
+            
+            $scraped_data = array(
+                'url' => $url,
+                'scraped_at' => current_time('mysql'),
+                'status' => 'success',
+                'variants' => array()
+            );
+            
+            // Extract price
+            if (!empty($schema['price_selector'])) {
+                $price = $this->extract_text_by_selector($xpath, $schema['price_selector']);
+                if ($price) {
+                    $scraped_data['price'] = $this->clean_price($price);
+                }
+            }
+            
+            // Extract old price
+            if (!empty($schema['old_price_selector'])) {
+                $old_price = $this->extract_text_by_selector($xpath, $schema['old_price_selector']);
+                if ($old_price) {
+                    $scraped_data['old_price'] = $this->clean_price($old_price);
+                }
+            }
+            
+            // Extract availability
+            if (!empty($schema['availability_selector'])) {
+                $availability = $this->extract_text_by_selector($xpath, $schema['availability_selector']);
+                if ($availability) {
+                    $scraped_data['availability'] = trim($availability);
+                    $scraped_data['in_stock'] = $this->determine_stock_status($availability);
+                }
+            }
+            
+            // Extract delivery info
+            if (!empty($schema['delivery_selector'])) {
+                $delivery = $this->extract_text_by_selector($xpath, $schema['delivery_selector']);
+                if ($delivery) {
+                    $scraped_data['delivery'] = trim($delivery);
+                }
+            }
+            
+            // Extract variants
+            $variants = $this->extract_variants($xpath, $schema);
+            if (!empty($variants)) {
+                $scraped_data['variants'] = $variants;
+            }
+            
+            // Calculate discount if both prices exist
+            if (!empty($scraped_data['price']) && !empty($scraped_data['old_price'])) {
+                $current = floatval(preg_replace('/[^\d.]/', '', $scraped_data['price']));
+                $original = floatval(preg_replace('/[^\d.]/', '', $scraped_data['old_price']));
+                
+                if ($current > 0 && $original > 0 && $original > $current) {
+                    $discount_percent = round((($original - $current) / $original) * 100);
+                    $scraped_data['discount_percent'] = $discount_percent;
+                }
+            }
+            
+            return $scraped_data;
+            
+        } catch (Exception $e) {
+            error_log("Scraping error for $url: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Extract text by CSS selector or XPath
+     */
+    private function extract_text_by_selector($xpath, $selector) {
+        try {
+            // Try as XPath first
+            if (strpos($selector, '//') === 0 || strpos($selector, '/') === 0) {
+                $nodes = $xpath->query($selector);
+            } else {
+                // Convert CSS selector to XPath (basic conversion)
+                $xpath_selector = $this->css_to_xpath($selector);
+                $nodes = $xpath->query($xpath_selector);
+            }
+            
+            if ($nodes && $nodes->length > 0) {
+                return trim($nodes->item(0)->textContent);
+            }
+        } catch (Exception $e) {
+            error_log("Selector extraction error: " . $e->getMessage());
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Extract product variants
+     */
+    private function extract_variants($xpath, $schema) {
+        $variants = array();
+        
+        if (empty($schema['variants_selector'])) {
+            return $variants;
+        }
+        
+        try {
+            $xpath_selector = $this->css_to_xpath($schema['variants_selector']);
+            $variant_nodes = $xpath->query($xpath_selector);
+            
+            foreach ($variant_nodes as $node) {
+                $variant = array();
+                
+                // Extract ML/size
+                if (!empty($schema['variant_ml_selector'])) {
+                    $ml_xpath = $this->css_to_xpath($schema['variant_ml_selector']);
+                    $ml_nodes = $xpath->query($ml_xpath, $node);
+                    if ($ml_nodes && $ml_nodes->length > 0) {
+                        $ml_text = trim($ml_nodes->item(0)->textContent);
+                        $variant['ml'] = $this->extract_ml_from_text($ml_text);
+                    }
+                }
+                
+                // Extract price
+                if (!empty($schema['variant_price_selector'])) {
+                    $price_xpath = $this->css_to_xpath($schema['variant_price_selector']);
+                    $price_nodes = $xpath->query($price_xpath, $node);
+                    if ($price_nodes && $price_nodes->length > 0) {
+                        $price_text = trim($price_nodes->item(0)->textContent);
+                        $variant['price'] = $this->clean_price($price_text);
+                    }
+                }
+                
+                // Only add if we have both ML and price
+                if (!empty($variant['ml']) && !empty($variant['price'])) {
+                    $variants[] = $variant;
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Variants extraction error: " . $e->getMessage());
+        }
+        
+        return $variants;
+    }
+    
+    /**
+     * Convert CSS selector to XPath (basic)
+     */
+    private function css_to_xpath($css_selector) {
+        $css_selector = trim($css_selector);
+        
+        // Basic conversions
+        $xpath = '//' . str_replace(array(
+            ' > ',
+            ' ',
+            '#',
+            '.',
+            '[class*="',
+            '"]',
+            ':not(',
+            ')'
+        ), array(
+            '/',
+            '//',
+            "[@id='",
+            "[@class='",
+            "[contains(@class,'",
+            "')]",
+            "[not(contains(@class,'",
+            "'))]"
+        ), $css_selector);
+        
+        // Handle attribute selectors better
+        if (strpos($css_selector, '[class*=') !== false) {
+            $xpath = preg_replace('/\[@class=\'([^\']+)\'\]/', "[contains(@class,'$1')]", $xpath);
+        }
+        
+        return $xpath;
+    }
+    
+    /**
+     * Clean and format price
+     */
+    private function clean_price($price_text) {
+        $price = preg_replace('/[^\d.,]/', '', $price_text);
+        $price = str_replace(',', '.', $price);
+        
+        // Remove extra dots
+        $parts = explode('.', $price);
+        if (count($parts) > 2) {
+            $price = implode('', array_slice($parts, 0, -1)) . '.' . end($parts);
+        }
+        
+        return $price;
+    }
+    
+    /**
+     * Extract ML from text
+     */
+    private function extract_ml_from_text($text) {
+        if (preg_match('/(\d+)\s*ml/i', $text, $matches)) {
+            return $matches[1] . 'ml';
+        }
+        
+        return $text;
+    }
+    
+    /**
+     * Determine stock status from availability text
+     */
+    private function determine_stock_status($availability) {
+        $availability = strtolower($availability);
+        
+        $in_stock_indicators = array('наличен', 'в наличност', 'available', 'in stock', 'на склад');
+        $out_of_stock_indicators = array('няма наличност', 'изчерпан', 'out of stock', 'unavailable');
+        
+        foreach ($in_stock_indicators as $indicator) {
+            if (strpos($availability, $indicator) !== false) {
+                return true;
+            }
+        }
+        
+        foreach ($out_of_stock_indicators as $indicator) {
+            if (strpos($availability, $indicator) !== false) {
+                return false;
+            }
+        }
+        
+        return null; // Unknown status
+    }
+    
+    /**
+     * Save scraped data to post meta
+     */
+    private function save_scraped_data($post_id, $store_index, $data) {
+        // Get current stores data
+        $stores = get_post_meta($post_id, '_parfume_stores_v2', true);
+        if (empty($stores) || !is_array($stores)) {
+            return false;
+        }
+        
+        if (!isset($stores[$store_index])) {
+            return false;
+        }
+        
+        // Add scraped data to store
+        $stores[$store_index]['scraped_data'] = $data;
+        $stores[$store_index]['last_scraped'] = current_time('mysql');
+        
+        // Calculate next scrape time
+        $settings = get_option('parfume_reviews_settings', array());
+        $interval = isset($settings['scrape_interval']) ? intval($settings['scrape_interval']) : 24;
+        $stores[$store_index]['next_scrape'] = date('Y-m-d H:i:s', strtotime('+' . $interval . ' hours'));
+        
+        update_post_meta($post_id, '_parfume_stores_v2', $stores);
+        
+        return true;
+    }
+    
+    /**
+     * AJAX handler for manual product scraping
+     */
+    public function manual_scrape_product() {
+        check_ajax_referer('parfume-scraper-nonce', 'nonce');
+        
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(__('Insufficient permissions', 'parfume-reviews'));
+        }
+        
+        $post_id = intval($_POST['post_id']);
+        $store_index = intval($_POST['store_index']);
+        
+        $stores = get_post_meta($post_id, '_parfume_stores_v2', true);
+        
+        if (empty($stores[$store_index])) {
+            wp_send_json_error(__('Store not found', 'parfume-reviews'));
+        }
+        
+        $store = $stores[$store_index];
+        $result = $this->scrape_product_url($store['product_url'], $store['store_id']);
+        
+        if ($result) {
+            $this->save_scraped_data($post_id, $store_index, $result);
+            wp_send_json_success(array(
+                'message' => __('Successfully scraped product data', 'parfume-reviews'),
+                'data' => $result
+            ));
+        } else {
+            wp_send_json_error(__('Failed to scrape product data', 'parfume-reviews'));
+        }
+    }
+    
+    /**
+     * AJAX handler for store data scraping
+     */
+    public function ajax_scrape_store_data() {
+        check_ajax_referer('parfume-reviews-admin-nonce', 'nonce');
+        
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(__('Insufficient permissions', 'parfume-reviews'));
+        }
+        
+        $url = esc_url_raw($_POST['url']);
+        $post_id = intval($_POST['post_id']);
+        $store_index = intval($_POST['store_index']);
+        
+        if (empty($url)) {
+            wp_send_json_error(__('URL is required', 'parfume-reviews'));
+        }
+        
+        // Determine store ID from URL
+        $store_id = $this->detect_store_from_url($url);
+        
+        $result = $this->scrape_product_url($url, $store_id);
+        
+        if ($result) {
+            $this->save_scraped_data($post_id, $store_index, $result);
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error(__('Failed to scrape product data', 'parfume-reviews'));
+        }
+    }
+    
+    /**
+     * AJAX handler for manual scrape all
+     */
+    public function ajax_manual_scrape_all() {
+        check_ajax_referer('parfume-reviews-admin-nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'parfume-reviews'));
+        }
+        
+        // Get all parfumes with store URLs
+        $posts = get_posts(array(
+            'post_type' => 'parfume',
+            'posts_per_page' => -1,
+            'meta_query' => array(
+                array(
+                    'key' => '_parfume_stores_v2',
+                    'compare' => 'EXISTS'
+                )
+            )
+        ));
+        
+        $count = 0;
+        foreach ($posts as $post) {
+            $stores = get_post_meta($post->ID, '_parfume_stores_v2', true);
+            if (is_array($stores)) {
+                foreach ($stores as $index => $store) {
+                    if (!empty($store['product_url'])) {
+                        $this->add_to_scrape_queue($post->ID, $index, $store);
+                        $count++;
+                    }
+                }
+            }
+        }
+        
+        wp_send_json_success(array(
+            'message' => sprintf(__('Added %d products to scraping queue', 'parfume-reviews'), $count),
+            'count' => $count
+        ));
+    }
+    
+    /**
+     * Add item to scrape queue
+     */
+    private function add_to_scrape_queue($post_id, $store_index, $store) {
+        $scrape_queue = get_option('parfume_scraper_queue', array());
+        
+        $queue_item = array(
+            'post_id' => $post_id,
+            'store_index' => $store_index,
+            'url' => $store['product_url'],
+            'store_id' => $store['store_id'],
+            'added' => current_time('mysql'),
+            'status' => 'pending'
+        );
+        
+        $scrape_queue[] = $queue_item;
+        update_option('parfume_scraper_queue', $scrape_queue);
+    }
+    
+    /**
+     * Detect store from URL
+     */
+    private function detect_store_from_url($url) {
+        $domain = parse_url($url, PHP_URL_HOST);
+        $domain = strtolower($domain);
+        
+        if (strpos($domain, 'douglas') !== false) {
+            return 'douglas';
+        } elseif (strpos($domain, 'notino') !== false) {
+            return 'notino';
+        }
+        
+        return 'generic';
+    }
+    
+    /**
+     * Test scraper URL - AJAX handler
+     */
+    public function test_scraper_url() {
+        check_ajax_referer('parfume-scraper-nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'parfume-reviews'));
+        }
+        
+        $url = esc_url_raw($_POST['url']);
+        
+        if (empty($url)) {
+            wp_send_json_error(__('URL is required', 'parfume-reviews'));
+        }
+        
+        $result = $this->analyze_page_structure($url);
+        
+        if ($result) {
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error(__('Failed to analyze page', 'parfume-reviews'));
+        }
+    }
+    
+    /**
+     * Analyze page structure for testing
+     */
+    private function analyze_page_structure($url) {
+        try {
+            $settings = get_option('parfume_reviews_settings', array());
+            $user_agent = isset($settings['user_agent']) ? 
+                         $settings['user_agent'] : 
+                         $this->user_agents[0];
+            
+            $response = wp_remote_get($url, array(
+                'timeout' => 30,
+                'user-agent' => $user_agent,
+            ));
+            
+            if (is_wp_error($response)) {
+                return false;
+            }
+            
+            $html = wp_remote_retrieve_body($response);
+            $dom = new \DOMDocument();
+            libxml_use_internal_errors(true);
+            @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
+            libxml_clear_errors();
+            
+            $xpath = new \DOMXPath($dom);
+            
+            $analysis = array(
+                'url' => $url,
+                'title' => '',
+                'potential_prices' => array(),
+                'potential_availability' => array(),
+                'potential_variants' => array(),
+            );
+            
+            // Get page title
+            $title_nodes = $xpath->query('//title');
+            if ($title_nodes->length > 0) {
+                $analysis['title'] = trim($title_nodes->item(0)->textContent);
+            }
+            
+            // Find potential prices
+            $price_patterns = array(
+                '//span[contains(@class, "price")]',
+                '//div[contains(@class, "price")]',
+                '//*[contains(text(), "лв")]',
+                '//*[contains(text(), "BGN")]',
+                '//*[contains(text(), "€")]',
+                '//*[contains(@class, "cost")]',
+                '//*[contains(@class, "amount")]'
+            );
+            
+            foreach ($price_patterns as $pattern) {
+                $nodes = $xpath->query($pattern);
+                foreach ($nodes as $node) {
+                    $text = trim($node->textContent);
+                    if (preg_match('/[\d,.]+ ?(лв|BGN|€|USD|\$)/', $text)) {
+                        $analysis['potential_prices'][] = array(
+                            'text' => $text,
+                            'selector' => $this->get_css_selector($node),
+                            'xpath' => $node->getNodePath()
+                        );
+                    }
+                }
+            }
+            
+            // Find potential availability
+            $availability_patterns = array(
+                '//*[contains(text(), "наличен")]',
+                '//*[contains(text(), "в наличност")]',
+                '//*[contains(text(), "available")]',
+                '//span[contains(@class, "stock")]',
+                '//div[contains(@class, "availability")]',
+                '//*[contains(@class, "status")]'
+            );
+            
+            foreach ($availability_patterns as $pattern) {
+                $nodes = $xpath->query($pattern);
+                foreach ($nodes as $node) {
+                    $text = trim($node->textContent);
+                    if (!empty($text) && strlen($text) < 100) {
+                        $analysis['potential_availability'][] = array(
+                            'text' => $text,
+                            'selector' => $this->get_css_selector($node),
+                            'xpath' => $node->getNodePath()
+                        );
+                    }
+                }
+            }
+            
+            // Remove duplicates
+            $analysis['potential_prices'] = array_slice(
+                array_unique($analysis['potential_prices'], SORT_REGULAR), 
+                0, 5
+            );
+            $analysis['potential_availability'] = array_slice(
+                array_unique($analysis['potential_availability'], SORT_REGULAR), 
+                0, 5
+            );
+            
+            return $analysis;
+            
+        } catch (Exception $e) {
+            error_log("Page analysis error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Get CSS selector from DOM node
+     */
+    private function get_css_selector($node) {
+        $path = array();
+        
+        while ($node && $node->nodeType === XML_ELEMENT_NODE) {
+            $selector = $node->nodeName;
+            
+            if ($node->hasAttribute('id')) {
+                $selector .= '#' . $node->getAttribute('id');
+                $path[] = $selector;
+                break;
+            }
+            
+            if ($node->hasAttribute('class')) {
+                $classes = explode(' ', $node->getAttribute('class'));
+                if (!empty($classes[0])) {
+                    $selector .= '.' . $classes[0];
+                }
+            }
+            
+            $path[] = $selector;
+            $node = $node->parentNode;
+        }
+        
+        return implode(' > ', array_reverse($path));
+    }
+    
+    /**
+     * Add admin menu pages
+     */
     public function add_admin_menu() {
         add_submenu_page(
             'edit.php?post_type=parfume',
@@ -63,8 +759,258 @@ class Product_Scraper {
         );
     }
     
+    /**
+     * Render admin monitoring page
+     */
+    public function render_admin_page() {
+        ?>
+        <div class="wrap">
+            <h1><?php _e('Product Scraper Monitor', 'parfume-reviews'); ?></h1>
+            
+            <?php $this->render_scraper_stats(); ?>
+            <?php $this->render_scraper_controls(); ?>
+            <?php $this->render_scraper_queue(); ?>
+            <?php $this->render_scraped_products_table(); ?>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render test tool page
+     */
+    public function render_test_tool_page() {
+        ?>
+        <div class="wrap">
+            <h1><?php _e('Scraper Test Tool', 'parfume-reviews'); ?></h1>
+            
+            <div class="scraper-test-tool">
+                <h2><?php _e('Test URL Scraping', 'parfume-reviews'); ?></h2>
+                
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">
+                            <label for="test-url"><?php _e('Test URL', 'parfume-reviews'); ?></label>
+                        </th>
+                        <td>
+                            <input type="url" id="test-url" class="large-text" placeholder="https://example.com/product">
+                            <button type="button" id="test-scraper-btn" class="button button-primary">
+                                <?php _e('Test Scraping', 'parfume-reviews'); ?>
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+                
+                <div id="test-results" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render scraper statistics
+     */
+    private function render_scraper_stats() {
+        $scrape_queue = get_option('parfume_scraper_queue', array());
+        $pending_count = count(array_filter($scrape_queue, function($item) { 
+            return $item['status'] === 'pending'; 
+        }));
+        $error_count = count(array_filter($scrape_queue, function($item) { 
+            return $item['status'] === 'error'; 
+        }));
+        
+        // Count total products with stores
+        $total_products = get_posts(array(
+            'post_type' => 'parfume',
+            'posts_per_page' => -1,
+            'meta_query' => array(
+                array(
+                    'key' => '_parfume_stores_v2',
+                    'compare' => 'EXISTS'
+                )
+            ),
+            'fields' => 'ids'
+        ));
+        
+        ?>
+        <div class="scraper-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 20px 0;">
+            <div class="stat-box" style="background: #f0f0f1; padding: 20px; border-radius: 5px; text-align: center;">
+                <h3><?php _e('Total Products', 'parfume-reviews'); ?></h3>
+                <span style="font-size: 2em; font-weight: bold; color: #0073aa;"><?php echo count($total_products); ?></span>
+            </div>
+            
+            <div class="stat-box" style="background: #fff3cd; padding: 20px; border-radius: 5px; text-align: center;">
+                <h3><?php _e('Pending Scrape', 'parfume-reviews'); ?></h3>
+                <span style="font-size: 2em; font-weight: bold; color: #856404;"><?php echo $pending_count; ?></span>
+            </div>
+            
+            <div class="stat-box" style="background: #f8d7da; padding: 20px; border-radius: 5px; text-align: center;">
+                <h3><?php _e('Errors', 'parfume-reviews'); ?></h3>
+                <span style="font-size: 2em; font-weight: bold; color: #721c24;"><?php echo $error_count; ?></span>
+            </div>
+            
+            <div class="stat-box" style="background: #d4edda; padding: 20px; border-radius: 5px; text-align: center;">
+                <h3><?php _e('Queue Size', 'parfume-reviews'); ?></h3>
+                <span style="font-size: 2em; font-weight: bold; color: #155724;"><?php echo count($scrape_queue); ?></span>
+            </div>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render scraper controls
+     */
+    private function render_scraper_controls() {
+        ?>
+        <div class="scraper-controls" style="background: #fff; padding: 20px; border: 1px solid #ccd0d4; border-radius: 4px; margin: 20px 0;">
+            <h3><?php _e('Scraper Controls', 'parfume-reviews'); ?></h3>
+            
+            <p>
+                <button type="button" class="button button-primary manual-scrape-all">
+                    <?php _e('Scrape All Products Now', 'parfume-reviews'); ?>
+                </button>
+                
+                <button type="button" class="button clear-queue" onclick="if(confirm('Clear scraping queue?')) location.href='<?php echo wp_nonce_url(admin_url('edit.php?post_type=parfume&page=parfume-product-scraper&action=clear_queue'), 'clear_queue'); ?>'">
+                    <?php _e('Clear Queue', 'parfume-reviews'); ?>
+                </button>
+            </p>
+            
+            <p class="description">
+                <?php _e('Manual scraping will add all products with store URLs to the scraping queue.', 'parfume-reviews'); ?>
+            </p>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render scraper queue
+     */
+    private function render_scraper_queue() {
+        $scrape_queue = get_option('parfume_scraper_queue', array());
+        $recent_queue = array_slice($scrape_queue, -20); // Show last 20 items
+        
+        ?>
+        <div class="scraper-queue" style="margin: 20px 0;">
+            <h3><?php _e('Recent Scraping Queue', 'parfume-reviews'); ?></h3>
+            
+            <?php if (empty($recent_queue)): ?>
+                <p><?php _e('No items in scraping queue.', 'parfume-reviews'); ?></p>
+            <?php else: ?>
+                <table class="wp-list-table widefat fixed striped">
+                    <thead>
+                        <tr>
+                            <th><?php _e('Product', 'parfume-reviews'); ?></th>
+                            <th><?php _e('Store', 'parfume-reviews'); ?></th>
+                            <th><?php _e('Status', 'parfume-reviews'); ?></th>
+                            <th><?php _e('Added', 'parfume-reviews'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach (array_reverse($recent_queue) as $item): ?>
+                            <tr>
+                                <td>
+                                    <a href="<?php echo get_edit_post_link($item['post_id']); ?>">
+                                        <?php echo get_the_title($item['post_id']); ?>
+                                    </a>
+                                </td>
+                                <td><?php echo esc_html($item['store_id']); ?></td>
+                                <td>
+                                    <span class="status-<?php echo esc_attr($item['status']); ?>">
+                                        <?php echo esc_html(ucfirst($item['status'])); ?>
+                                    </span>
+                                </td>
+                                <td><?php echo esc_html($item['added']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render scraped products table
+     */
+    private function render_scraped_products_table() {
+        // Get products with scraped data
+        $products = get_posts(array(
+            'post_type' => 'parfume',
+            'posts_per_page' => 20,
+            'meta_query' => array(
+                array(
+                    'key' => '_parfume_stores_v2',
+                    'compare' => 'EXISTS'
+                )
+            )
+        ));
+        
+        ?>
+        <div class="scraped-products" style="margin: 20px 0;">
+            <h3><?php _e('Recently Scraped Products', 'parfume-reviews'); ?></h3>
+            
+            <?php if (empty($products)): ?>
+                <p><?php _e('No products with store data found.', 'parfume-reviews'); ?></p>
+            <?php else: ?>
+                <table class="wp-list-table widefat fixed striped">
+                    <thead>
+                        <tr>
+                            <th><?php _e('Product', 'parfume-reviews'); ?></th>
+                            <th><?php _e('Stores', 'parfume-reviews'); ?></th>
+                            <th><?php _e('Last Scraped', 'parfume-reviews'); ?></th>
+                            <th><?php _e('Status', 'parfume-reviews'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($products as $product): ?>
+                            <?php
+                            $stores = get_post_meta($product->ID, '_parfume_stores_v2', true);
+                            $stores = is_array($stores) ? $stores : array();
+                            ?>
+                            <tr>
+                                <td>
+                                    <a href="<?php echo get_edit_post_link($product->ID); ?>">
+                                        <strong><?php echo esc_html($product->post_title); ?></strong>
+                                    </a>
+                                </td>
+                                <td><?php echo count($stores); ?> stores</td>
+                                <td>
+                                    <?php
+                                    $last_scraped = '';
+                                    foreach ($stores as $store) {
+                                        if (!empty($store['last_scraped'])) {
+                                            if (empty($last_scraped) || $store['last_scraped'] > $last_scraped) {
+                                                $last_scraped = $store['last_scraped'];
+                                            }
+                                        }
+                                    }
+                                    echo $last_scraped ? esc_html($last_scraped) : __('Never', 'parfume-reviews');
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    $has_data = false;
+                                    foreach ($stores as $store) {
+                                        if (!empty($store['scraped_data'])) {
+                                            $has_data = true;
+                                            break;
+                                        }
+                                    }
+                                    echo $has_data ? '<span class="status-success">Has Data</span>' : '<span class="status-pending">No Data</span>';
+                                    ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Register scraper settings
+     */
     public function register_scraper_settings() {
-        // Добавяме настройки към съществуващата група
         add_settings_section(
             'parfume_reviews_scraper_section',
             __('Product Scraper Settings', 'parfume-reviews'),
@@ -128,6 +1074,9 @@ class Product_Scraper {
         <?php
     }
     
+    /**
+     * Add scraper meta boxes
+     */
     public function add_scraper_meta_boxes() {
         add_meta_box(
             'product_scraper_stores',
@@ -139,18 +1088,24 @@ class Product_Scraper {
         );
     }
     
+    /**
+     * Render stores meta box
+     */
     public function render_stores_meta_box($post) {
         wp_nonce_field('product_scraper_nonce', 'product_scraper_nonce');
         
         $stores = get_post_meta($post->ID, '_parfume_stores_v2', true);
         $stores = !empty($stores) && is_array($stores) ? $stores : array();
         
-        // Получаваме всички налични stores от настройките
-        $available_stores = get_option('parfume_reviews_stores', array());
+        $available_stores = array(
+            'douglas' => array('name' => 'Douglas'),
+            'notino' => array('name' => 'Notino'),
+            'generic' => array('name' => 'Other Store')
+        );
         
         ?>
-        <div id="product-scraper-container">
-            <div class="stores-list" id="stores-list">
+        <div class="stores-meta-box">
+            <div class="stores-container">
                 <?php if (!empty($stores)): ?>
                     <?php foreach ($stores as $index => $store): ?>
                         <?php $this->render_single_store_admin($index, $store, $post->ID, $available_stores); ?>
@@ -158,63 +1113,29 @@ class Product_Scraper {
                 <?php endif; ?>
             </div>
             
-            <div class="add-store-section">
-                <select id="available-stores-select">
-                    <option value=""><?php _e('Select a store to add', 'parfume-reviews'); ?></option>
-                    <?php foreach ($available_stores as $store_id => $store_data): ?>
-                        <option value="<?php echo esc_attr($store_id); ?>"><?php echo esc_html($store_data['name']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <button type="button" id="add-store-btn" class="button"><?php _e('Add Store', 'parfume-reviews'); ?></button>
-            </div>
+            <p>
+                <button type="button" class="button add-store-btn">
+                    <?php _e('Add Store', 'parfume-reviews'); ?>
+                </button>
+            </p>
+            
+            <?php if (empty($stores)): ?>
+                <div class="no-stores-message">
+                    <p><em><?php _e('No stores configured. Add a store above to start price monitoring.', 'parfume-reviews'); ?></em></p>
+                </div>
+            <?php endif; ?>
         </div>
         
-        <script type="text/template" id="store-template">
+        <!-- Store template for JavaScript -->
+        <script type="text/html" id="store-item-template">
             <?php $this->render_single_store_admin('{{INDEX}}', array(), $post->ID, $available_stores); ?>
         </script>
-        
-        <style>
-        .store-item-admin {
-            border: 1px solid #ddd;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f9f9f9;
-            position: relative;
-        }
-        .store-drag-handle {
-            cursor: move;
-            padding: 5px;
-            background: #0073aa;
-            color: white;
-            display: inline-block;
-            margin-bottom: 10px;
-        }
-        .store-remove {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            color: #a00;
-            text-decoration: none;
-        }
-        .scraped-data {
-            background: #e7f3ff;
-            padding: 10px;
-            margin-top: 10px;
-            border-left: 4px solid #0073aa;
-        }
-        .scrape-status {
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .status-success { background: #d4edda; color: #155724; }
-        .status-error { background: #f8d7da; color: #721c24; }
-        .status-pending { background: #fff3cd; color: #856404; }
-        </style>
         <?php
     }
     
+    /**
+     * Render single store admin interface
+     */
     private function render_single_store_admin($index, $store, $post_id, $available_stores) {
         $store = wp_parse_args($store, array(
             'store_id' => '',
@@ -222,27 +1143,25 @@ class Product_Scraper {
             'affiliate_url' => '',
             'promo_code' => '',
             'promo_code_info' => '',
+            'scraped_data' => array(),
+            'last_scraped' => ''
         ));
-        
-        // Получаваме scraped data
-        $scraped_key = 'scraped_' . md5($store['product_url']);
-        $scraped_data = get_post_meta($post_id, '_store_' . $scraped_key, true);
-        $scraped_data = is_array($scraped_data) ? $scraped_data : array();
         
         $store_info = isset($available_stores[$store['store_id']]) ? $available_stores[$store['store_id']] : array();
         
         ?>
         <div class="store-item-admin" data-index="<?php echo esc_attr($index); ?>">
-            <div class="store-drag-handle">≡ <?php _e('Drag to reorder', 'parfume-reviews'); ?></div>
-            <a href="#" class="store-remove" onclick="return confirm('<?php _e('Remove this store?', 'parfume-reviews'); ?>')"><?php _e('Remove', 'parfume-reviews'); ?></a>
-            
-            <h4><?php echo isset($store_info['name']) ? esc_html($store_info['name']) : __('Unknown Store', 'parfume-reviews'); ?></h4>
+            <div class="store-header">
+                <span class="store-drag-handle">≡</span>
+                <strong><?php _e('Store', 'parfume-reviews'); ?> <span class="store-number"><?php echo ($index + 1); ?></span></strong>
+                <a href="#" class="store-remove" title="<?php esc_attr_e('Remove store', 'parfume-reviews'); ?>">×</a>
+            </div>
             
             <table class="form-table">
                 <tr>
-                    <th><label><?php _e('Store', 'parfume-reviews'); ?></label></th>
+                    <th><label for="stores_<?php echo esc_attr($index); ?>_store_id"><?php _e('Store', 'parfume-reviews'); ?></label></th>
                     <td>
-                        <select name="stores[<?php echo $index; ?>][store_id]" class="store-select">
+                        <select name="stores[<?php echo esc_attr($index); ?>][store_id]" id="stores_<?php echo esc_attr($index); ?>_store_id" class="store-select">
                             <option value=""><?php _e('Select Store', 'parfume-reviews'); ?></option>
                             <?php foreach ($available_stores as $store_id => $store_data): ?>
                                 <option value="<?php echo esc_attr($store_id); ?>" <?php selected($store['store_id'], $store_id); ?>>
@@ -254,121 +1173,103 @@ class Product_Scraper {
                 </tr>
                 
                 <tr>
-                    <th><label><?php _e('Product URL', 'parfume-reviews'); ?></label></th>
+                    <th><label for="stores_<?php echo esc_attr($index); ?>_product_url"><?php _e('Product URL', 'parfume-reviews'); ?></label></th>
                     <td>
-                        <input type="url" name="stores[<?php echo $index; ?>][product_url]" value="<?php echo esc_attr($store['product_url']); ?>" class="large-text">
-                        <button type="button" class="button test-scrape-btn" data-url="<?php echo esc_attr($store['product_url']); ?>"><?php _e('Test Scrape', 'parfume-reviews'); ?></button>
+                        <input type="url" name="stores[<?php echo esc_attr($index); ?>][product_url]" 
+                               id="stores_<?php echo esc_attr($index); ?>_product_url" 
+                               value="<?php echo esc_url($store['product_url']); ?>" 
+                               class="large-text store-product-url" 
+                               placeholder="https://example.com/product">
+                        <div class="scrape-indicator"></div>
                     </td>
                 </tr>
                 
                 <tr>
-                    <th><label><?php _e('Affiliate URL', 'parfume-reviews'); ?></label></th>
+                    <th><label for="stores_<?php echo esc_attr($index); ?>_affiliate_url"><?php _e('Affiliate URL', 'parfume-reviews'); ?></label></th>
                     <td>
-                        <input type="url" name="stores[<?php echo $index; ?>][affiliate_url]" value="<?php echo esc_attr($store['affiliate_url']); ?>" class="large-text">
+                        <input type="url" name="stores[<?php echo esc_attr($index); ?>][affiliate_url]" 
+                               id="stores_<?php echo esc_attr($index); ?>_affiliate_url" 
+                               value="<?php echo esc_url($store['affiliate_url']); ?>" 
+                               class="large-text" 
+                               placeholder="https://affiliate-link.com">
                     </td>
                 </tr>
                 
                 <tr>
-                    <th><label><?php _e('Promo Code', 'parfume-reviews'); ?></label></th>
+                    <th><label for="stores_<?php echo esc_attr($index); ?>_promo_code"><?php _e('Promo Code', 'parfume-reviews'); ?></label></th>
                     <td>
-                        <input type="text" name="stores[<?php echo $index; ?>][promo_code]" value="<?php echo esc_attr($store['promo_code']); ?>" class="regular-text">
-                    </td>
-                </tr>
-                
-                <tr>
-                    <th><label><?php _e('Promo Code Info', 'parfume-reviews'); ?></label></th>
-                    <td>
-                        <input type="text" name="stores[<?php echo $index; ?>][promo_code_info]" value="<?php echo esc_attr($store['promo_code_info']); ?>" class="large-text">
+                        <input type="text" name="stores[<?php echo esc_attr($index); ?>][promo_code]" 
+                               id="stores_<?php echo esc_attr($index); ?>_promo_code" 
+                               value="<?php echo esc_attr($store['promo_code']); ?>" 
+                               class="regular-text" 
+                               placeholder="DISCOUNT10">
+                        <br>
+                        <input type="text" name="stores[<?php echo esc_attr($index); ?>][promo_code_info]" 
+                               id="stores_<?php echo esc_attr($index); ?>_promo_code_info" 
+                               value="<?php echo esc_attr($store['promo_code_info']); ?>" 
+                               class="large-text" 
+                               placeholder="<?php esc_attr_e('Promo code description', 'parfume-reviews'); ?>">
                     </td>
                 </tr>
             </table>
             
-            <?php if (!empty($scraped_data)): ?>
-                <div class="scraped-data">
-                    <h5><?php _e('Scraped Data', 'parfume-reviews'); ?></h5>
-                    
-                    <div class="scrape-info-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
-                        <!-- Цена -->
-                        <div class="scrape-info-item">
-                            <strong><?php _e('Price', 'parfume-reviews'); ?></strong><br>
-                            <?php if (isset($scraped_data['price'])): ?>
-                                <span class="scraped-value"><?php echo esc_html($scraped_data['price']); ?></span><br>
-                            <?php endif; ?>
-                            <small>
-                                <?php _e('Last:', 'parfume-reviews'); ?> <?php echo isset($scraped_data['last_updated']) ? esc_html($scraped_data['last_updated']) : __('Never', 'parfume-reviews'); ?><br>
-                                <?php _e('Next:', 'parfume-reviews'); ?> <?php echo isset($scraped_data['next_update']) ? esc_html($scraped_data['next_update']) : __('Pending', 'parfume-reviews'); ?>
-                            </small><br>
-                            <button type="button" class="button-small manual-scrape-btn" data-post-id="<?php echo $post_id; ?>" data-store-index="<?php echo $index; ?>"><?php _e('Update Now', 'parfume-reviews'); ?></button>
-                        </div>
-                        
-                        <!-- Наличност -->
-                        <div class="scrape-info-item">
-                            <strong><?php _e('Availability', 'parfume-reviews'); ?></strong><br>
-                            <?php if (isset($scraped_data['availability'])): ?>
-                                <span class="scraped-value"><?php echo esc_html($scraped_data['availability']); ?></span><br>
-                            <?php endif; ?>
-                            <small>
-                                <?php _e('Last:', 'parfume-reviews'); ?> <?php echo isset($scraped_data['availability_updated']) ? esc_html($scraped_data['availability_updated']) : __('Never', 'parfume-reviews'); ?>
-                            </small>
-                        </div>
-                        
-                        <!-- Доставка -->
-                        <div class="scrape-info-item">
-                            <strong><?php _e('Delivery', 'parfume-reviews'); ?></strong><br>
-                            <?php if (isset($scraped_data['delivery'])): ?>
-                                <span class="scraped-value"><?php echo esc_html($scraped_data['delivery']); ?></span><br>
-                            <?php endif; ?>
-                            <small>
-                                <?php _e('Last:', 'parfume-reviews'); ?> <?php echo isset($scraped_data['delivery_updated']) ? esc_html($scraped_data['delivery_updated']) : __('Never', 'parfume-reviews'); ?>
-                            </small>
-                        </div>
-                    </div>
-                    
-                    <!-- Variants -->
-                    <?php if (isset($scraped_data['variants']) && !empty($scraped_data['variants'])): ?>
-                        <div class="variants-info">
-                            <strong><?php _e('Variants', 'parfume-reviews'); ?></strong><br>
-                            <?php foreach ($scraped_data['variants'] as $variant): ?>
-                                <span class="variant-item">
-                                    <?php echo esc_html($variant['ml']); ?> - <?php echo esc_html($variant['price']); ?>
-                                    <?php if (isset($variant['old_price'])): ?>
-                                        <small>(<?php _e('was', 'parfume-reviews'); ?> <?php echo esc_html($variant['old_price']); ?>)</small>
-                                    <?php endif; ?>
-                                </span><br>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                    
-                    <!-- Status -->
-                    <div class="scrape-status-info">
-                        <span class="scrape-status <?php echo isset($scraped_data['status']) ? 'status-' . esc_attr($scraped_data['status']) : 'status-pending'; ?>">
-                            <?php 
-                            if (isset($scraped_data['status'])) {
-                                switch ($scraped_data['status']) {
-                                    case 'success': echo __('Success', 'parfume-reviews'); break;
-                                    case 'error': echo __('Error', 'parfume-reviews'); break;
-                                    case 'blocked': echo __('Blocked', 'parfume-reviews'); break;
-                                    default: echo __('Pending', 'parfume-reviews'); break;
-                                }
-                            } else {
-                                echo __('Pending', 'parfume-reviews');
-                            }
-                            ?>
-                        </span>
-                        <?php if (isset($scraped_data['error_message'])): ?>
-                            <small class="error-message"><?php echo esc_html($scraped_data['error_message']); ?></small>
+            <?php if (!empty($store['scraped_data'])): ?>
+                <div class="scraped-results">
+                    <h4><?php _e('Last Scraped Data', 'parfume-reviews'); ?></h4>
+                    <div class="scraped-data">
+                        <?php if (!empty($store['scraped_data']['price'])): ?>
+                            <div class="scraped-item">
+                                <strong><?php _e('Price:', 'parfume-reviews'); ?></strong> 
+                                <?php echo esc_html($store['scraped_data']['price']); ?>
+                            </div>
                         <?php endif; ?>
+                        
+                        <?php if (!empty($store['scraped_data']['old_price'])): ?>
+                            <div class="scraped-item">
+                                <strong><?php _e('Old Price:', 'parfume-reviews'); ?></strong> 
+                                <?php echo esc_html($store['scraped_data']['old_price']); ?>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($store['scraped_data']['availability'])): ?>
+                            <div class="scraped-item">
+                                <strong><?php _e('Availability:', 'parfume-reviews'); ?></strong> 
+                                <?php echo esc_html($store['scraped_data']['availability']); ?>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($store['scraped_data']['variants'])): ?>
+                            <div class="scraped-item">
+                                <strong><?php _e('Variants:', 'parfume-reviews'); ?></strong>
+                                <ul>
+                                    <?php foreach ($store['scraped_data']['variants'] as $variant): ?>
+                                        <li><?php echo esc_html($variant['ml']) . ' - ' . esc_html($variant['price']); ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <div class="scraped-meta">
+                            <?php _e('Scraped:', 'parfume-reviews'); ?> <?php echo esc_html($store['last_scraped']); ?>
+                        </div>
                     </div>
                 </div>
             <?php else: ?>
-                <div class="scraped-data">
-                    <p><em><?php _e('No scraped data yet. Save the post and add a Product URL to start scraping.', 'parfume-reviews'); ?></em></p>
-                </div>
+                <div class="scraped-results"></div>
             <?php endif; ?>
+            
+            <p>
+                <button type="button" class="button manual-scrape-btn">
+                    <?php _e('Scrape Now', 'parfume-reviews'); ?>
+                </button>
+            </p>
         </div>
         <?php
     }
     
+    /**
+     * Save scraper meta boxes
+     */
     public function save_scraper_meta_boxes($post_id) {
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
         if (get_post_type($post_id) !== 'parfume') return;
@@ -394,7 +1295,7 @@ class Product_Scraper {
                 
                 update_post_meta($post_id, '_parfume_stores_v2', $stores);
                 
-                // Планираме scraping за новите URL-и
+                // Schedule scraping for new URLs
                 $this->schedule_product_scraping($post_id, $stores);
                 
             } else {
@@ -403,622 +1304,20 @@ class Product_Scraper {
         }
     }
     
+    /**
+     * Schedule product scraping
+     */
     private function schedule_product_scraping($post_id, $stores) {
         foreach ($stores as $index => $store) {
             if (!empty($store['product_url'])) {
-                // Добавяме в опашката за scraping
-                $scrape_queue = get_option('parfume_scraper_queue', array());
-                
-                $queue_item = array(
-                    'post_id' => $post_id,
-                    'store_index' => $index,
-                    'url' => $store['product_url'],
-                    'store_id' => $store['store_id'],
-                    'added' => current_time('mysql'),
-                    'status' => 'pending'
-                );
-                
-                $scrape_queue[] = $queue_item;
-                update_option('parfume_scraper_queue', $scrape_queue);
+                $this->add_to_scrape_queue($post_id, $index, $store);
             }
         }
     }
     
-    public function run_batch_scraping() {
-        $settings = get_option('parfume_reviews_settings', array());
-        $batch_size = isset($settings['batch_size']) ? intval($settings['batch_size']) : 10;
-        
-        $scrape_queue = get_option('parfume_scraper_queue', array());
-        $processed = 0;
-        
-        foreach ($scrape_queue as $key => $item) {
-            if ($processed >= $batch_size) break;
-            if ($item['status'] !== 'pending') continue;
-            
-            $result = $this->scrape_product_url($item['url'], $item['store_id']);
-            
-            if ($result) {
-                // Запазваме резултата
-                $this->save_scraped_data($item['post_id'], $item['store_index'], $result);
-                $scrape_queue[$key]['status'] = 'completed';
-            } else {
-                $scrape_queue[$key]['status'] = 'error';
-                $scrape_queue[$key]['error_count'] = isset($item['error_count']) ? $item['error_count'] + 1 : 1;
-                
-                // Ако има повече от 3 грешки, премахваме от опашката
-                if ($scrape_queue[$key]['error_count'] >= 3) {
-                    unset($scrape_queue[$key]);
-                }
-            }
-            
-            $processed++;
-            
-            // Добавяме delay между заявките
-            sleep(2);
-        }
-        
-        // Почистваме завършените елементи
-        $scrape_queue = array_filter($scrape_queue, function($item) {
-            return $item['status'] !== 'completed';
-        });
-        
-        update_option('parfume_scraper_queue', array_values($scrape_queue));
-    }
-    
-    private function scrape_product_url($url, $store_id) {
-        if (empty($url)) return false;
-        
-        // Получаваме schema за магазина
-        $store_schemas = get_option('parfume_store_schemas', array());
-        $schema = isset($store_schemas[$store_id]) ? $store_schemas[$store_id] : null;
-        
-        if (!$schema) {
-            error_log("No schema found for store: " . $store_id);
-            return false;
-        }
-        
-        try {
-            $settings = get_option('parfume_reviews_settings', array());
-            $user_agent = isset($settings['user_agent']) ? $settings['user_agent'] : $this->user_agents[0];
-            
-            $response = wp_remote_get($url, array(
-                'timeout' => 30,
-                'user-agent' => $user_agent,
-                'headers' => array(
-                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language' => 'en-US,en;q=0.5',
-                    'Accept-Encoding' => 'gzip, deflate',
-                    'Connection' => 'keep-alive',
-                ),
-            ));
-            
-            if (is_wp_error($response)) {
-                error_log("Scraping error for $url: " . $response->get_error_message());
-                return false;
-            }
-            
-            $html = wp_remote_retrieve_body($response);
-            if (empty($html)) return false;
-            
-            // Парсим HTML
-            $dom = new \DOMDocument();
-            @$dom->loadHTML($html);
-            $xpath = new \DOMXPath($dom);
-            
-            $scraped_data = array(
-                'url' => $url,
-                'scraped_at' => current_time('mysql'),
-                'status' => 'success'
-            );
-            
-            // Extractваме данни според схемата
-            if (!empty($schema['price_selector'])) {
-                $price_nodes = $xpath->query($schema['price_selector']);
-                if ($price_nodes->length > 0) {
-                    $scraped_data['price'] = trim($price_nodes->item(0)->textContent);
-                }
-            }
-            
-            if (!empty($schema['old_price_selector'])) {
-                $old_price_nodes = $xpath->query($schema['old_price_selector']);
-                if ($old_price_nodes->length > 0) {
-                    $scraped_data['old_price'] = trim($old_price_nodes->item(0)->textContent);
-                }
-            }
-            
-            if (!empty($schema['availability_selector'])) {
-                $availability_nodes = $xpath->query($schema['availability_selector']);
-                if ($availability_nodes->length > 0) {
-                    $scraped_data['availability'] = trim($availability_nodes->item(0)->textContent);
-                }
-            }
-            
-            if (!empty($schema['delivery_selector'])) {
-                $delivery_nodes = $xpath->query($schema['delivery_selector']);
-                if ($delivery_nodes->length > 0) {
-                    $scraped_data['delivery'] = trim($delivery_nodes->item(0)->textContent);
-                }
-            }
-            
-            // Варианти (ml и цени)
-            if (!empty($schema['variants_selector'])) {
-                $variants_nodes = $xpath->query($schema['variants_selector']);
-                $variants = array();
-                
-                foreach ($variants_nodes as $node) {
-                    $ml = '';
-                    $price = '';
-                    
-                    // Търсим ml и цена в рамките на този node
-                    if (!empty($schema['variant_ml_selector'])) {
-                        $ml_nodes = $xpath->query($schema['variant_ml_selector'], $node);
-                        if ($ml_nodes->length > 0) {
-                            $ml = trim($ml_nodes->item(0)->textContent);
-                        }
-                    }
-                    
-                    if (!empty($schema['variant_price_selector'])) {
-                        $price_nodes = $xpath->query($schema['variant_price_selector'], $node);
-                        if ($price_nodes->length > 0) {
-                            $price = trim($price_nodes->item(0)->textContent);
-                        }
-                    }
-                    
-                    if (!empty($ml) && !empty($price)) {
-                        $variants[] = array(
-                            'ml' => $ml,
-                            'price' => $price
-                        );
-                    }
-                }
-                
-                if (!empty($variants)) {
-                    $scraped_data['variants'] = $variants;
-                }
-            }
-            
-            return $scraped_data;
-            
-        } catch (Exception $e) {
-            error_log("Scraping exception for $url: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    private function save_scraped_data($post_id, $store_index, $data) {
-        $meta_key = '_store_scraped_' . $store_index;
-        
-        // Добавяме timestamps
-        $data['last_updated'] = current_time('mysql');
-        $settings = get_option('parfume_reviews_settings', array());
-        $interval = isset($settings['scrape_interval']) ? intval($settings['scrape_interval']) : 24;
-        $data['next_update'] = date('Y-m-d H:i:s', strtotime('+' . $interval . ' hours'));
-        
-        update_post_meta($post_id, $meta_key, $data);
-    }
-    
-    public function manual_scrape_product() {
-        check_ajax_referer('parfume-scraper-nonce', 'nonce');
-        
-        if (!current_user_can('edit_posts')) {
-            wp_send_json_error(__('Insufficient permissions', 'parfume-reviews'));
-        }
-        
-        $post_id = intval($_POST['post_id']);
-        $store_index = intval($_POST['store_index']);
-        
-        $stores = get_post_meta($post_id, '_parfume_stores_v2', true);
-        
-        if (empty($stores[$store_index])) {
-            wp_send_json_error(__('Store not found', 'parfume-reviews'));
-        }
-        
-        $store = $stores[$store_index];
-        $result = $this->scrape_product_url($store['product_url'], $store['store_id']);
-        
-        if ($result) {
-            $this->save_scraped_data($post_id, $store_index, $result);
-            wp_send_json_success(array(
-                'message' => __('Successfully scraped product data', 'parfume-reviews'),
-                'data' => $result
-            ));
-        } else {
-            wp_send_json_error(__('Failed to scrape product data', 'parfume-reviews'));
-        }
-    }
-    
-    public function test_scraper_url() {
-        check_ajax_referer('parfume-scraper-nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Insufficient permissions', 'parfume-reviews'));
-        }
-        
-        $url = esc_url_raw($_POST['url']);
-        
-        if (empty($url)) {
-            wp_send_json_error(__('URL is required', 'parfume-reviews'));
-        }
-        
-        // Правим опростен scrape за тестване
-        $result = $this->analyze_page_structure($url);
-        
-        if ($result) {
-            wp_send_json_success($result);
-        } else {
-            wp_send_json_error(__('Failed to analyze page', 'parfume-reviews'));
-        }
-    }
-    
-    private function analyze_page_structure($url) {
-        // Тази функция анализира структурата на страницата и предлага селектори
-        // Това е опростена версия - в реалността би трябвало по-сложна логика
-        
-        try {
-            $settings = get_option('parfume_reviews_settings', array());
-            $user_agent = isset($settings['user_agent']) ? $settings['user_agent'] : $this->user_agents[0];
-            
-            $response = wp_remote_get($url, array(
-                'timeout' => 30,
-                'user-agent' => $user_agent,
-            ));
-            
-            if (is_wp_error($response)) {
-                return false;
-            }
-            
-            $html = wp_remote_retrieve_body($response);
-            $dom = new \DOMDocument();
-            @$dom->loadHTML($html);
-            $xpath = new \DOMXPath($dom);
-            
-            $analysis = array(
-                'url' => $url,
-                'title' => '',
-                'potential_prices' => array(),
-                'potential_availability' => array(),
-                'potential_variants' => array(),
-            );
-            
-            // Търсим заглавие
-            $title_nodes = $xpath->query('//title');
-            if ($title_nodes->length > 0) {
-                $analysis['title'] = trim($title_nodes->item(0)->textContent);
-            }
-            
-            // Търсим потенциални цени (елементи с числа и валутни символи)
-            $price_patterns = array(
-                '//span[contains(@class, "price")]',
-                '//div[contains(@class, "price")]',
-                '//*[contains(text(), "лв")]',
-                '//*[contains(text(), "BGN")]',
-                '//*[contains(text(), "€")]',
-            );
-            
-            foreach ($price_patterns as $pattern) {
-                $nodes = $xpath->query($pattern);
-                foreach ($nodes as $node) {
-                    $text = trim($node->textContent);
-                    if (preg_match('/[\d,.]+ ?(лв|BGN|€)/', $text)) {
-                        $analysis['potential_prices'][] = array(
-                            'text' => $text,
-                            'selector' => $this->get_css_selector($node),
-                            'xpath' => $node->getNodePath()
-                        );
-                    }
-                }
-            }
-            
-            // Търсим потенциална наличност
-            $availability_patterns = array(
-                '//*[contains(text(), "наличен")]',
-                '//*[contains(text(), "в наличност")]',
-                '//*[contains(text(), "available")]',
-                '//span[contains(@class, "stock")]',
-                '//div[contains(@class, "availability")]',
-            );
-            
-            foreach ($availability_patterns as $pattern) {
-                $nodes = $xpath->query($pattern);
-                foreach ($nodes as $node) {
-                    $analysis['potential_availability'][] = array(
-                        'text' => trim($node->textContent),
-                        'selector' => $this->get_css_selector($node),
-                        'xpath' => $node->getNodePath()
-                    );
-                }
-            }
-            
-            return $analysis;
-            
-        } catch (Exception $e) {
-            error_log("Page analysis error: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    private function get_css_selector($node) {
-        // Опростена функция за генериране на CSS селектор
-        $path = array();
-        
-        while ($node && $node->nodeType === XML_ELEMENT_NODE) {
-            $selector = $node->nodeName;
-            
-            if ($node->hasAttribute('id')) {
-                $selector .= '#' . $node->getAttribute('id');
-                $path[] = $selector;
-                break;
-            }
-            
-            if ($node->hasAttribute('class')) {
-                $classes = explode(' ', $node->getAttribute('class'));
-                if (!empty($classes[0])) {
-                    $selector .= '.' . $classes[0];
-                }
-            }
-            
-            $path[] = $selector;
-            $node = $node->parentNode;
-        }
-        
-        return implode(' > ', array_reverse($path));
-    }
-    
-    public function render_admin_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Product Scraper Monitor', 'parfume-reviews'); ?></h1>
-            
-            <?php $this->render_scraper_stats(); ?>
-            <?php $this->render_scraper_queue(); ?>
-            <?php $this->render_scraped_products_table(); ?>
-        </div>
-        <?php
-    }
-    
-    private function render_scraper_stats() {
-        $scrape_queue = get_option('parfume_scraper_queue', array());
-        $pending_count = count(array_filter($scrape_queue, function($item) { return $item['status'] === 'pending'; }));
-        $error_count = count(array_filter($scrape_queue, function($item) { return $item['status'] === 'error'; }));
-        
-        ?>
-        <div class="scraper-stats" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 20px 0;">
-            <div class="stat-box" style="background: #f0f0f1; padding: 20px; border-radius: 5px;">
-                <h3><?php _e('Pending', 'parfume-reviews'); ?></h3>
-                <span style="font-size: 2em; font-weight: bold; color: #0073aa;"><?php echo $pending_count; ?></span>
-            </div>
-            
-            <div class="stat-box" style="background: #f0f0f1; padding: 20px; border-radius: 5px;">
-                <h3><?php _e('Errors', 'parfume-reviews'); ?></h3>
-                <span style="font-size: 2em; font-weight: bold; color: #dc3232;"><?php echo $error_count; ?></span>
-            </div>
-            
-            <div class="stat-box" style="background: #f0f0f1; padding: 20px; border-radius: 5px;">
-                <h3><?php _e('Total Queue', 'parfume-reviews'); ?></h3>
-                <span style="font-size: 2em; font-weight: bold; color: #46b450;"><?php echo count($scrape_queue); ?></span>
-            </div>
-        </div>
-        <?php
-    }
-    
-    private function render_scraper_queue() {
-        $scrape_queue = get_option('parfume_scraper_queue', array());
-        
-        ?>
-        <h2><?php _e('Scraper Queue', 'parfume-reviews'); ?></h2>
-        
-        <table class="wp-list-table widefat fixed striped">
-            <thead>
-                <tr>
-                    <th><?php _e('Post', 'parfume-reviews'); ?></th>
-                    <th><?php _e('Store', 'parfume-reviews'); ?></th>
-                    <th><?php _e('URL', 'parfume-reviews'); ?></th>
-                    <th><?php _e('Status', 'parfume-reviews'); ?></th>
-                    <th><?php _e('Added', 'parfume-reviews'); ?></th>
-                    <th><?php _e('Actions', 'parfume-reviews'); ?></th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($scrape_queue)): ?>
-                    <tr>
-                        <td colspan="6"><?php _e('No items in queue', 'parfume-reviews'); ?></td>
-                    </tr>
-                <?php else: ?>
-                    <?php foreach ($scrape_queue as $item): ?>
-                        <tr>
-                            <td>
-                                <a href="<?php echo get_edit_post_link($item['post_id']); ?>">
-                                    <?php echo get_the_title($item['post_id']); ?>
-                                </a>
-                            </td>
-                            <td><?php echo esc_html($item['store_id']); ?></td>
-                            <td>
-                                <a href="<?php echo esc_url($item['url']); ?>" target="_blank">
-                                    <?php echo esc_html(wp_trim_words($item['url'], 8)); ?>
-                                </a>
-                            </td>
-                            <td>
-                                <span class="status-badge status-<?php echo esc_attr($item['status']); ?>">
-                                    <?php echo esc_html(ucfirst($item['status'])); ?>
-                                </span>
-                            </td>
-                            <td><?php echo esc_html($item['added']); ?></td>
-                            <td>
-                                <button class="button button-small manual-scrape-queue" 
-                                        data-post-id="<?php echo esc_attr($item['post_id']); ?>" 
-                                        data-store-index="<?php echo esc_attr($item['store_index']); ?>">
-                                    <?php _e('Scrape Now', 'parfume-reviews'); ?>
-                                </button>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-        <?php
-    }
-    
-    private function render_scraped_products_table() {
-        // Получаваме всички постове с scraped data
-        $posts_with_stores = get_posts(array(
-            'post_type' => 'parfume',
-            'meta_key' => '_parfume_stores_v2',
-            'posts_per_page' => 50,
-            'post_status' => 'publish'
-        ));
-        
-        ?>
-        <h2><?php _e('Scraped Products', 'parfume-reviews'); ?></h2>
-        
-        <table class="wp-list-table widefat fixed striped">
-            <thead>
-                <tr>
-                    <th><?php _e('Post', 'parfume-reviews'); ?></th>
-                    <th><?php _e('Stores', 'parfume-reviews'); ?></th>
-                    <th><?php _e('Last Scraped', 'parfume-reviews'); ?></th>
-                    <th><?php _e('Status', 'parfume-reviews'); ?></th>
-                    <th><?php _e('Actions', 'parfume-reviews'); ?></th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($posts_with_stores)): ?>
-                    <tr>
-                        <td colspan="5"><?php _e('No products with stores found', 'parfume-reviews'); ?></td>
-                    </tr>
-                <?php else: ?>
-                    <?php foreach ($posts_with_stores as $post): ?>
-                        <?php
-                        $stores = get_post_meta($post->ID, '_parfume_stores_v2', true);
-                        $store_count = is_array($stores) ? count($stores) : 0;
-                        
-                        // Получаваме последно scraping време
-                        $last_scraped = '';
-                        $status = 'pending';
-                        
-                        for ($i = 0; $i < $store_count; $i++) {
-                            $scraped_data = get_post_meta($post->ID, '_store_scraped_' . $i, true);
-                            if (!empty($scraped_data['last_updated'])) {
-                                if (empty($last_scraped) || $scraped_data['last_updated'] > $last_scraped) {
-                                    $last_scraped = $scraped_data['last_updated'];
-                                }
-                                if (isset($scraped_data['status'])) {
-                                    $status = $scraped_data['status'];
-                                }
-                            }
-                        }
-                        ?>
-                        <tr>
-                            <td>
-                                <a href="<?php echo get_edit_post_link($post->ID); ?>">
-                                    <?php echo esc_html($post->post_title); ?>
-                                </a>
-                            </td>
-                            <td><?php echo $store_count; ?> stores</td>
-                            <td><?php echo $last_scraped ? esc_html($last_scraped) : __('Never', 'parfume-reviews'); ?></td>
-                            <td>
-                                <span class="status-badge status-<?php echo esc_attr($status); ?>">
-                                    <?php echo esc_html(ucfirst($status)); ?>
-                                </span>
-                            </td>
-                            <td>
-                                <a href="<?php echo get_edit_post_link($post->ID); ?>" class="button button-small">
-                                    <?php _e('Edit', 'parfume-reviews'); ?>
-                                </a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-        <?php
-    }
-    
-    public function render_test_tool_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Scraper Test Tool', 'parfume-reviews'); ?></h1>
-            
-            <div class="scraper-test-form">
-                <h2><?php _e('Test URL Analysis', 'parfume-reviews'); ?></h2>
-                
-                <form id="test-scraper-form">
-                    <table class="form-table">
-                        <tr>
-                            <th scope="row">
-                                <label for="test_url"><?php _e('Product URL', 'parfume-reviews'); ?></label>
-                            </th>
-                            <td>
-                                <input type="url" id="test_url" class="large-text" placeholder="https://example.com/product-page">
-                                <button type="submit" class="button button-primary"><?php _e('Analyze Page', 'parfume-reviews'); ?></button>
-                            </td>
-                        </tr>
-                    </table>
-                </form>
-                
-                <div id="analysis-results" style="display: none;">
-                    <h3><?php _e('Analysis Results', 'parfume-reviews'); ?></h3>
-                    <div id="analysis-content"></div>
-                </div>
-            </div>
-        </div>
-        
-        <script>
-        jQuery(document).ready(function($) {
-            $('#test-scraper-form').on('submit', function(e) {
-                e.preventDefault();
-                
-                var url = $('#test_url').val();
-                if (!url) return;
-                
-                $('#analysis-results').show();
-                $('#analysis-content').html('<p>Analyzing...</p>');
-                
-                $.ajax({
-                    url: ajaxurl,
-                    type: 'POST',
-                    data: {
-                        action: 'test_scraper_url',
-                        url: url,
-                        nonce: '<?php echo wp_create_nonce('parfume-scraper-nonce'); ?>'
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            var html = '<h4>Page Title: ' + response.data.title + '</h4>';
-                            
-                            if (response.data.potential_prices.length > 0) {
-                                html += '<h5>Potential Prices Found:</h5><ul>';
-                                response.data.potential_prices.forEach(function(price) {
-                                    html += '<li><strong>' + price.text + '</strong><br>';
-                                    html += 'CSS: <code>' + price.selector + '</code><br>';
-                                    html += 'XPath: <code>' + price.xpath + '</code></li>';
-                                });
-                                html += '</ul>';
-                            }
-                            
-                            if (response.data.potential_availability.length > 0) {
-                                html += '<h5>Potential Availability:</h5><ul>';
-                                response.data.potential_availability.forEach(function(avail) {
-                                    html += '<li><strong>' + avail.text + '</strong><br>';
-                                    html += 'CSS: <code>' + avail.selector + '</code></li>';
-                                });
-                                html += '</ul>';
-                            }
-                            
-                            $('#analysis-content').html(html);
-                        } else {
-                            $('#analysis-content').html('<p style="color: red;">Error: ' + response.data + '</p>');
-                        }
-                    },
-                    error: function() {
-                        $('#analysis-content').html('<p style="color: red;">AJAX Error</p>');
-                    }
-                });
-            });
-        });
-        </script>
-        <?php
-    }
-    
+    /**
+     * Enqueue admin scripts
+     */
     public function enqueue_admin_scripts($hook) {
         if (strpos($hook, 'parfume-product-scraper') !== false || 
             strpos($hook, 'parfume-scraper-test') !== false ||
