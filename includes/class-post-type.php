@@ -54,27 +54,27 @@ class Post_Type {
             'not_found_in_trash'   => __('Not found in Trash', 'parfume-reviews'),
             'featured_image'       => __('Featured Image', 'parfume-reviews'),
             'set_featured_image'   => __('Set featured image', 'parfume-reviews'),
-            'remove_featured_image' => __('Remove featured image', 'parfume-reviews'),
+            'remove_featured_image'=> __('Remove featured image', 'parfume-reviews'),
             'use_featured_image'   => __('Use as featured image', 'parfume-reviews'),
             'insert_into_item'     => __('Insert into parfume', 'parfume-reviews'),
-            'uploaded_to_this_item' => __('Uploaded to this parfume', 'parfume-reviews'),
+            'uploaded_to_this_item'=> __('Uploaded to this parfume', 'parfume-reviews'),
             'items_list'           => __('Parfumes list', 'parfume-reviews'),
-            'items_list_navigation' => __('Parfumes list navigation', 'parfume-reviews'),
+            'items_list_navigation'=> __('Parfumes list navigation', 'parfume-reviews'),
             'filter_items_list'    => __('Filter parfumes list', 'parfume-reviews'),
         );
         
         $args = array(
             'label'                => __('Parfume', 'parfume-reviews'),
-            'description'          => __('Parfume reviews and information', 'parfume-reviews'),
+            'description'          => __('Parfume Reviews', 'parfume-reviews'),
             'labels'               => $labels,
-            'supports'             => array('title', 'editor', 'thumbnail', 'excerpt', 'comments', 'custom-fields'),
-            'taxonomies'           => array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity'),
+            'supports'             => array('title', 'editor', 'thumbnail', 'excerpt', 'custom-fields', 'comments'),
+            'taxonomies'           => array('marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'),
             'hierarchical'         => false,
             'public'               => true,
             'show_ui'              => true,
             'show_in_menu'         => true,
-            'menu_position'        => 20,
-            'menu_icon'            => 'dashicons-heart',
+            'menu_position'        => 5,
+            'menu_icon'            => 'dashicons-products',
             'show_in_admin_bar'    => true,
             'show_in_nav_menus'    => true,
             'can_export'           => true,
@@ -84,10 +84,8 @@ class Post_Type {
             'capability_type'      => 'post',
             'show_in_rest'         => true,
             'rewrite'              => array(
-                'slug'       => $slug,
+                'slug' => $slug,
                 'with_front' => false,
-                'pages'      => true,
-                'feeds'      => true,
             ),
         );
         
@@ -225,15 +223,25 @@ class Post_Type {
             $queried_object = get_queried_object();
             
             if ($queried_object && isset($queried_object->taxonomy)) {
-                // Special handling for single perfumer pages
+                // Special handling for perfumer taxonomy
                 if ($queried_object->taxonomy === 'perfumer') {
-                    $single_perfumer_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/single-perfumer.php';
-                    if (file_exists($single_perfumer_template)) {
-                        return $single_perfumer_template;
+                    // Check if we're on the main perfumer archive vs specific perfumer page
+                    // For specific perfumer term (has slug and name), use single-perfumer template
+                    if (!empty($queried_object->slug) && !empty($queried_object->name)) {
+                        $single_perfumer_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/single-perfumer.php';
+                        if (file_exists($single_perfumer_template)) {
+                            return $single_perfumer_template;
+                        }
+                    }
+                    
+                    // For perfumer archive (all perfumers listing), use taxonomy-perfumer.php
+                    $perfumer_archive_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/taxonomy-perfumer.php';
+                    if (file_exists($perfumer_archive_template)) {
+                        return $perfumer_archive_template;
                     }
                 }
                 
-                // Specific taxonomy template
+                // Specific taxonomy template for other taxonomies
                 $specific_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/taxonomy-' . $queried_object->taxonomy . '.php';
                 if (file_exists($specific_template)) {
                     return $specific_template;
@@ -290,7 +298,6 @@ class Post_Type {
     
     /**
      * Построява URL за филтри използвайки Query Handler
-     * ПОПРАВЕНО: Премахнат дублираният static метод
      */
     public function build_filter_url($filters = array(), $base_url = '') {
         if ($this->query_handler) {
