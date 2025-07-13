@@ -817,6 +817,130 @@ function parfume_reviews_format_price($price, $currency = 'лв') {
     return $price;
 }
 
+
+
+/**
+ * КРИТИЧНА ПОПРАВКА ЗА ФАТАЛНА ГРЕШКА
+ * 
+ * ИНСТРУКЦИИ ЗА ДОБАВЯНЕ:
+ * 1. Отворете файла includes/template-functions.php
+ * 2. Идете в самия край на файла (след последната функция parfume_reviews_format_price)
+ * 3. ДОБАВЕТЕ следния код в края на файла преди затварящия PHP таг ?>
+ * 
+ * НЕ ЗАМЕНЯЙТЕ НИЩО - САМО ДОБАВЕТЕ В КРАЯ!
+ */
+
+/**
+ * КРИТИЧНА ПОПРАВКА: Добавяне на липсващата функция
+ * Тази функция се използва в templates/archive-perfumer.php на ред 136
+ * 
+ * Получава най-евтината доставка за парфюм
+ */
+function parfume_reviews_get_cheapest_shipping($post_id) {
+    $stores = get_post_meta($post_id, '_parfume_stores', true);
+    
+    if (empty($stores) || !is_array($stores)) {
+        return '';
+    }
+    
+    $shipping_options = array();
+    
+    foreach ($stores as $store) {
+        if (!empty($store['shipping_info'])) {
+            // Извличаме цена от shipping информацията
+            $shipping_text = $store['shipping_info'];
+            
+            // Търсим цени в shipping текста
+            if (preg_match('/(\d+[\.,]?\d*)\s*(лв|bgn|eur|€)/i', $shipping_text, $matches)) {
+                $price = floatval(str_replace(',', '.', $matches[1]));
+                $shipping_options[] = array(
+                    'text' => $shipping_text,
+                    'price' => $price,
+                    'store' => isset($store['name']) ? $store['name'] : ''
+                );
+            } else {
+                // Ако няма цена, добавяме като безплатна доставка или специална информация
+                if (stripos($shipping_text, 'безплатна') !== false || 
+                    stripos($shipping_text, 'free') !== false ||
+                    stripos($shipping_text, 'безплатно') !== false) {
+                    $shipping_options[] = array(
+                        'text' => $shipping_text,
+                        'price' => 0,
+                        'store' => isset($store['name']) ? $store['name'] : ''
+                    );
+                } else {
+                    // Просто добавяме текста без цена
+                    $shipping_options[] = array(
+                        'text' => $shipping_text,
+                        'price' => 999999, // Висока цена за несортирани опции
+                        'store' => isset($store['name']) ? $store['name'] : ''
+                    );
+                }
+            }
+        }
+    }
+    
+    if (empty($shipping_options)) {
+        return '';
+    }
+    
+    // Сортираме по цена (най-евтина първо)
+    usort($shipping_options, function($a, $b) {
+        return $a['price'] <=> $b['price'];
+    });
+    
+    // Връщаме най-евтината опция
+    return $shipping_options[0]['text'];
+}
+
+/**
+ * БОНУС ФУНКЦИЯ: Получава най-евтината доставка с детайли
+ */
+function parfume_reviews_get_cheapest_shipping_details($post_id) {
+    $stores = get_post_meta($post_id, '_parfume_stores', true);
+    
+    if (empty($stores) || !is_array($stores)) {
+        return false;
+    }
+    
+    $cheapest_shipping = null;
+    $lowest_price = null;
+    
+    foreach ($stores as $store) {
+        if (!empty($store['shipping_info'])) {
+            $shipping_text = $store['shipping_info'];
+            
+            // Извличаме цена от shipping информацията
+            if (preg_match('/(\d+[\.,]?\d*)\s*(лв|bgn|eur|€)/i', $shipping_text, $matches)) {
+                $price = floatval(str_replace(',', '.', $matches[1]));
+                
+                if ($lowest_price === null || $price < $lowest_price) {
+                    $lowest_price = $price;
+                    $cheapest_shipping = array(
+                        'text' => $shipping_text,
+                        'price' => $price,
+                        'store' => isset($store['name']) ? $store['name'] : '',
+                        'formatted_price' => number_format($price, 2) . ' лв'
+                    );
+                }
+            } elseif (stripos($shipping_text, 'безплатна') !== false || 
+                     stripos($shipping_text, 'free') !== false ||
+                     stripos($shipping_text, 'безплатно') !== false) {
+                // Безплатна доставка е най-евтина
+                $cheapest_shipping = array(
+                    'text' => $shipping_text,
+                    'price' => 0,
+                    'store' => isset($store['name']) ? $store['name'] : '',
+                    'formatted_price' => 'Безплатна'
+                );
+                $lowest_price = 0;
+                break; // Не може да бъде по-евтино от безплатно
+            }
+        }
+    }
+    
+    return $cheapest_shipping;
+}
 /**
  * Генерира breadcrumbs за parfume страници
  */

@@ -1,7 +1,12 @@
 <?php
 /**
- * Template for single perfumer (parfumeur) pages
- * Отделна страница за парфюмьор с пълна информация, биография и парфюми
+ * Single Perfumer Template
+ * Алтернативен template за single парфюмерист страници
+ * 
+ * Файл: templates/single-perfumer.php
+ * 
+ * ЗАБЕЛЕЖКА: Този файл може да се използва като backup
+ * Основният template е taxonomy-perfumer.php
  */
 
 if (!defined('ABSPATH')) {
@@ -10,451 +15,337 @@ if (!defined('ABSPATH')) {
 
 get_header();
 
-// Get the current perfumer term
-$queried_object = get_queried_object();
-if (!$queried_object || !isset($queried_object->taxonomy) || $queried_object->taxonomy !== 'perfumer') {
-    get_template_part('404');
-    get_footer();
-    return;
-}
-
-$perfumer = $queried_object;
-
-// Get perfumer meta data (using existing meta fields - no new fields added)
-$perfumer_photo = get_term_meta($perfumer->term_id, 'perfumer_photo', true);
-$perfumer_birthdate = get_term_meta($perfumer->term_id, 'perfumer_birthdate', true);
-$perfumer_nationality = get_term_meta($perfumer->term_id, 'perfumer_nationality', true);
-$perfumer_education = get_term_meta($perfumer->term_id, 'perfumer_education', true);
-$perfumer_awards = get_term_meta($perfumer->term_id, 'perfumer_awards', true);
-$perfumer_signature_style = get_term_meta($perfumer->term_id, 'perfumer_signature_style', true);
-$perfumer_website = get_term_meta($perfumer->term_id, 'perfumer_website', true);
-$perfumer_social_media = get_term_meta($perfumer->term_id, 'perfumer_social_media', true);
-
-// Get perfumer's perfumes
-$perfume_args = array(
-    'post_type' => 'parfume',
-    'tax_query' => array(
-        array(
-            'taxonomy' => 'perfumer',
-            'field' => 'term_id',
-            'terms' => $perfumer->term_id,
-        ),
-    ),
-    'posts_per_page' => -1,
-    'orderby' => 'date',
-    'order' => 'DESC',
-);
-
-$perfume_query = new WP_Query($perfume_args);
-
-// Calculate statistics for this perfumer only
-$total_perfumes = $perfume_query->found_posts;
-$total_rating = 0;
-$rated_count = 0;
-$brands_worked_with = array();
-$popular_notes = array();
-
-if ($perfume_query->have_posts()) {
-    while ($perfume_query->have_posts()) {
-        $perfume_query->the_post();
-        
-        // Collect ratings
-        $rating = get_post_meta(get_the_ID(), '_parfume_rating', true);
-        if (!empty($rating) && is_numeric($rating)) {
-            $total_rating += floatval($rating);
-            $rated_count++;
-        }
-        
-        // Collect brands this perfumer worked with
-        $brands = wp_get_post_terms(get_the_ID(), 'marki');
-        foreach ($brands as $brand) {
-            if (!isset($brands_worked_with[$brand->term_id])) {
-                $brands_worked_with[$brand->term_id] = array(
-                    'name' => $brand->name,
-                    'count' => 0
-                );
-            }
-            $brands_worked_with[$brand->term_id]['count']++;
-        }
-        
-        // Collect notes used by this perfumer
-        $notes = wp_get_post_terms(get_the_ID(), 'notes');
-        foreach ($notes as $note) {
-            if (!isset($popular_notes[$note->term_id])) {
-                $popular_notes[$note->term_id] = array(
-                    'name' => $note->name,
-                    'count' => 0
-                );
-            }
-            $popular_notes[$note->term_id]['count']++;
-        }
-    }
-    wp_reset_postdata();
-}
-
-// Calculate average rating
-$average_rating = $rated_count > 0 ? $total_rating / $rated_count : 0;
-
-// Sort brands and notes by popularity
-uasort($brands_worked_with, function($a, $b) {
-    return $b['count'] - $a['count'];
-});
-
-uasort($popular_notes, function($a, $b) {
-    return $b['count'] - $a['count'];
-});
-
-// Get most popular perfumes by this perfumer (top 3)
-$popular_perfumes_args = array(
-    'post_type' => 'parfume',
-    'tax_query' => array(
-        array(
-            'taxonomy' => 'perfumer',
-            'field' => 'term_id',
-            'terms' => $perfumer->term_id,
-        ),
-    ),
-    'posts_per_page' => 3,
-    'meta_key' => '_parfume_rating',
-    'orderby' => 'meta_value_num',
-    'order' => 'DESC',
-    'meta_query' => array(
-        array(
-            'key' => '_parfume_rating',
-            'value' => '',
-            'compare' => '!='
-        )
-    )
-);
-
-$popular_perfumes_query = new WP_Query($popular_perfumes_args);
+$current_term = get_queried_object();
 ?>
 
 <div class="single-perfumer-page">
-    <!-- Breadcrumbs -->
-    <div class="breadcrumbs">
-        <a href="<?php echo home_url(); ?>"><?php _e('Home', 'parfume-reviews'); ?></a>
-        <span class="separator">/</span>
-        <a href="<?php echo get_post_type_archive_link('parfume'); ?>"><?php _e('Perfumes', 'parfume-reviews'); ?></a>
-        <span class="separator">/</span>
-        <a href="<?php echo get_term_link(get_taxonomy('perfumer')); ?>"><?php _e('Perfumers', 'parfume-reviews'); ?></a>
-        <span class="separator">/</span>
-        <span class="current"><?php echo esc_html($perfumer->name); ?></span>
-    </div>
-
-    <!-- Perfumer Header -->
-    <header class="perfumer-header">
-        <div class="perfumer-photo">
-            <?php if (!empty($perfumer_photo)): ?>
-                <img src="<?php echo esc_url($perfumer_photo); ?>" alt="<?php echo esc_attr($perfumer->name); ?>" class="perfumer-image">
-            <?php else: ?>
-                <div class="perfumer-avatar">
-                    <span class="perfumer-initials">
-                        <?php 
-                        $name_parts = explode(' ', $perfumer->name);
-                        echo esc_html(substr($name_parts[0], 0, 1));
-                        if (isset($name_parts[1])) {
-                            echo esc_html(substr($name_parts[1], 0, 1));
-                        }
-                        ?>
-                    </span>
-                </div>
-            <?php endif; ?>
-        </div>
-        
-        <div class="perfumer-info">
-            <h1 class="perfumer-name"><?php echo esc_html($perfumer->name); ?></h1>
-            
-            <?php if (!empty($perfumer->description)): ?>
-                <div class="perfumer-description">
-                    <?php echo wpautop(esc_html($perfumer->description)); ?>
-                </div>
-            <?php endif; ?>
-            
-            <div class="perfumer-meta">
-                <?php if (!empty($perfumer_nationality)): ?>
-                    <div class="meta-item nationality">
-                        <span class="meta-label"><?php _e('Nationality:', 'parfume-reviews'); ?></span>
-                        <span class="meta-value"><?php echo esc_html($perfumer_nationality); ?></span>
+    <div class="perfumer-hero">
+        <div class="container">
+            <div class="perfumer-header">
+                <h1 class="perfumer-name"><?php echo esc_html($current_term->name); ?></h1>
+                
+                <?php if (!empty($current_term->description)): ?>
+                    <div class="perfumer-bio">
+                        <?php echo wpautop(wp_kses_post($current_term->description)); ?>
                     </div>
                 <?php endif; ?>
                 
-                <?php if (!empty($perfumer_birthdate)): ?>
-                    <div class="meta-item birthdate">
-                        <span class="meta-label"><?php _e('Born:', 'parfume-reviews'); ?></span>
-                        <span class="meta-value"><?php echo esc_html($perfumer_birthdate); ?></span>
-                    </div>
-                <?php endif; ?>
-            </div>
-            
-            <div class="perfumer-stats">
-                <div class="stat-item">
-                    <span class="stat-number"><?php echo $total_perfumes; ?></span>
-                    <span class="stat-label"><?php _e('Perfumes', 'parfume-reviews'); ?></span>
-                </div>
-                
-                <?php if ($average_rating > 0): ?>
+                <div class="perfumer-stats">
                     <div class="stat-item">
-                        <span class="stat-number"><?php echo number_format($average_rating, 1); ?></span>
-                        <span class="stat-label"><?php _e('Avg Rating', 'parfume-reviews'); ?></span>
+                        <span class="stat-number"><?php echo $current_term->count; ?></span>
+                        <span class="stat-label"><?php echo _n('Парфюм', 'Парфюма', $current_term->count, 'parfume-reviews'); ?></span>
                     </div>
-                <?php endif; ?>
-                
-                <div class="stat-item">
-                    <span class="stat-number"><?php echo count($brands_worked_with); ?></span>
-                    <span class="stat-label"><?php _e('Brands', 'parfume-reviews'); ?></span>
                 </div>
             </div>
         </div>
-    </header>
-
-    <!-- Navigation Tabs -->
-    <nav class="perfumer-tabs">
-        <a href="#overview" class="tab-link active" data-tab="overview"><?php _e('Overview', 'parfume-reviews'); ?></a>
-        <a href="#perfumes" class="tab-link" data-tab="perfumes"><?php _e('Perfumes', 'parfume-reviews'); ?></a>
-        <?php if (!empty($perfumer_education) || !empty($perfumer_awards) || !empty($perfumer_website) || !empty($perfumer_social_media)): ?>
-            <a href="#biography" class="tab-link" data-tab="biography"><?php _e('Biography', 'parfume-reviews'); ?></a>
-        <?php endif; ?>
-        <?php if (!empty($brands_worked_with)): ?>
-            <a href="#collaborations" class="tab-link" data-tab="collaborations"><?php _e('Collaborations', 'parfume-reviews'); ?></a>
-        <?php endif; ?>
-    </nav>
-
-    <!-- Tab Contents -->
-    <div class="tab-contents">
-        
-        <!-- Overview Tab -->
-        <div id="overview" class="tab-content active">
-            <!-- Quick Stats Grid -->
-            <div class="quick-stats-grid">
-                <?php if (!empty($perfumer_signature_style)): ?>
-                    <div class="quick-stat-card">
-                        <h3><?php _e('Signature Style', 'parfume-reviews'); ?></h3>
-                        <p><?php echo esc_html($perfumer_signature_style); ?></p>
-                    </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($brands_worked_with)): ?>
-                    <div class="quick-stat-card">
-                        <h3><?php _e('Top Brands', 'parfume-reviews'); ?></h3>
-                        <div class="brands-list">
-                            <?php 
-                            $top_brands = array_slice($brands_worked_with, 0, 3, true);
-                            foreach ($top_brands as $brand): 
-                            ?>
-                                <span class="brand-tag"><?php echo esc_html($brand['name']); ?> (<?php echo $brand['count']; ?>)</span>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($popular_notes)): ?>
-                    <div class="quick-stat-card">
-                        <h3><?php _e('Popular Notes', 'parfume-reviews'); ?></h3>
-                        <div class="notes-list">
-                            <?php 
-                            $top_notes = array_slice($popular_notes, 0, 5, true);
-                            foreach ($top_notes as $note): 
-                            ?>
-                                <span class="note-tag"><?php echo esc_html($note['name']); ?></span>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- Most Popular Perfumes -->
-            <?php if ($popular_perfumes_query->have_posts()): ?>
-                <section class="popular-perfumes">
-                    <h2><?php _e('Most Popular Perfumes by', 'parfume-reviews'); ?> <?php echo esc_html($perfumer->name); ?></h2>
-                    <div class="perfumes-grid">
-                        <?php while ($popular_perfumes_query->have_posts()): $popular_perfumes_query->the_post(); ?>
-                            <div class="perfume-card">
-                                <a href="<?php the_permalink(); ?>" class="perfume-link">
-                                    <div class="perfume-thumbnail">
-                                        <?php if (has_post_thumbnail()): ?>
-                                            <?php the_post_thumbnail('medium'); ?>
-                                        <?php else: ?>
-                                            <div class="no-image">
-                                                <span><?php _e('No Image', 'parfume-reviews'); ?></span>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                    
-                                    <div class="perfume-info">
-                                        <h3 class="perfume-title"><?php the_title(); ?></h3>
-                                        
-                                        <?php 
-                                        $brands = wp_get_post_terms(get_the_ID(), 'marki', array('fields' => 'names'));
-                                        if (!empty($brands) && !is_wp_error($brands)): 
-                                        ?>
-                                            <div class="perfume-brand"><?php echo esc_html($brands[0]); ?></div>
-                                        <?php endif; ?>
-                                        
-                                        <?php 
-                                        $rating = get_post_meta(get_the_ID(), '_parfume_rating', true);
-                                        if (!empty($rating)): 
-                                        ?>
-                                            <div class="perfume-rating">
-                                                <span class="stars">
-                                                    <?php for ($i = 1; $i <= 5; $i++): ?>
-                                                        <span class="star <?php echo $i <= $rating ? 'filled' : ''; ?>">★</span>
-                                                    <?php endfor; ?>
-                                                </span>
-                                                <span class="rating-number"><?php echo number_format($rating, 1); ?></span>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                </a>
-                            </div>
-                        <?php endwhile; wp_reset_postdata(); ?>
-                    </div>
-                </section>
-            <?php endif; ?>
-        </div>
-
-        <!-- Perfumes Tab -->
-        <div id="perfumes" class="tab-content">
-            <?php if ($perfume_query->have_posts()): ?>
-                <h2><?php _e('All Perfumes by', 'parfume-reviews'); ?> <?php echo esc_html($perfumer->name); ?> (<?php echo $total_perfumes; ?>)</h2>
-                <div class="all-perfumes-grid">
-                    <?php while ($perfume_query->have_posts()): $perfume_query->the_post(); ?>
-                        <div class="perfume-card">
-                            <a href="<?php the_permalink(); ?>" class="perfume-link">
-                                <div class="perfume-thumbnail">
-                                    <?php if (has_post_thumbnail()): ?>
-                                        <?php the_post_thumbnail('medium'); ?>
-                                    <?php else: ?>
-                                        <div class="no-image">
-                                            <span><?php _e('No Image', 'parfume-reviews'); ?></span>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                                
-                                <div class="perfume-info">
-                                    <h3 class="perfume-title"><?php the_title(); ?></h3>
-                                    
-                                    <?php 
-                                    $brands = wp_get_post_terms(get_the_ID(), 'marki', array('fields' => 'names'));
-                                    if (!empty($brands) && !is_wp_error($brands)): 
-                                    ?>
-                                        <div class="perfume-brand"><?php echo esc_html($brands[0]); ?></div>
-                                    <?php endif; ?>
-                                    
-                                    <?php 
-                                    $rating = get_post_meta(get_the_ID(), '_parfume_rating', true);
-                                    if (!empty($rating)): 
-                                    ?>
-                                        <div class="perfume-rating">
-                                            <span class="stars">
-                                                <?php for ($i = 1; $i <= 5; $i++): ?>
-                                                    <span class="star <?php echo $i <= $rating ? 'filled' : ''; ?>">★</span>
-                                                <?php endfor; ?>
-                                            </span>
-                                            <span class="rating-number"><?php echo number_format($rating, 1); ?></span>
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <div class="perfume-year">
-                                        <?php echo get_the_date('Y'); ?>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                    <?php endwhile; wp_reset_postdata(); ?>
-                </div>
-            <?php else: ?>
-                <p class="no-perfumes"><?php _e('No perfumes found for this perfumer.', 'parfume-reviews'); ?></p>
-            <?php endif; ?>
-        </div>
-
-        <!-- Biography Tab -->
-        <?php if (!empty($perfumer_education) || !empty($perfumer_awards) || !empty($perfumer_website) || !empty($perfumer_social_media)): ?>
-            <div id="biography" class="tab-content">
-                <div class="biography-content">
-                    <?php if (!empty($perfumer_education)): ?>
-                        <section class="bio-section">
-                            <h3><?php _e('Education', 'parfume-reviews'); ?></h3>
-                            <p><?php echo esc_html($perfumer_education); ?></p>
-                        </section>
-                    <?php endif; ?>
-                    
-                    <?php if (!empty($perfumer_awards)): ?>
-                        <section class="bio-section">
-                            <h3><?php _e('Awards & Recognition', 'parfume-reviews'); ?></h3>
-                            <p><?php echo esc_html($perfumer_awards); ?></p>
-                        </section>
-                    <?php endif; ?>
-                    
-                    <?php if (!empty($perfumer_website) || !empty($perfumer_social_media)): ?>
-                        <section class="bio-section">
-                            <h3><?php _e('External Links', 'parfume-reviews'); ?></h3>
-                            <?php if (!empty($perfumer_website)): ?>
-                                <p><a href="<?php echo esc_url($perfumer_website); ?>" target="_blank" rel="noopener"><?php _e('Official Website', 'parfume-reviews'); ?></a></p>
-                            <?php endif; ?>
-                            
-                            <?php if (!empty($perfumer_social_media)): ?>
-                                <p><a href="<?php echo esc_url($perfumer_social_media); ?>" target="_blank" rel="noopener"><?php _e('Social Media', 'parfume-reviews'); ?></a></p>
-                            <?php endif; ?>
-                        </section>
-                    <?php endif; ?>
-                </div>
-            </div>
-        <?php endif; ?>
-
-        <!-- Collaborations Tab -->
-        <?php if (!empty($brands_worked_with)): ?>
-            <div id="collaborations" class="tab-content">
-                <div class="collaborations-content">
-                    <!-- Brand Collaborations -->
-                    <section class="collab-section">
-                        <h3><?php _e('Brand Collaborations for', 'parfume-reviews'); ?> <?php echo esc_html($perfumer->name); ?></h3>
-                        <div class="brands-grid">
-                            <?php foreach ($brands_worked_with as $brand): ?>
-                                <div class="brand-collab-card">
-                                    <h4><?php echo esc_html($brand['name']); ?></h4>
-                                    <p><?php printf(_n('%d perfume', '%d perfumes', $brand['count'], 'parfume-reviews'), $brand['count']); ?></p>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </section>
-                </div>
-            </div>
-        <?php endif; ?>
     </div>
-
-    <!-- Back to All Perfumers -->
-    <div class="back-to-perfumers">
-        <a href="<?php echo get_term_link(get_taxonomy('perfumer')); ?>" class="back-button">
-            <span class="dashicons dashicons-arrow-left-alt2"></span>
-            <?php _e('Back to All Perfumers', 'parfume-reviews'); ?>
-        </a>
+    
+    <div class="perfumer-content">
+        <div class="container">
+            <div class="perfumer-perfumes-section">
+                <h2 class="section-title"><?php printf(__('Парфюми от %s', 'parfume-reviews'), esc_html($current_term->name)); ?></h2>
+                
+                <?php
+                // Query за парфюмите на този парфюмерист  
+                $perfumes_query = new WP_Query(array(
+                    'post_type' => 'parfume',
+                    'posts_per_page' => 16,
+                    'paged' => get_query_var('paged'),
+                    'tax_query' => array(
+                        array(
+                            'taxonomy' => 'perfumer',
+                            'field' => 'slug', 
+                            'terms' => $current_term->slug,
+                        ),
+                    ),
+                    'meta_key' => '_parfume_rating',
+                    'orderby' => 'meta_value_num',
+                    'order' => 'DESC',
+                ));
+                ?>
+                
+                <?php if ($perfumes_query->have_posts()): ?>
+                    <div class="perfumes-grid">
+                        <?php while ($perfumes_query->have_posts()): $perfumes_query->the_post(); ?>
+                            <?php parfume_reviews_display_parfume_card(get_the_ID()); ?>
+                        <?php endwhile; ?>
+                    </div>
+                    
+                    <?php
+                    // Pagination
+                    $pagination_links = paginate_links(array(
+                        'total' => $perfumes_query->max_num_pages,
+                        'current' => max(1, get_query_var('paged')),
+                        'prev_text' => __('‹ Предишна', 'parfume-reviews'),
+                        'next_text' => __('Следваща ›', 'parfume-reviews'),
+                        'type' => 'array',
+                    ));
+                    
+                    if ($pagination_links): ?>
+                        <nav class="perfumes-pagination">
+                            <ul class="pagination">
+                                <?php foreach ($pagination_links as $link): ?>
+                                    <li class="page-item"><?php echo $link; ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </nav>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <div class="no-perfumes">
+                        <p><?php _e('Няма намерени парфюми от този парфюмерист.', 'parfume-reviews'); ?></p>
+                    </div>
+                <?php endif; ?>
+                
+                <?php wp_reset_postdata(); ?>
+            </div>
+            
+            <!-- Related Perfumers Section -->
+            <div class="related-perfumers-section">
+                <h2 class="section-title"><?php _e('Други парфюмеристи', 'parfume-reviews'); ?></h2>
+                
+                <?php
+                // Взимаме други парфюмеристи
+                $other_perfumers = get_terms(array(
+                    'taxonomy' => 'perfumer',
+                    'hide_empty' => true,
+                    'exclude' => array($current_term->term_id),
+                    'number' => 8,
+                    'orderby' => 'count',
+                    'order' => 'DESC',
+                ));
+                
+                if (!empty($other_perfumers) && !is_wp_error($other_perfumers)): ?>
+                    <div class="related-perfumers-grid">
+                        <?php foreach ($other_perfumers as $perfumer): ?>
+                            <div class="related-perfumer-card">
+                                <h3 class="related-perfumer-name">
+                                    <a href="<?php echo get_term_link($perfumer); ?>">
+                                        <?php echo esc_html($perfumer->name); ?>
+                                    </a>
+                                </h3>
+                                <span class="related-perfumer-count">
+                                    <?php printf(_n('%d парфюм', '%d парфюма', $perfumer->count, 'parfume-reviews'), $perfumer->count); ?>
+                                </span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- CSS се зарежда автоматично през enqueue_scripts() метода -->
+<style>
+/* Single Perfumer Page Styles */
+.single-perfumer-page .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
 
-<script>
-// Simple tab functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const tabLinks = document.querySelectorAll('.tab-link');
-    const tabContents = document.querySelectorAll('.tab-content');
+.perfumer-hero {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 60px 0;
+}
+
+.perfumer-header {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.perfumer-name {
+    font-size: 3em;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 30px;
+}
+
+.perfumer-bio {
+    font-size: 1.2em;
+    line-height: 1.6;
+    color: #666;
+    margin-bottom: 40px;
+}
+
+.perfumer-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    display: block;
+    font-size: 2.5em;
+    font-weight: 700;
+    color: #0073aa;
+}
+
+.stat-label {
+    display: block;
+    font-size: 1em;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.perfumer-content {
+    padding: 80px 0;
+}
+
+.section-title {
+    font-size: 2.2em;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 40px;
+    text-align: center;
+}
+
+.perfumes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+    margin-bottom: 60px;
+}
+
+.perfumes-pagination {
+    text-align: center;
+    margin: 60px 0;
+}
+
+.pagination {
+    display: inline-flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: 10px;
+}
+
+.pagination .page-item a,
+.pagination .page-item span {
+    display: block;
+    padding: 12px 16px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.3s ease;
+}
+
+.pagination .page-item a:hover,
+.pagination .page-item.current span {
+    background: #0073aa;
+    color: white;
+    border-color: #0073aa;
+}
+
+.related-perfumers-section {
+    margin-top: 80px;
+    padding-top: 60px;
+    border-top: 1px solid #dee2e6;
+}
+
+.related-perfumers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.related-perfumer-card {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.related-perfumer-card:hover {
+    background: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transform: translateY(-3px);
+}
+
+.related-perfumer-name {
+    margin: 0 0 10px;
+    font-size: 1.1em;
+}
+
+.related-perfumer-name a {
+    text-decoration: none;
+    color: #333;
+    transition: color 0.3s ease;
+}
+
+.related-perfumer-name a:hover {
+    color: #0073aa;
+}
+
+.related-perfumer-count {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.no-perfumes {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .perfumer-name {
+        font-size: 2.2em;
+    }
     
-    tabLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            // Remove active class from all tabs
-            tabLinks.forEach(l => l.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
-            
-            // Add active class to clicked tab
-            this.classList.add('active');
-            const targetTab = this.getAttribute('data-tab');
-            document.getElementById(targetTab).classList.add('active');
-        });
-    });
-});
-</script>
+    .perfumer-bio {
+        font-size: 1em;
+    }
+    
+    .perfumer-stats {
+        gap: 20px;
+    }
+    
+    .stat-number {
+        font-size: 2em;
+    }
+    
+    .perfumes-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+    }
+    
+    .related-perfumers-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .perfumer-hero {
+        padding: 40px 0;
+    }
+    
+    .perfumer-name {
+        font-size: 1.8em;
+    }
+    
+    .perfumer-stats {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .perfumes-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .related-perfumers-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 
 <?php get_footer(); ?>
