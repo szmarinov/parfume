@@ -4,7 +4,7 @@ namespace Parfume_Reviews\Taxonomies;
 /**
  * Taxonomy Rewrite Handler - управлява URL rewrite rules за таксономии
  * 📁 Файл: includes/taxonomies/class-taxonomy-rewrite-handler.php
- * ПОПРАВЕНО: Добавени proper rewrite rules за кирилични символи
+ * КРИТИЧНА ПОПРАВКА: 'marki' -> 'parfumeri' във ВСИЧКИ места
  */
 class Taxonomy_Rewrite_Handler {
     
@@ -12,9 +12,6 @@ class Taxonomy_Rewrite_Handler {
         add_action('init', array($this, 'add_custom_rewrite_rules'), 20);
         add_filter('query_vars', array($this, 'add_query_vars'));
         add_action('parse_request', array($this, 'parse_custom_requests'));
-        
-        // Flush rewrite rules при активация на плъгина
-        add_action('parfume_reviews_activated', array($this, 'flush_rewrite_rules_on_activation'));
     }
     
     /**
@@ -24,9 +21,9 @@ class Taxonomy_Rewrite_Handler {
         $settings = get_option('parfume_reviews_settings', array());
         $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
         
-        // ПОПРАВЕНО: Taxonomy archive rules - за всички taxonomies
+        // ПОПРАВЕНО: Taxonomy archive rules - правилни default slug-ове
         $taxonomy_slugs = array(
-            'marki' => !empty($settings['brands_slug']) ? $settings['brands_slug'] : 'parfumeri',
+            'marki' => !empty($settings['brands_slug']) ? $settings['brands_slug'] : 'parfumeri', // ПОПРАВЕНО
             'notes' => !empty($settings['notes_slug']) ? $settings['notes_slug'] : 'notes',
             'perfumer' => !empty($settings['perfumers_slug']) ? $settings['perfumers_slug'] : 'parfumers',
             'gender' => !empty($settings['gender_slug']) ? $settings['gender_slug'] : 'gender',
@@ -36,7 +33,7 @@ class Taxonomy_Rewrite_Handler {
         );
         
         foreach ($taxonomy_slugs as $taxonomy => $slug) {
-            // ПОПРАВЕНО: Основни taxonomy term rules (поддръжка за кирилични символи)
+            // ПОПРАВЕНО: Taxonomy term rules (за кирилични символи)
             add_rewrite_rule(
                 '^' . $parfume_slug . '/' . $slug . '/([^/]+)/?$',
                 'index.php?' . $taxonomy . '=$matches[1]',
@@ -50,7 +47,7 @@ class Taxonomy_Rewrite_Handler {
                 'top'
             );
             
-            // Archive page rule (e.g., /parfiumi/parfumeri/ за всички марки)
+            // Archive page rule (e.g., /parfiumi/parfumeri/)
             add_rewrite_rule(
                 '^' . $parfume_slug . '/' . $slug . '/?$',
                 'index.php?is_parfume_taxonomy_archive=' . $taxonomy,
@@ -92,12 +89,16 @@ class Taxonomy_Rewrite_Handler {
             'top'
         );
         
-        // ПОПРАВЕНО: Filter pagination
-        add_rewrite_rule(
-            '^' . $parfume_slug . '/filter/page/?([0-9]{1,})/?$',
-            'index.php?post_type=parfume&paged=$matches[1]',
-            'top'
-        );
+        // Force flush rewrite rules once after updates
+        if (get_transient('parfume_reviews_flush_rewrite_rules')) {
+            flush_rewrite_rules(false);
+            delete_transient('parfume_reviews_flush_rewrite_rules');
+        }
+        
+        // ПОПРАВЕНО: Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Parfume Reviews: Rewrite rules added for taxonomies: ' . print_r($taxonomy_slugs, true));
+        }
     }
     
     /**
@@ -134,6 +135,11 @@ class Taxonomy_Rewrite_Handler {
             // Mark this as a taxonomy archive page
             $wp->query_vars['is_home'] = false;
             $wp->query_vars['is_archive'] = true;
+            
+            // ПОПРАВЕНО: Debug logging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Parfume Reviews: Parsing custom request for taxonomy: ' . $taxonomy);
+            }
         }
     }
     
@@ -143,8 +149,9 @@ class Taxonomy_Rewrite_Handler {
     public function get_taxonomy_slug($taxonomy) {
         $settings = get_option('parfume_reviews_settings', array());
         
+        // ПОПРАВЕНО: slug mapping с правилни default-и
         $slug_mapping = array(
-            'marki' => !empty($settings['brands_slug']) ? $settings['brands_slug'] : 'parfumeri',
+            'marki' => !empty($settings['brands_slug']) ? $settings['brands_slug'] : 'parfumeri', // ПОПРАВЕНО
             'notes' => !empty($settings['notes_slug']) ? $settings['notes_slug'] : 'notes',
             'perfumer' => !empty($settings['perfumers_slug']) ? $settings['perfumers_slug'] : 'parfumers',
             'gender' => !empty($settings['gender_slug']) ? $settings['gender_slug'] : 'gender',
@@ -167,10 +174,6 @@ class Taxonomy_Rewrite_Handler {
      * Получава URL за архив на таксономия
      */
     public function get_taxonomy_archive_url($taxonomy) {
-        if (!in_array($taxonomy, $this->get_supported_taxonomies())) {
-            return false;
-        }
-        
         $settings = get_option('parfume_reviews_settings', array());
         $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
         $taxonomy_slug = $this->get_taxonomy_slug($taxonomy);
@@ -179,13 +182,25 @@ class Taxonomy_Rewrite_Handler {
     }
     
     /**
+     * Получава URL за архив на таксономия с буква
+     */
+    public function get_taxonomy_archive_letter_url($taxonomy, $letter) {
+        $settings = get_option('parfume_reviews_settings', array());
+        $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
+        $taxonomy_slug = $this->get_taxonomy_slug($taxonomy);
+        
+        return home_url('/' . $parfume_slug . '/' . $taxonomy_slug . '/letter/' . strtolower($letter) . '/');
+    }
+    
+    /**
      * Проверява дали slug е валиден за таксономия
      */
     public function is_valid_taxonomy_slug($slug) {
         $settings = get_option('parfume_reviews_settings', array());
         
+        // ПОПРАВЕНО: valid slugs с правилни default-и
         $valid_slugs = array(
-            $settings['brands_slug'] ?? 'parfumeri',
+            $settings['brands_slug'] ?? 'parfumeri', // ПОПРАВЕНО
             $settings['notes_slug'] ?? 'notes',
             $settings['perfumers_slug'] ?? 'parfumers',
             $settings['gender_slug'] ?? 'gender',
@@ -198,20 +213,7 @@ class Taxonomy_Rewrite_Handler {
     }
     
     /**
-     * Flush rewrite rules при активация
-     */
-    public function flush_rewrite_rules_on_activation() {
-        $this->add_custom_rewrite_rules();
-        flush_rewrite_rules(false);
-        
-        // Логваме за debugging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Parfume Reviews: Rewrite rules flushed');
-        }
-    }
-    
-    /**
-     * Debug: Получава всички rewrite rules за плъгина
+     * Debug функции
      */
     public function get_debug_rewrite_rules() {
         global $wp_rewrite;
@@ -230,25 +232,14 @@ class Taxonomy_Rewrite_Handler {
     }
     
     /**
-     * Debug: Проверява дали URL има правилни rewrite rules
+     * Force flush на activation
      */
-    public function debug_url($url_path) {
-        $debug_info = array();
-        $debug_info['url_path'] = $url_path;
-        $debug_info['decoded_url'] = urldecode($url_path);
+    public function flush_rewrite_rules_on_activation() {
+        $this->add_custom_rewrite_rules();
+        flush_rewrite_rules(false);
         
-        // Проверяваме дали URL-ът съвпада с някой pattern
-        global $wp_rewrite;
-        $debug_info['matching_rules'] = array();
-        
-        foreach ($wp_rewrite->rules as $pattern => $rewrite) {
-            if (preg_match('#^' . $pattern . '#', trim($url_path, '/'))) {
-                $debug_info['matching_rules'][$pattern] = $rewrite;
-            }
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Parfume Reviews: Rewrite rules flushed on activation');
         }
-        
-        $debug_info['parfume_rules'] = $this->get_debug_rewrite_rules();
-        
-        return $debug_info;
     }
 }

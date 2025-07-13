@@ -2,132 +2,169 @@
 namespace Parfume_Reviews\Taxonomies;
 
 /**
- * Taxonomy SEO Support - управлява SEO интеграция за таксономии
+ * Taxonomy SEO Support - управлява SEO интеграцията за таксономии
+ * 📁 Файл: includes/taxonomies/class-taxonomy-seo-support.php
+ * ПОПРАВЕНО: Правилни default slug-ове
  */
 class Taxonomy_SEO_Support {
     
     public function __construct() {
-        add_action('init', array($this, 'add_seo_support'));
-    }
-    
-    /**
-     * Добавя SEO поддръжка за всички таксономии
-     */
-    public function add_seo_support() {
-        $this->add_yoast_seo_support();
-        $this->add_rankmath_support();
+        // Yoast SEO hooks
+        add_action('wpseo_init', array($this, 'add_yoast_support'));
+        
+        // RankMath hooks
+        add_action('rank_math/loaded', array($this, 'add_rankmath_support'));
+        
+        // Generic SEO hooks
+        add_action('wp_head', array($this, 'add_generic_meta_tags'));
+        add_action('wp_head', array($this, 'add_structured_data'));
     }
     
     /**
      * Добавя Yoast SEO поддръжка
      */
-    private function add_yoast_seo_support() {
-        if (!class_exists('WPSEO_Options')) {
-            return;
+    public function add_yoast_support() {
+        if (class_exists('WPSEO_Options')) {
+            add_filter('wpseo_title', array($this, 'modify_yoast_title'));
+            add_filter('wpseo_metadesc', array($this, 'modify_yoast_description'));
+            add_filter('wpseo_canonical', array($this, 'modify_yoast_canonical'));
+            add_action('wpseo_head', array($this, 'add_yoast_og_tags'));
         }
-        
-        add_filter('wpseo_metabox_prio', function() { return 'high'; });
-        
-        // Enable Yoast for all our taxonomies
-        $taxonomies = $this->get_supported_taxonomies();
-        foreach ($taxonomies as $taxonomy) {
-            add_filter('wpseo_taxonomy_meta_' . $taxonomy, '__return_true');
-        }
-        
-        // Add taxonomy support
-        add_filter('wpseo_metabox_prio', '__return_true');
-        
-        // Enable breadcrumbs for taxonomies
-        add_filter('wpseo_breadcrumb_links', array($this, 'add_yoast_breadcrumbs'));
-        
-        // Add OpenGraph tags for taxonomy pages
-        add_action('wpseo_head', array($this, 'add_yoast_og_tags'));
     }
     
     /**
      * Добавя RankMath поддръжка
      */
-    private function add_rankmath_support() {
-        if (!defined('RANK_MATH_VERSION')) {
-            return;
+    public function add_rankmath_support() {
+        if (class_exists('RankMath')) {
+            add_filter('rank_math/frontend/title', array($this, 'modify_rankmath_title'));
+            add_filter('rank_math/frontend/description', array($this, 'modify_rankmath_description'));
+            add_filter('rank_math/frontend/canonical', array($this, 'modify_rankmath_canonical'));
+            add_action('rank_math/head', array($this, 'add_rankmath_og_tags'));
         }
-        
-        add_filter('rank_math/metabox/priority', function() { return 'high'; });
-        
-        // Enable RankMath for all our taxonomies
-        $taxonomies = $this->get_supported_taxonomies();
-        foreach ($taxonomies as $taxonomy) {
-            add_filter('rank_math/taxonomy/' . $taxonomy, '__return_true');
-            add_filter('rank_math/taxonomy/' . $taxonomy . '/add_meta_box', '__return_true');
-            
-            // Add to sitemap
-            add_filter('rank_math/sitemap/enable_' . $taxonomy, '__return_true');
-            
-            // Enable structured data
-            add_filter('rank_math/schema/taxonomy_' . $taxonomy, '__return_true');
-        }
-        
-        // Add breadcrumbs
-        add_filter('rank_math/frontend/breadcrumb/items', array($this, 'add_rankmath_breadcrumbs'));
-        
-        // Add OpenGraph tags
-        add_action('rank_math/head', array($this, 'add_rankmath_og_tags'));
     }
     
     /**
-     * Добавя Yoast breadcrumbs за таксономии
+     * Модифицира Yoast title за taxonomy страници
      */
-    public function add_yoast_breadcrumbs($links) {
-        if (!is_tax($this->get_supported_taxonomies())) {
-            return $links;
+    public function modify_yoast_title($title) {
+        if (is_tax($this->get_supported_taxonomies())) {
+            $queried_object = get_queried_object();
+            if ($queried_object) {
+                // Custom title based on taxonomy
+                switch ($queried_object->taxonomy) {
+                    case 'marki':
+                        return $queried_object->name . ' - ' . __('Парфюми от марката', 'parfume-reviews') . ' | ' . get_bloginfo('name');
+                    case 'perfumer':
+                        return $queried_object->name . ' - ' . __('Парфюми от парфюмера', 'parfume-reviews') . ' | ' . get_bloginfo('name');
+                    case 'notes':
+                        return $queried_object->name . ' - ' . __('Парфюми с нотка', 'parfume-reviews') . ' | ' . get_bloginfo('name');
+                    default:
+                        return $queried_object->name . ' - ' . __('Парфюми', 'parfume-reviews') . ' | ' . get_bloginfo('name');
+                }
+            }
         }
         
-        $queried_object = get_queried_object();
-        if (!$queried_object || !isset($queried_object->taxonomy)) {
-            return $links;
-        }
-        
-        // Add taxonomy archive link
-        $taxonomy_obj = get_taxonomy($queried_object->taxonomy);
-        if ($taxonomy_obj) {
-            $archive_link = array(
-                'url' => $this->get_taxonomy_archive_url($queried_object->taxonomy),
-                'text' => $taxonomy_obj->labels->name,
-            );
-            
-            // Insert before the last element (current page)
-            array_splice($links, -1, 0, array($archive_link));
-        }
-        
-        return $links;
+        return $title;
     }
     
     /**
-     * Добавя RankMath breadcrumbs за таксономии
+     * Модифицира Yoast description за taxonomy страници
      */
-    public function add_rankmath_breadcrumbs($crumbs) {
-        if (!is_tax($this->get_supported_taxonomies())) {
-            return $crumbs;
+    public function modify_yoast_description($description) {
+        if (is_tax($this->get_supported_taxonomies())) {
+            $queried_object = get_queried_object();
+            if ($queried_object) {
+                if (!empty($queried_object->description)) {
+                    return $queried_object->description;
+                }
+                
+                // Default descriptions based on taxonomy
+                switch ($queried_object->taxonomy) {
+                    case 'marki':
+                        return sprintf(__('Открийте всички парфюми от марката %s. Прегледайте нашата колекция и намерете вашия следващ любим аромат.', 'parfume-reviews'), $queried_object->name);
+                    case 'perfumer':
+                        return sprintf(__('Парфюми създадени от %s. Разгледайте уникалните творения на този талантлив парфюмер.', 'parfume-reviews'), $queried_object->name);
+                    case 'notes':
+                        return sprintf(__('Парфюми с нотка %s. Намерете ароматите, които съдържат тази специална съставка.', 'parfume-reviews'), $queried_object->name);
+                    default:
+                        return sprintf(__('Разгледайте парфюмите в категория %s.', 'parfume-reviews'), $queried_object->name);
+                }
+            }
         }
         
-        $queried_object = get_queried_object();
-        if (!$queried_object || !isset($queried_object->taxonomy)) {
-            return $crumbs;
+        return $description;
+    }
+    
+    /**
+     * Модифицира canonical URL за taxonomy страници
+     */
+    public function modify_yoast_canonical($canonical) {
+        if (is_tax($this->get_supported_taxonomies())) {
+            $queried_object = get_queried_object();
+            if ($queried_object) {
+                return $this->get_taxonomy_archive_url($queried_object->taxonomy);
+            }
         }
         
-        // Add taxonomy archive link
-        $taxonomy_obj = get_taxonomy($queried_object->taxonomy);
-        if ($taxonomy_obj) {
-            $archive_crumb = array(
-                $this->get_taxonomy_archive_url($queried_object->taxonomy),
-                $taxonomy_obj->labels->name,
-            );
-            
-            // Insert before the last element (current page)
-            array_splice($crumbs, -1, 0, array($archive_crumb));
+        return $canonical;
+    }
+    
+    /**
+     * Модифицира RankMath title
+     */
+    public function modify_rankmath_title($title) {
+        return $this->modify_yoast_title($title);
+    }
+    
+    /**
+     * Модифицира RankMath description
+     */
+    public function modify_rankmath_description($description) {
+        return $this->modify_yoast_description($description);
+    }
+    
+    /**
+     * Модифицира RankMath canonical
+     */
+    public function modify_rankmath_canonical($canonical) {
+        return $this->modify_yoast_canonical($canonical);
+    }
+    
+    /**
+     * Добавя generic meta tags за taxonomy страници
+     */
+    public function add_generic_meta_tags() {
+        if (is_tax($this->get_supported_taxonomies())) {
+            $queried_object = get_queried_object();
+            if ($queried_object) {
+                // Only add if no SEO plugin is active
+                if (!class_exists('WPSEO_Options') && !class_exists('RankMath')) {
+                    $title = $this->modify_yoast_title('');
+                    $description = $this->modify_yoast_description('');
+                    
+                    if ($title) {
+                        echo '<title>' . esc_html($title) . '</title>' . "\n";
+                    }
+                    
+                    if ($description) {
+                        echo '<meta name="description" content="' . esc_attr($description) . '">' . "\n";
+                    }
+                }
+            }
         }
-        
-        return $crumbs;
+    }
+    
+    /**
+     * Добавя structured data за taxonomy страници
+     */
+    public function add_structured_data() {
+        if (is_tax($this->get_supported_taxonomies())) {
+            $queried_object = get_queried_object();
+            if ($queried_object) {
+                $this->output_structured_data($queried_object);
+            }
+        }
     }
     
     /**
@@ -232,8 +269,9 @@ class Taxonomy_SEO_Support {
         $settings = get_option('parfume_reviews_settings', array());
         $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
         
+        // ПОПРАВЕНО: Правилни default slug-ове
         $slug_mapping = array(
-            'marki' => !empty($settings['brands_slug']) ? $settings['brands_slug'] : 'marki',
+            'marki' => !empty($settings['brands_slug']) ? $settings['brands_slug'] : 'parfumeri',
             'notes' => !empty($settings['notes_slug']) ? $settings['notes_slug'] : 'notes',
             'perfumer' => !empty($settings['perfumers_slug']) ? $settings['perfumers_slug'] : 'parfumers',
             'gender' => !empty($settings['gender_slug']) ? $settings['gender_slug'] : 'gender',

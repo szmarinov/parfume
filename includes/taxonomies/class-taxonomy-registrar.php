@@ -3,6 +3,8 @@ namespace Parfume_Reviews\Taxonomies;
 
 /**
  * Taxonomy Registrar - отговаря за регистрацията на всички таксономии
+ * 📁 Файл: includes/taxonomies/class-taxonomy-registrar.php
+ * ПОПРАВЕНО: brands_slug default от 'marki' на 'parfumeri'
  */
 class Taxonomy_Registrar {
     
@@ -110,7 +112,8 @@ class Taxonomy_Registrar {
      * Регистрира Brands taxonomy
      */
     private function register_brands_taxonomy($settings, $parfume_slug) {
-        $brands_slug = !empty($settings['brands_slug']) ? $settings['brands_slug'] : 'marki';
+        // ПОПРАВЕНО: brands_slug default от 'marki' на 'parfumeri'
+        $brands_slug = !empty($settings['brands_slug']) ? $settings['brands_slug'] : 'parfumeri';
         
         $brands_labels = array(
             'name' => __('Марки', 'parfume-reviews'),
@@ -274,7 +277,7 @@ class Taxonomy_Registrar {
             'show_in_rest' => true,
             'public' => true,
             'publicly_queryable' => true,
-            'meta_box_cb' => 'post_categories_meta_box',
+            'meta_box_cb' => 'post_tags_meta_box',
             'show_in_nav_menus' => true,
             'show_tagcloud' => true,
         ));
@@ -287,16 +290,14 @@ class Taxonomy_Registrar {
      */
     private function add_default_gender_terms() {
         $default_genders = array(
-            'Мъжки парфюми',
-            'Дамски парфюми', 
-            'Арабски парфюми',
-            'Луксозни парфюми',
-            'Нишови парфюми'
+            'unisex' => __('Унисекс', 'parfume-reviews'),
+            'men' => __('Мъжки', 'parfume-reviews'),
+            'women' => __('Дамски', 'parfume-reviews'),
         );
         
-        foreach ($default_genders as $gender) {
-            if (!term_exists($gender, 'gender')) {
-                wp_insert_term($gender, 'gender');
+        foreach ($default_genders as $slug => $name) {
+            if (!term_exists($slug, 'gender')) {
+                wp_insert_term($name, 'gender', array('slug' => $slug));
             }
         }
     }
@@ -306,15 +307,19 @@ class Taxonomy_Registrar {
      */
     private function add_default_aroma_type_terms() {
         $default_aroma_types = array(
-            'Тоалетна вода',
-            'Парфюмна вода',
-            'Парфюм',
-            'Парфюмен елексир'
+            'floral' => __('Флорални', 'parfume-reviews'),
+            'oriental' => __('Ориенталски', 'parfume-reviews'),
+            'woody' => __('Дървесни', 'parfume-reviews'),
+            'fresh' => __('Свежи', 'parfume-reviews'),
+            'citrus' => __('Цитрусови', 'parfume-reviews'),
+            'fruity' => __('Плодови', 'parfume-reviews'),
+            'spicy' => __('Пикантни', 'parfume-reviews'),
+            'aquatic' => __('Водни', 'parfume-reviews'),
         );
         
-        foreach ($default_aroma_types as $type) {
-            if (!term_exists($type, 'aroma_type')) {
-                wp_insert_term($type, 'aroma_type');
+        foreach ($default_aroma_types as $slug => $name) {
+            if (!term_exists($slug, 'aroma_type')) {
+                wp_insert_term($name, 'aroma_type', array('slug' => $slug));
             }
         }
     }
@@ -324,13 +329,19 @@ class Taxonomy_Registrar {
      */
     private function add_default_brand_terms() {
         $default_brands = array(
-            'Chanel', 'Dior', 'Tom Ford', 'Creed', 'Maison Francis Kurkdjian',
-            'By Kilian', 'Amouage', 'Xerjoff', 'Parfums de Marly', 'Montale'
+            'chanel' => 'Chanel',
+            'dior' => 'Dior',
+            'ysl' => 'Yves Saint Laurent',
+            'versace' => 'Versace',
+            'armani' => 'Giorgio Armani',
+            'gucci' => 'Gucci',
+            'prada' => 'Prada',
+            'tom-ford' => 'Tom Ford',
         );
         
-        foreach ($default_brands as $brand) {
-            if (!term_exists($brand, 'marki')) {
-                wp_insert_term($brand, 'marki');
+        foreach ($default_brands as $slug => $name) {
+            if (!term_exists($slug, 'marki')) {
+                wp_insert_term($name, 'marki', array('slug' => $slug));
             }
         }
     }
@@ -339,11 +350,17 @@ class Taxonomy_Registrar {
      * Добавя default terms за Season
      */
     private function add_default_season_terms() {
-        $default_seasons = array('Пролет', 'Лято', 'Есен', 'Зима');
+        $default_seasons = array(
+            'spring' => __('Пролет', 'parfume-reviews'),
+            'summer' => __('Лято', 'parfume-reviews'),
+            'autumn' => __('Есен', 'parfume-reviews'),
+            'winter' => __('Зима', 'parfume-reviews'),
+            'all-year' => __('Целогодишно', 'parfume-reviews'),
+        );
         
-        foreach ($default_seasons as $season) {
-            if (!term_exists($season, 'season')) {
-                wp_insert_term($season, 'season');
+        foreach ($default_seasons as $slug => $name) {
+            if (!term_exists($slug, 'season')) {
+                wp_insert_term($name, 'season', array('slug' => $slug));
             }
         }
     }
@@ -352,11 +369,16 @@ class Taxonomy_Registrar {
      * Добавя default terms за Intensity
      */
     private function add_default_intensity_terms() {
-        $default_intensities = array('Силни', 'Средни', 'Леки');
+        $default_intensities = array(
+            'light' => __('Лека', 'parfume-reviews'),
+            'moderate' => __('Умерена', 'parfume-reviews'),
+            'strong' => __('Силна', 'parfume-reviews'),
+            'very-strong' => __('Много силна', 'parfume-reviews'),
+        );
         
-        foreach ($default_intensities as $intensity) {
-            if (!term_exists($intensity, 'intensity')) {
-                wp_insert_term($intensity, 'intensity');
+        foreach ($default_intensities as $slug => $name) {
+            if (!term_exists($slug, 'intensity')) {
+                wp_insert_term($name, 'intensity', array('slug' => $slug));
             }
         }
     }
@@ -366,13 +388,19 @@ class Taxonomy_Registrar {
      */
     private function add_default_notes_terms() {
         $default_notes = array(
-            'Роза', 'Жасмин', 'Лавандула', 'Бергамот', 'Лимон',
-            'Сандалово дърво', 'Кедър', 'Мускус', 'Амбър', 'Ванилия'
+            'rose' => __('Роза', 'parfume-reviews'),
+            'jasmine' => __('Жасмин', 'parfume-reviews'),
+            'vanilla' => __('Ванилия', 'parfume-reviews'),
+            'sandalwood' => __('Сандалово дърво', 'parfume-reviews'),
+            'bergamot' => __('Бергамот', 'parfume-reviews'),
+            'lavender' => __('Лавандула', 'parfume-reviews'),
+            'musk' => __('Мускус', 'parfume-reviews'),
+            'amber' => __('Амбра', 'parfume-reviews'),
         );
         
-        foreach ($default_notes as $note) {
-            if (!term_exists($note, 'notes')) {
-                wp_insert_term($note, 'notes');
+        foreach ($default_notes as $slug => $name) {
+            if (!term_exists($slug, 'notes')) {
+                wp_insert_term($name, 'notes', array('slug' => $slug));
             }
         }
     }
@@ -382,14 +410,17 @@ class Taxonomy_Registrar {
      */
     private function add_default_perfumer_terms() {
         $default_perfumers = array(
-            'Алберто Морилас', 'Куентин Биш', 'Доминик Ропион', 'Оливие Кресп',
-            'Франсоа Демаши', 'Кристофър Шелдрейк', 'Жак Кавалие', 'Анок Филибер',
-            'Мишел Жирар', 'Пиер Монтале'
+            'jacques-polge' => 'Jacques Polge',
+            'olivier-polge' => 'Olivier Polge',
+            'alberto-morillas' => 'Alberto Morillas',
+            'francois-demachy' => 'François Demachy',
+            'jean-claude-ellena' => 'Jean-Claude Ellena',
+            'thierry-wasser' => 'Thierry Wasser',
         );
         
-        foreach ($default_perfumers as $perfumer) {
-            if (!term_exists($perfumer, 'perfumer')) {
-                wp_insert_term($perfumer, 'perfumer');
+        foreach ($default_perfumers as $slug => $name) {
+            if (!term_exists($slug, 'perfumer')) {
+                wp_insert_term($name, 'perfumer', array('slug' => $slug));
             }
         }
     }
