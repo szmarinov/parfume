@@ -52,6 +52,19 @@ class Taxonomy_Template_Loader {
                 return $plugin_template;
             }
         } elseif (is_tax('perfumer')) {
+            // Special handling for perfumer taxonomy - same logic as in Post_Type class
+            $queried_object = get_queried_object();
+            
+            // Check if we're on a specific perfumer page vs all perfumers archive
+            // For specific perfumer term (has slug and name), use single-perfumer template
+            if ($queried_object && !empty($queried_object->slug) && !empty($queried_object->name)) {
+                $single_perfumer_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/single-perfumer.php';
+                if (file_exists($single_perfumer_template)) {
+                    return $single_perfumer_template;
+                }
+            }
+            
+            // For perfumer archive (all perfumers listing), use taxonomy-perfumer.php
             $plugin_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/taxonomy-perfumer.php';
             if (file_exists($plugin_template)) {
                 return $plugin_template;

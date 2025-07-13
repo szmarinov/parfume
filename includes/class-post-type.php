@@ -225,7 +225,7 @@ class Post_Type {
             if ($queried_object && isset($queried_object->taxonomy)) {
                 // Special handling for perfumer taxonomy
                 if ($queried_object->taxonomy === 'perfumer') {
-                    // Check if we're on the main perfumer archive vs specific perfumer page
+                    // Check if we're on a specific perfumer page vs all perfumers archive
                     // For specific perfumer term (has slug and name), use single-perfumer template
                     if (!empty($queried_object->slug) && !empty($queried_object->name)) {
                         $single_perfumer_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/single-perfumer.php';
