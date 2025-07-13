@@ -2,113 +2,170 @@
 namespace Parfume_Reviews;
 
 /**
- * Post Type class - управлява регистрацията на parfume post type
- * АКТУАЛИЗИРАН ЗА РАБОТА С НОВИЯ QUERY HANDLER
+ * Post Type Handler
+ * 📁 Файл: includes/class-post-type.php
+ * ПОПРАВЕНО: Template loading и rewrite rules
  */
 class Post_Type {
     
-    /**
-     * Instance на Query_Handler
-     */
-    private $query_handler;
-    
     public function __construct() {
-        add_action('init', array($this, 'register_post_type'));
-        add_action('init', array($this, 'add_rewrite_rules'));
+        add_action('init', array($this, 'register_post_types'), 10);
+        add_action('init', array($this, 'add_rewrite_rules'), 15);
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
-        add_filter('template_include', array($this, 'load_templates'));
+        add_filter('template_include', array($this, 'load_templates'), 99);
         
-        // Инициализираме Query Handler
-        if (class_exists('Parfume_Reviews\\Post_Type\\Query_Handler')) {
-            $this->query_handler = new \Parfume_Reviews\Post_Type\Query_Handler();
-        }
-        
-        // Debug хук
+        // Debug hooks
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            add_action('wp_footer', array($this, 'debug_query_info'));
+            add_action('wp', array($this, 'debug_query_info'));
         }
     }
     
-    public function register_post_type() {
+    /**
+     * Регистрира custom post types
+     */
+    public function register_post_types() {
         $settings = get_option('parfume_reviews_settings', array());
-        $slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
+        $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
         
-        $labels = array(
-            'name'                  => _x('Parfumes', 'Post Type General Name', 'parfume-reviews'),
-            'singular_name'         => _x('Parfume', 'Post Type Singular Name', 'parfume-reviews'),
-            'menu_name'            => __('Parfumes', 'parfume-reviews'),
-            'name_admin_bar'       => __('Parfume', 'parfume-reviews'),
-            'archives'             => __('Parfume Archives', 'parfume-reviews'),
-            'attributes'           => __('Parfume Attributes', 'parfume-reviews'),
-            'parent_item_colon'    => __('Parent Parfume:', 'parfume-reviews'),
-            'all_items'            => __('All Parfumes', 'parfume-reviews'),
-            'add_new_item'         => __('Add New Parfume', 'parfume-reviews'),
-            'add_new'              => __('Add New', 'parfume-reviews'),
-            'new_item'             => __('New Parfume', 'parfume-reviews'),
-            'edit_item'            => __('Edit Parfume', 'parfume-reviews'),
-            'update_item'          => __('Update Parfume', 'parfume-reviews'),
-            'view_item'            => __('View Parfume', 'parfume-reviews'),
-            'view_items'           => __('View Parfumes', 'parfume-reviews'),
-            'search_items'         => __('Search Parfumes', 'parfume-reviews'),
-            'not_found'            => __('Not found', 'parfume-reviews'),
-            'not_found_in_trash'   => __('Not found in Trash', 'parfume-reviews'),
-            'featured_image'       => __('Featured Image', 'parfume-reviews'),
-            'set_featured_image'   => __('Set featured image', 'parfume-reviews'),
-            'remove_featured_image' => __('Remove featured image', 'parfume-reviews'),
-            'use_featured_image'   => __('Use as featured image', 'parfume-reviews'),
-            'insert_into_item'     => __('Insert into parfume', 'parfume-reviews'),
-            'uploaded_to_this_item' => __('Uploaded to this parfume', 'parfume-reviews'),
-            'items_list'           => __('Parfumes list', 'parfume-reviews'),
-            'items_list_navigation' => __('Parfumes list navigation', 'parfume-reviews'),
-            'filter_items_list'    => __('Filter parfumes list', 'parfume-reviews'),
-        );
-        
-        $args = array(
-            'label'                => __('Parfume', 'parfume-reviews'),
-            'description'          => __('Parfume reviews and information', 'parfume-reviews'),
-            'labels'               => $labels,
-            'supports'             => array('title', 'editor', 'thumbnail', 'excerpt', 'comments', 'custom-fields'),
-            'taxonomies'           => array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity'),
-            'hierarchical'         => false,
-            'public'               => true,
-            'show_ui'              => true,
-            'show_in_menu'         => true,
-            'menu_position'        => 20,
-            'menu_icon'            => 'dashicons-heart',
-            'show_in_admin_bar'    => true,
-            'show_in_nav_menus'    => true,
-            'can_export'           => true,
-            'has_archive'          => $slug,
-            'exclude_from_search'  => false,
-            'publicly_queryable'   => true,
-            'capability_type'      => 'post',
-            'show_in_rest'         => true,
-            'rewrite'              => array(
-                'slug'       => $slug,
-                'with_front' => false,
-                'pages'      => true,
-                'feeds'      => true,
+        // Register Parfume post type
+        $parfume_args = array(
+            'labels' => array(
+                'name' => __('Parfumes', 'parfume-reviews'),
+                'singular_name' => __('Parfume', 'parfume-reviews'),
+                'add_new' => __('Add New', 'parfume-reviews'),
+                'add_new_item' => __('Add New Parfume', 'parfume-reviews'),
+                'new_item' => __('New Parfume', 'parfume-reviews'),
+                'edit_item' => __('Edit Parfume', 'parfume-reviews'),
+                'view_item' => __('View Parfume', 'parfume-reviews'),
+                'all_items' => __('All Parfumes', 'parfume-reviews'),
+                'search_items' => __('Search Parfumes', 'parfume-reviews'),
+                'parent_item_colon' => __('Parent Parfumes:', 'parfume-reviews'),
+                'not_found' => __('No parfumes found.', 'parfume-reviews'),
+                'not_found_in_trash' => __('No parfumes found in Trash.', 'parfume-reviews'),
             ),
+            'public' => true,
+            'publicly_queryable' => true,
+            'show_ui' => true,
+            'show_in_menu' => true,
+            'show_in_nav_menus' => true,
+            'show_in_admin_bar' => true,
+            'query_var' => true,
+            'rewrite' => array(
+                'slug' => $parfume_slug,
+                'with_front' => false,
+                'feeds' => true,
+                'pages' => true,
+            ),
+            'capability_type' => 'post',
+            'has_archive' => true,
+            'hierarchical' => false,
+            'menu_position' => 20,
+            'menu_icon' => 'dashicons-products',
+            'supports' => array(
+                'title',
+                'editor',
+                'excerpt',
+                'thumbnail',
+                'custom-fields',
+                'comments',
+                'revisions',
+                'author',
+                'page-attributes'
+            ),
+            'show_in_rest' => true,
+            'rest_base' => 'parfumes',
+            'rest_controller_class' => 'WP_REST_Posts_Controller',
         );
         
-        register_post_type('parfume', $args);
+        register_post_type('parfume', $parfume_args);
+        
+        // Регистрираме и parfume_blog ако е нужен
+        $this->register_parfume_blog_post_type($settings);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Parfume Reviews: Post Type initialized');
+        }
     }
     
+    /**
+     * Регистрира parfume blog post type
+     */
+    private function register_parfume_blog_post_type($settings) {
+        $blog_slug = !empty($settings['blog_slug']) ? $settings['blog_slug'] : 'parfume-blog';
+        
+        $blog_args = array(
+            'labels' => array(
+                'name' => __('Parfume Articles', 'parfume-reviews'),
+                'singular_name' => __('Parfume Article', 'parfume-reviews'),
+                'add_new' => __('Add New Article', 'parfume-reviews'),
+                'add_new_item' => __('Add New Parfume Article', 'parfume-reviews'),
+                'edit_item' => __('Edit Article', 'parfume-reviews'),
+                'view_item' => __('View Article', 'parfume-reviews'),
+                'all_items' => __('All Articles', 'parfume-reviews'),
+                'search_items' => __('Search Articles', 'parfume-reviews'),
+                'not_found' => __('No articles found.', 'parfume-reviews'),
+                'not_found_in_trash' => __('No articles found in Trash.', 'parfume-reviews'),
+            ),
+            'public' => true,
+            'publicly_queryable' => true,
+            'show_ui' => true,
+            'show_in_menu' => 'edit.php?post_type=parfume',
+            'show_in_nav_menus' => true,
+            'query_var' => true,
+            'rewrite' => array(
+                'slug' => $blog_slug,
+                'with_front' => false,
+            ),
+            'capability_type' => 'post',
+            'has_archive' => true,
+            'hierarchical' => false,
+            'supports' => array(
+                'title',
+                'editor', 
+                'excerpt',
+                'thumbnail',
+                'comments',
+                'revisions',
+                'author'
+            ),
+            'show_in_rest' => true,
+        );
+        
+        register_post_type('parfume_blog', $blog_args);
+    }
+    
+    /**
+     * ПОПРАВЕНО: Добавя custom rewrite rules
+     */
     public function add_rewrite_rules() {
         $settings = get_option('parfume_reviews_settings', array());
         $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
         
-        // Archive pagination
+        // ПОПРАВЕНО: Archive pagination
         add_rewrite_rule(
-            $parfume_slug . '/page/?([0-9]{1,})/?$',
+            '^' . $parfume_slug . '/page/?([0-9]{1,})/?$',
             'index.php?post_type=parfume&paged=$matches[1]',
             'top'
         );
         
-        // Filter pagination
+        // ПОПРАВЕНО: Filter pagination
         add_rewrite_rule(
-            $parfume_slug . '/filter/page/?([0-9]{1,})/?$',
+            '^' . $parfume_slug . '/filter/page/?([0-9]{1,})/?$',
             'index.php?post_type=parfume&paged=$matches[1]',
+            'top'
+        );
+        
+        // ПОПРАВЕНО: Search within parfumes
+        add_rewrite_rule(
+            '^' . $parfume_slug . '/search/([^/]+)/?$',
+            'index.php?post_type=parfume&s=$matches[1]',
+            'top'
+        );
+        
+        // ПОПРАВЕНО: Search pagination
+        add_rewrite_rule(
+            '^' . $parfume_slug . '/search/([^/]+)/page/?([0-9]{1,})/?$',
+            'index.php?post_type=parfume&s=$matches[1]&paged=$matches[2]',
             'top'
         );
     }
@@ -201,6 +258,9 @@ class Post_Type {
         }
     }
     
+    /**
+     * ПОПРАВЕНО: Template loading с по-добри проверки
+     */
     public function load_templates($template) {
         global $post;
         
@@ -220,7 +280,7 @@ class Post_Type {
             }
         }
         
-        // Taxonomy templates
+        // ПОПРАВЕНО: Taxonomy templates с по-добри проверки
         if (is_tax(array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity'))) {
             $queried_object = get_queried_object();
             
@@ -250,118 +310,51 @@ class Post_Type {
         return $template;
     }
     
+    /**
+     * Debug query информация
+     */
     public function debug_query_info() {
         global $wp_query;
         
         if (is_post_type_archive('parfume') || is_tax(array('marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'))) {
-            echo '<div style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.9); color: white; padding: 10px; z-index: 9999; font-size: 12px; max-width: 300px;">';
-            echo '<strong>Query Debug:</strong><br>';
-            echo '<strong>Is Archive:</strong> ' . (is_post_type_archive('parfume') ? 'YES' : 'NO') . '<br>';
-            echo '<strong>Is Tax:</strong> ' . (is_tax() ? 'YES' : 'NO') . '<br>';
-            echo '<strong>Found Posts:</strong> ' . $wp_query->found_posts . '<br>';
-            
-            // Показваме активните филтри ако има такива
-            if ($this->query_handler) {
-                $active_filters = $this->query_handler->get_active_filters();
-                if (!empty($active_filters)) {
-                    echo '<strong>Active Filters:</strong><pre>' . print_r($active_filters, true) . '</pre>';
+            if (defined('WP_DEBUG_DISPLAY') && WP_DEBUG_DISPLAY && current_user_can('manage_options')) {
+                echo '<div style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.9); color: white; padding: 10px; z-index: 9999; font-size: 12px; max-width: 300px;">';
+                echo '<strong>Query Debug:</strong><br>';
+                echo '<strong>Is Archive:</strong> ' . (is_post_type_archive('parfume') ? 'YES' : 'NO') . '<br>';
+                echo '<strong>Is Tax:</strong> ' . (is_tax() ? 'YES' : 'NO') . '<br>';
+                echo '<strong>Found Posts:</strong> ' . $wp_query->found_posts . '<br>';
+                echo '<strong>Request:</strong> ' . $wp_query->request . '<br>';
+                
+                if (is_tax()) {
+                    $queried_object = get_queried_object();
+                    if ($queried_object) {
+                        echo '<strong>Taxonomy:</strong> ' . $queried_object->taxonomy . '<br>';
+                        echo '<strong>Term:</strong> ' . $queried_object->name . '<br>';
+                    }
                 }
-            }
-            
-            echo '</div>';
-        }
-    }
-    
-    /**
-     * АКТУАЛИЗИРАНИ МЕТОДИ ЗА ФИЛТРИ - ИЗПОЛЗВАТ НОВИЯ QUERY HANDLER
-     */
-    
-    /**
-     * Получава активните филтри от Query Handler
-     */
-    public function get_active_filters() {
-        if ($this->query_handler) {
-            return $this->query_handler->get_active_filters();
-        }
-        
-        // Fallback ако Query Handler не е наличен
-        return self::get_active_filters_static();
-    }
-    
-    /**
-     * Построява URL за филтри използвайки Query Handler
-     * ПОПРАВЕНО: Премахнат дублираният static метод
-     */
-    public function build_filter_url($filters = array(), $base_url = '') {
-        if ($this->query_handler) {
-            return $this->query_handler->build_filter_url($filters, $base_url);
-        }
-        
-        // Fallback ако Query Handler не е наличен
-        return self::build_filter_url_static($filters, $base_url);
-    }
-    
-    /**
-     * Проверява дали има активни филтри
-     */
-    public function has_active_filters() {
-        $filters = $this->get_active_filters();
-        return !empty($filters);
-    }
-    
-    /**
-     * СТАТИЧНИ МЕТОДИ ЗА BACKWARD COMPATIBILITY
-     */
-    
-    /**
-     * Статичен метод за получаване на активни филтри
-     */
-    public static function get_active_filters_static() {
-        $active_filters = array();
-        $supported_taxonomies = array('gender', 'aroma_type', 'marki', 'season', 'intensity', 'notes', 'perfumer');
-        
-        foreach ($supported_taxonomies as $taxonomy) {
-            if (!empty($_GET[$taxonomy])) {
-                $terms = is_array($_GET[$taxonomy]) ? $_GET[$taxonomy] : array($_GET[$taxonomy]);
-                $active_filters[$taxonomy] = array_map('sanitize_text_field', $terms);
+                
+                echo '</div>';
             }
         }
-        
-        // Добавяме ценови филтри
-        if (!empty($_GET['min_price'])) {
-            $active_filters['min_price'] = floatval($_GET['min_price']);
-        }
-        
-        if (!empty($_GET['max_price'])) {
-            $active_filters['max_price'] = floatval($_GET['max_price']);
-        }
-        
-        // Добавяме рейтинг филтър
-        if (!empty($_GET['min_rating'])) {
-            $active_filters['min_rating'] = floatval($_GET['min_rating']);
-        }
-        
-        return $active_filters;
     }
     
     /**
-     * Статичен метод за построяване на URL за филтри
+     * Получава настройки за post type
      */
-    public static function build_filter_url_static($filters = array(), $base_url = '') {
-        if (empty($base_url)) {
-            if (is_post_type_archive('parfume')) {
-                $base_url = get_post_type_archive_link('parfume');
-            } elseif (is_tax()) {
-                $base_url = get_term_link(get_queried_object());
-            } else {
-                $base_url = home_url('/parfiumi/');
-            }
-        }
+    public function get_post_type_settings() {
+        return get_option('parfume_reviews_settings', array());
+    }
+    
+    /**
+     * Flush rewrite rules (за използване при нужда)
+     */
+    public function flush_rewrite_rules() {
+        $this->register_post_types();
+        $this->add_rewrite_rules();
+        flush_rewrite_rules(false);
         
-        if (!empty($filters)) {
-            $base_url = add_query_arg($filters, $base_url);
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Parfume Reviews: Rewrite rules flushed');
         }
-        
-        return $base_url;
     }
 }
