@@ -2,16 +2,18 @@
 namespace Parfume_Reviews\Post_Type;
 
 /**
- * Template Loader - управлява зареждането на template файлове
+ * Template Loader - управлява зареждането на template файлове за post types
+ * 📁 Файл: includes/post-type/class-template-loader.php
  */
 class Template_Loader {
     
     public function __construct() {
-        add_filter('template_include', array($this, 'template_loader'));
+        add_filter('template_include', array($this, 'template_loader'), 5); // По-висок приоритет от taxonomy loader
     }
     
     /**
-     * Template loader - зарежда правилните template файлове
+     * Template loader - зарежда правилните template файлове за post types
+     * ВАЖНО: Този loader обработва САМО post types, НЕ taxonomies
      */
     public function template_loader($template) {
         // Single parfume template
@@ -46,42 +48,7 @@ class Template_Loader {
             }
         }
         
-        // Taxonomy templates - специфични таксономии
-        if (is_tax(array('marki', 'notes', 'perfumer'))) {
-            $queried_object = get_queried_object();
-            if ($queried_object && isset($queried_object->taxonomy)) {
-                $template_files = array(
-                    'taxonomy-' . $queried_object->taxonomy . '-' . $queried_object->slug . '.php',
-                    'taxonomy-' . $queried_object->taxonomy . '.php',
-                    'taxonomy.php'
-                );
-                
-                foreach ($template_files as $template_file) {
-                    $plugin_template = $this->locate_template($template_file);
-                    if ($plugin_template) {
-                        return $plugin_template;
-                    }
-                }
-            }
-        }
-        
-        // Generic taxonomy templates
-        if (is_tax(array('gender', 'aroma_type', 'season', 'intensity'))) {
-            $queried_object = get_queried_object();
-            if ($queried_object && isset($queried_object->taxonomy)) {
-                $template_files = array(
-                    'taxonomy-' . $queried_object->taxonomy . '.php',
-                    'taxonomy.php'
-                );
-                
-                foreach ($template_files as $template_file) {
-                    $plugin_template = $this->locate_template($template_file);
-                    if ($plugin_template) {
-                        return $plugin_template;
-                    }
-                }
-            }
-        }
+        // НЕ обработваме taxonomies тук - това се прави от Taxonomy_Template_Loader
         
         return $template;
     }
@@ -131,14 +98,6 @@ class Template_Loader {
         } elseif (is_post_type_archive('parfume_blog')) {
             $templates[] = 'archive-parfume-blog.php';
             $templates[] = 'archive.php';
-        } elseif (is_tax()) {
-            $queried_object = get_queried_object();
-            if ($queried_object && isset($queried_object->taxonomy)) {
-                $templates[] = 'taxonomy-' . $queried_object->taxonomy . '-' . $queried_object->slug . '.php';
-                $templates[] = 'taxonomy-' . $queried_object->taxonomy . '.php';
-                $templates[] = 'taxonomy.php';
-                $templates[] = 'archive.php';
-            }
         }
         
         return $templates;
@@ -213,7 +172,7 @@ class Template_Loader {
     }
     
     /**
-     * Получава всички налични template файлове
+     * Получава всички налични template файлове за post types
      */
     public function get_available_templates() {
         $templates = array();
@@ -223,7 +182,10 @@ class Template_Loader {
             $files = scandir($template_dir);
             foreach ($files as $file) {
                 if (pathinfo($file, PATHINFO_EXTENSION) === 'php') {
-                    $templates[] = $file;
+                    // Филтрираме само post type templates
+                    if (preg_match('/^(single|archive)-parfume/', $file)) {
+                        $templates[] = $file;
+                    }
                 }
             }
         }
@@ -243,13 +205,6 @@ class Template_Loader {
             $classes[] = 'parfume-archive-page';
         } elseif (is_post_type_archive('parfume_blog')) {
             $classes[] = 'parfume-blog-archive-page';
-        } elseif (is_tax(array('marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'))) {
-            $classes[] = 'parfume-taxonomy-page';
-            
-            $queried_object = get_queried_object();
-            if ($queried_object && isset($queried_object->taxonomy)) {
-                $classes[] = 'parfume-taxonomy-' . $queried_object->taxonomy;
-            }
         }
         
         return $classes;
