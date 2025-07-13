@@ -1,0 +1,720 @@
+/* ==========================================================================
+   Single Parfume Page - Dedicated Styles
+   ОБНОВЕН С ГАЛЕРИЯ И ПОДОБРЕНИ STORES СТИЛОВЕ
+   ========================================================================== */
+
+/* Main Container */
+.parfume-single {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+
+/* Container Layout */
+.parfume-container {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+}
+
+.parfume-main-content {
+    flex: 1;
+}
+
+.parfume-stores-sidebar {
+    flex: 0 0 350px;
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+}
+
+/* Header Section */
+.parfume-header {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 50px;
+    align-items: flex-start;
+}
+
+.parfume-gallery {
+    flex: 0 0 45%;
+    position: sticky;
+    top: 20px;
+}
+
+.parfume-featured-image {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    background: #f8f9fa;
+}
+
+.parfume-featured-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.parfume-featured-image:hover img {
+    transform: scale(1.05);
+}
+
+.parfume-summary {
+    flex: 1;
+    padding-left: 20px;
+}
+
+.parfume-title {
+    font-size: 2.5em;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: #1a1a1a;
+    line-height: 1.2;
+}
+
+.parfume-brand {
+    font-size: 1.4em;
+    color: #0073aa;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.parfume-brand a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.parfume-brand a:hover {
+    color: #005a87;
+}
+
+/* Rating Section */
+.parfume-rating {
+    display: flex;
+    align-items: center;
+    margin-bottom: 25px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #ffc107;
+}
+
+.rating-stars {
+    font-size: 1.8em;
+    color: #ffc107;
+    margin-right: 15px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.rating-stars .star {
+    margin-right: 2px;
+}
+
+.rating-stars .star.filled {
+    color: #ffc107;
+}
+
+.rating-stars .star:not(.filled) {
+    color: #e9ecef;
+}
+
+.rating-text {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Quick Info Grid */
+.parfume-quick-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    font-weight: 500;
+    color: #495057;
+}
+
+.info-value a {
+    color: #0073aa;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.info-value a:hover {
+    color: #005a87;
+    text-decoration: underline;
+}
+
+/* ==========================================================================
+   ГАЛЕРИЯ СТИЛОВЕ
+   ========================================================================== */
+
+.parfume-additional-images {
+    margin-top: 20px;
+}
+
+.additional-images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 10px;
+    max-width: 100%;
+}
+
+.additional-image-item {
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.additional-image-item:hover {
+    transform: scale(1.05);
+    border-color: #0073aa;
+    box-shadow: 0 4px 15px rgba(0, 115, 170, 0.3);
+}
+
+.additional-image-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Image Modal */
+.image-modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    padding-top: 60px;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+}
+
+.modal-content {
+    margin: auto;
+    display: block;
+    max-width: 90%;
+    max-height: 80%;
+    border-radius: 8px;
+}
+
+.close-modal {
+    position: absolute;
+    top: 20px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.close-modal:hover {
+    color: #bbb;
+}
+
+/* ==========================================================================
+   ПОДОБРЕНИ STORES СТИЛОВЕ - КАТО НА СКРИЙНШОТА
+   ========================================================================== */
+
+.stores-container {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.stores-title {
+    background: #f8f9fa;
+    margin: 0;
+    padding: 20px;
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 1px solid #e0e0e0;
+    text-align: center;
+}
+
+.store-list {
+    padding: 0;
+}
+
+.store-item {
+    padding: 20px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.store-item:hover {
+    background: #f8f9fa;
+}
+
+.store-item:last-child {
+    border-bottom: none;
+}
+
+.store-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.store-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.store-logo {
+    flex: 0 0 auto;
+}
+
+.store-logo img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    padding: 4px;
+    background: white;
+}
+
+.store-details {
+    flex: 1;
+}
+
+.store-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 1.1em;
+    line-height: 1.2;
+}
+
+.store-size {
+    color: #666;
+    font-size: 0.9em;
+    margin-top: 2px;
+}
+
+.availability-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.availability-badge.in-stock {
+    background: #d4edda;
+    color: #155724;
+}
+
+.availability-badge.out-of-stock {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.store-pricing {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.price-display {
+    font-size: 1.4em;
+    font-weight: 700;
+    color: #333;
+    flex: 0 0 auto;
+}
+
+.store-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.store-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ff6b35;
+    color: white;
+    text-decoration: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+.store-button:hover {
+    background: #e5522b;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+}
+
+.store-button svg {
+    transition: transform 0.3s ease;
+}
+
+.store-button:hover svg {
+    transform: translate(2px, -2px);
+}
+
+.promo-code {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8em;
+}
+
+.promo-text {
+    color: #666;
+}
+
+.promo-code-value {
+    background: #f8f9fa;
+    border: 1px dashed #ff6b35;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #ff6b35;
+    font-weight: bold;
+}
+
+.promo-code-value:hover {
+    background: #ff6b35;
+    color: white;
+}
+
+.shipping-info {
+    margin-top: 10px;
+    text-align: center;
+    color: #666;
+    border-top: 1px dotted #e0e0e0;
+    padding-top: 8px;
+}
+
+/* ==========================================================================
+   Content Tabs and Sections
+   ========================================================================== */
+
+.content-tabs {
+    display: flex;
+    border-bottom: 2px solid #e9ecef;
+    margin-bottom: 30px;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.tab-link {
+    display: inline-block;
+    padding: 15px 25px;
+    background: none;
+    border: none;
+    color: #6c757d;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+}
+
+.tab-link:hover {
+    color: #0073aa;
+    background: #f8f9fa;
+}
+
+.tab-link.active {
+    color: #0073aa;
+    border-bottom-color: #0073aa;
+    background: #f8f9fa;
+}
+
+.content-section {
+    display: none;
+    padding: 30px 0;
+}
+
+.content-section.active {
+    display: block;
+}
+
+.content-section h2 {
+    color: #333;
+    margin-bottom: 25px;
+    font-size: 1.8em;
+    border-bottom: 2px solid #0073aa;
+    padding-bottom: 10px;
+}
+
+.section-content {
+    line-height: 1.8;
+    color: #495057;
+}
+
+/* Aroma Chart */
+.aroma-chart-container {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 12px;
+    margin-top: 30px;
+}
+
+.aroma-chart-container h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+}
+
+.aroma-chart {
+    display: grid;
+    gap: 15px;
+}
+
+.chart-item {
+    display: grid;
+    grid-template-columns: 120px 1fr 50px;
+    align-items: center;
+    gap: 15px;
+}
+
+.chart-item label {
+    font-weight: 600;
+    color: #495057;
+    text-transform: capitalize;
+}
+
+.chart-bar {
+    height: 20px;
+    background: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.chart-fill {
+    height: 100%;
+    background: linear-gradient(135deg, #0073aa, #005a87);
+    border-radius: 10px;
+    transition: width 0.8s ease;
+    position: relative;
+}
+
+.chart-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%);
+    background-size: 10px 10px;
+}
+
+.chart-value {
+    font-weight: 600;
+    color: #0073aa;
+    text-align: center;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+    .parfume-header {
+        flex-direction: column;
+        gap: 30px;
+    }
+    
+    .parfume-gallery {
+        position: static;
+        width: 100%;
+    }
+    
+    .parfume-summary {
+        padding-left: 0;
+    }
+    
+    .parfume-quick-info {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .parfume-container {
+        flex-direction: column;
+    }
+    
+    .parfume-stores-sidebar {
+        position: static;
+        max-height: none;
+        order: -1;
+        margin-bottom: 30px;
+    }
+    
+    .store-pricing {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    
+    .store-actions {
+        align-items: stretch;
+    }
+    
+    .store-button {
+        justify-content: center;
+    }
+    
+    .additional-images-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .parfume-title {
+        font-size: 2em;
+    }
+    
+    .parfume-brand {
+        font-size: 1.2em;
+    }
+    
+    .content-tabs {
+        padding: 0 10px;
+    }
+    
+    .tab-link {
+        padding: 12px 15px;
+        font-size: 0.9em;
+    }
+    
+    .chart-item {
+        grid-template-columns: 100px 1fr 40px;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .parfume-single {
+        padding: 15px;
+    }
+    
+    .additional-images-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .parfume-quick-info {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .info-item {
+        padding: 10px;
+        background: white;
+        border-radius: 6px;
+    }
+    
+    .stores-title {
+        padding: 15px;
+        font-size: 1.1em;
+    }
+    
+    .store-item {
+        padding: 15px;
+    }
+    
+    .store-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .availability-badge {
+        align-self: flex-start;
+    }
+    
+    .chart-item {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        text-align: center;
+    }
+    
+    .chart-bar {
+        order: 2;
+    }
+    
+    .chart-value {
+        order: 3;
+    }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+    .parfume-stores-sidebar,
+    .content-tabs,
+    .store-button,
+    .image-modal {
+        display: none !important;
+    }
+    
+    .parfume-container {
+        flex-direction: column;
+    }
+    
+    .content-section {
+        display: block !important;
+    }
+    
+    .parfume-single {
+        box-shadow: none;
+        padding: 0;
+    }
+}
