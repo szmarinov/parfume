@@ -58,6 +58,56 @@ if ($is_single_perfumer) {
                                 <span class="stat-label"><?php echo _n('Парфюм', 'Парфюма', $current_term->count, 'parfume-reviews'); ?></span>
                             </div>
                         </div>
+                        <?php
+                        // Получаваме мета полетата правилно
+                        $birth_year = get_term_meta($current_term->term_id, 'birth_year', true);
+                        $nationality = get_term_meta($current_term->term_id, 'nationality', true);
+                        $career_start = get_term_meta($current_term->term_id, 'career_start', true);
+                        $signature_style = get_term_meta($current_term->term_id, 'signature_style', true);
+                        $awards = get_term_meta($current_term->term_id, 'awards', true);
+                        ?>
+                        
+                        <?php if ($nationality || $birth_year || $career_start): ?>
+                            <div class="perfumer-metadata">
+                                <h3><?php _e('Информация за парфюмериста', 'parfume-reviews'); ?></h3>
+                                <div class="metadata-grid">
+                                    <?php if ($nationality): ?>
+                                        <div class="meta-item">
+                                            <span class="meta-label"><?php _e('Националност:', 'parfume-reviews'); ?></span>
+                                            <span class="meta-value"><?php echo esc_html($nationality); ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($birth_year): ?>
+                                        <div class="meta-item">
+                                            <span class="meta-label"><?php _e('Година на раждане:', 'parfume-reviews'); ?></span>
+                                            <span class="meta-value"><?php echo esc_html($birth_year); ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($career_start): ?>
+                                        <div class="meta-item">
+                                            <span class="meta-label"><?php _e('Кариера започва:', 'parfume-reviews'); ?></span>
+                                            <span class="meta-value"><?php echo esc_html($career_start); ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($signature_style): ?>
+                                        <div class="meta-item">
+                                            <span class="meta-label"><?php _e('Стил на творчество:', 'parfume-reviews'); ?></span>
+                                            <span class="meta-value"><?php echo esc_html($signature_style); ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($awards): ?>
+                                        <div class="meta-item">
+                                            <span class="meta-label"><?php _e('Награди:', 'parfume-reviews'); ?></span>
+                                            <span class="meta-value"><?php echo wpautop(esc_html($awards)); ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>						
                     </div>
                 </div>
             </div>

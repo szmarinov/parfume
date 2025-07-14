@@ -3,14 +3,14 @@ namespace Parfume_Reviews\Taxonomies;
 
 /**
  * Taxonomy Template Loader - управлява зареждането на template файлове за таксономии
- * ПОДОБРЕНА ВЕРСИЯ С ДЕБЪГ И 404 ЗАЩИТА
+ * ПОПРАВЕНА ВЕРСИЯ ЗА PERFUMER ARCHIVE - /parfiumi/parfumeri/
  * 
  * Файл: includes/taxonomies/class-taxonomy-template-loader.php
  */
 class Taxonomy_Template_Loader {
     
     public function __construct() {
-        add_filter('template_include', array($this, 'template_loader'));
+        add_filter('template_include', array($this, 'template_loader'), 99);
         
         // Добавяме дебъг hook-ове само ако WP_DEBUG е включен
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -21,7 +21,7 @@ class Taxonomy_Template_Loader {
     
     /**
      * Зарежда подходящия template файл за таксономии
-     * ПОДОБРЕНА ВЕРСИЯ С FALLBACK И ДЕБЪГ
+     * ПОПРАВЕНА ВЕРСИЯ ЗА PERFUMER ARCHIVE
      */
     public function template_loader($template) {
         global $wp_query;
@@ -29,7 +29,30 @@ class Taxonomy_Template_Loader {
         // Дебъг лог
         $this->debug_log('Template loader called for: ' . $this->get_current_page_type());
         
-        // Check if this is our custom taxonomy archive
+        // ПЪРВО - Проверяваме за PERFUMER ARCHIVE
+        if (isset($wp_query->query_vars['perfumer_archive']) || 
+            isset($wp_query->query_vars['is_perfumer_archive'])) {
+            
+            $this->debug_log("PERFUMER ARCHIVE detected!");
+            
+            // Опитваме се да заредим archive-perfumer.php
+            $perfumer_archive_template = $this->locate_template('archive-perfumer.php');
+            if ($perfumer_archive_template) {
+                $this->debug_log("Loading archive-perfumer.php from: {$perfumer_archive_template}");
+                return $perfumer_archive_template;
+            }
+            
+            // Fallback към taxonomy-perfumer.php
+            $perfumer_fallback_template = $this->locate_template('taxonomy-perfumer.php');
+            if ($perfumer_fallback_template) {
+                $this->debug_log("Fallback to taxonomy-perfumer.php from: {$perfumer_fallback_template}");
+                return $perfumer_fallback_template;
+            }
+            
+            $this->debug_log("ERROR: No perfumer archive template found!");
+        }
+        
+        // ВТОРО - Проверяваме за други taxonomy archives
         if (isset($wp_query->query_vars['is_parfume_taxonomy_archive'])) {
             $taxonomy = $wp_query->query_vars['is_parfume_taxonomy_archive'];
             $this->debug_log("Custom taxonomy archive detected: {$taxonomy}");
@@ -40,7 +63,7 @@ class Taxonomy_Template_Loader {
             }
         }
         
-        // Handle individual taxonomy terms
+        // ТРЕТО - Handle individual taxonomy terms (single perfumer, brand, etc.)
         if (is_tax()) {
             $queried_object = get_queried_object();
             if ($queried_object && isset($queried_object->taxonomy)) {
@@ -49,14 +72,35 @@ class Taxonomy_Template_Loader {
                 
                 // Проверяваме дали е наша поддържана таксономия
                 if ($this->is_parfume_taxonomy($taxonomy)) {
-                    $template = $this->load_taxonomy_template($taxonomy, $queried_object);
-                    if ($template) {
-                        return $template;
+                    
+                    // СПЕЦИАЛНО ЗА PERFUMER SINGLE PAGES
+                    if ($taxonomy === 'perfumer') {
+                        $this->debug_log("Perfumer single page: {$queried_object->name} (slug: {$queried_object->slug})");
+                        
+                        // За single perfumer опитваме специфичен template
+                        $specific_template = $this->locate_template("taxonomy-perfumer-{$queried_object->slug}.php");
+                        if ($specific_template) {
+                            $this->debug_log("Template found: taxonomy-perfumer-{$queried_object->slug}.php");
+                            return $specific_template;
+                        }
+                        
+                        // Fallback към общ perfumer template
+                        $general_template = $this->locate_template('taxonomy-perfumer.php');
+                        if ($general_template) {
+                            $this->debug_log("Template found: taxonomy-perfumer.php");
+                            return $general_template;
+                        }
+                        
+                        $this->debug_log("Template not found: taxonomy-perfumer.php");
                     } else {
-                        $this->debug_log("WARNING: No template found for taxonomy {$taxonomy}");
-                        // Добавяме 404 защита
-                        $this->maybe_set_404_for_missing_template($taxonomy);
+                        // За други таксономии
+                        $template = $this->load_taxonomy_template($taxonomy, $queried_object);
+                        if ($template) {
+                            return $template;
+                        }
                     }
+                    
+                    $this->debug_log("WARNING: No template found for taxonomy {$taxonomy}");
                 }
             }
         }
@@ -65,16 +109,23 @@ class Taxonomy_Template_Loader {
     }
     
     /**
-     * НОВА ФУНКЦИЯ - Зарежда archive template за таксономия
+     * ПОПРАВЕНА ФУНКЦИЯ - Зарежда archive template за таксономия
      */
     private function load_taxonomy_archive_template($taxonomy) {
         $templates_to_try = array();
         
-        // Специфичен archive template
-        $templates_to_try[] = "archive-{$taxonomy}.php";
+        // За perfumer - специален случай
+        if ($taxonomy === 'perfumer') {
+            $templates_to_try[] = "archive-perfumer.php";
+            $templates_to_try[] = "taxonomy-perfumer.php";
+        } else {
+            // За други таксономии
+            $templates_to_try[] = "archive-{$taxonomy}.php";
+        }
         
-        // Fallback към общ taxonomy archive
+        // Общи fallback-ове
         $templates_to_try[] = "archive-taxonomy.php";
+        $templates_to_try[] = "taxonomy.php";
         
         foreach ($templates_to_try as $template_name) {
             $template_path = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/' . $template_name;
@@ -91,7 +142,6 @@ class Taxonomy_Template_Loader {
     
     /**
      * ПОПРАВЕНА ФУНКЦИЯ - Зарежда template за таксономия
-     * Сега правилно работи с taxonomy-perfumer.php файла
      */
     private function load_taxonomy_template($taxonomy, $term_object) {
         $templates_to_try = array();
@@ -109,7 +159,9 @@ class Taxonomy_Template_Loader {
             $templates_to_try[] = 'taxonomy-perfumer.php';
         } else {
             // За други таксономии
-            $templates_to_try[] = "taxonomy-{$taxonomy}-{$term_object->slug}.php";
+            if ($term_object && !empty($term_object->slug)) {
+                $templates_to_try[] = "taxonomy-{$taxonomy}-{$term_object->slug}.php";
+            }
             $templates_to_try[] = "taxonomy-{$taxonomy}.php";
         }
         
@@ -131,7 +183,31 @@ class Taxonomy_Template_Loader {
     }
     
     /**
-     * НОВА ФУНКЦИЯ - Проверява дали таксономията е от нашия плъгин
+     * Намира template файл в темата или в plugin-а
+     */
+    private function locate_template($template_name) {
+        // Първо търси в активната тема
+        $theme_template = locate_template(array(
+            'parfume-reviews/' . $template_name,
+            $template_name
+        ));
+        
+        if ($theme_template) {
+            return $theme_template;
+        }
+        
+        // После търси в plugin папката
+        $plugin_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/' . $template_name;
+        
+        if (file_exists($plugin_template)) {
+            return $plugin_template;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Проверява дали дадена таксономия е за парфюми
      */
     private function is_parfume_taxonomy($taxonomy) {
         $parfume_taxonomies = array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity');
@@ -139,87 +215,87 @@ class Taxonomy_Template_Loader {
     }
     
     /**
-     * НОВА ФУНКЦИЯ - Задава 404 ако липсва template
-     */
-    private function maybe_set_404_for_missing_template($taxonomy) {
-        // Само ако сме в debug режим и има настройка да показваме 404
-        $settings = get_option('parfume_reviews_settings', array());
-        
-        if (!empty($settings['debug_404_on_missing_template'])) {
-            global $wp_query;
-            $wp_query->set_404();
-            status_header(404);
-            $this->debug_log("Set 404 for missing template: taxonomy-{$taxonomy}.php");
-        }
-    }
-    
-    /**
-     * НОВА ФУНКЦИЯ - Получава типа на текущата страница
+     * НОВА ФУНКЦИЯ - Получава типа на текущата страница за дебъг
      */
     private function get_current_page_type() {
-        if (is_tax()) {
-            $queried_object = get_queried_object();
-            return 'taxonomy: ' . ($queried_object->taxonomy ?? 'unknown');
-        } elseif (is_singular()) {
-            return 'single: ' . get_post_type();
-        } elseif (is_post_type_archive()) {
-            return 'archive: ' . get_post_type();
-        } else {
-            return 'other';
+        global $wp_query;
+        
+        if (isset($wp_query->query_vars['perfumer_archive']) || 
+            isset($wp_query->query_vars['is_perfumer_archive'])) {
+            return 'perfumer_archive';
         }
+        
+        if (isset($wp_query->query_vars['is_parfume_taxonomy_archive'])) {
+            return 'taxonomy_archive: ' . $wp_query->query_vars['is_parfume_taxonomy_archive'];
+        }
+        
+        if (is_tax()) {
+            $obj = get_queried_object();
+            return 'taxonomy: ' . ($obj ? $obj->taxonomy : 'unknown');
+        }
+        
+        if (is_singular('parfume')) {
+            return 'single_parfume';
+        }
+        
+        if (is_post_type_archive('parfume')) {
+            return 'parfume_archive';
+        }
+        
+        return 'other';
     }
     
     /**
-     * НОВА ФУНКЦИЯ - Дебъг лог функция
+     * Debug функция за проследяване
      */
     private function debug_log($message) {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Parfume Reviews Template Loader: ' . $message);
+        if (defined('WP_DEBUG') && WP_DEBUG && function_exists('parfume_reviews_debug_log')) {
+            parfume_reviews_debug_log('Parfume Reviews Template Loader: ' . $message);
         }
     }
     
     /**
-     * НОВА ФУНКЦИЯ - Дебъг информация във footer (само в debug режим)
+     * НОВА ФУНКЦИЯ - Показва дебъг информация в footer
      */
     public function debug_template_info() {
         if (!current_user_can('manage_options') || !defined('WP_DEBUG') || !WP_DEBUG) {
             return;
         }
         
-        if (is_tax() && $this->is_parfume_taxonomy(get_queried_object()->taxonomy)) {
-            $queried_object = get_queried_object();
-            echo "<!-- Parfume Reviews Debug:\n";
-            echo "Taxonomy: {$queried_object->taxonomy}\n";
-            echo "Term: {$queried_object->name} ({$queried_object->slug})\n";
-            echo "Template hierarchy checked:\n";
-            
-            $templates = $this->get_template_hierarchy_for_debug($queried_object->taxonomy, $queried_object);
-            foreach ($templates as $template) {
-                $exists = file_exists(PARFUME_REVIEWS_PLUGIN_DIR . 'templates/' . $template);
-                echo "  - {$template} " . ($exists ? '✅' : '❌') . "\n";
+        global $wp_query;
+        
+        echo "\n<!-- PARFUME REVIEWS TEMPLATE DEBUG\n";
+        echo "Page Type: " . $this->get_current_page_type() . "\n";
+        
+        if (isset($wp_query->query_vars['perfumer_archive'])) {
+            echo "Perfumer Archive: YES\n";
+        }
+        
+        if (isset($wp_query->query_vars['is_perfumer_archive'])) {
+            echo "Is Perfumer Archive: YES\n";
+        }
+        
+        if (is_tax()) {
+            $obj = get_queried_object();
+            if ($obj) {
+                echo "Taxonomy: {$obj->taxonomy}\n";
+                echo "Term: {$obj->name} (slug: {$obj->slug})\n";
             }
-            echo "-->";
-        }
-    }
-    
-    /**
-     * НОВА ФУНКЦИЯ - Получава template hierarchy за дебъг
-     */
-    private function get_template_hierarchy_for_debug($taxonomy, $term_object) {
-        $templates = array();
-        
-        if ($taxonomy === 'perfumer') {
-            $templates[] = "taxonomy-perfumer-{$term_object->slug}.php";
-            $templates[] = 'taxonomy-perfumer.php';
-        } else {
-            $templates[] = "taxonomy-{$taxonomy}-{$term_object->slug}.php";
-            $templates[] = "taxonomy-{$taxonomy}.php";
         }
         
-        $templates[] = 'taxonomy.php';
-        $templates[] = 'archive-taxonomy.php';
+        // Проверяваме всички template файлове
+        $templates = array(
+            'archive-perfumer.php',
+            'taxonomy-perfumer.php',
+            'archive-taxonomy.php'
+        );
         
-        return $templates;
+        echo "Templates Status:\n";
+        foreach ($templates as $template) {
+            $exists = file_exists(PARFUME_REVIEWS_PLUGIN_DIR . 'templates/' . $template);
+            echo "  - {$template} " . ($exists ? '✅' : '❌') . "\n";
+        }
+        echo "-->";
     }
     
     /**
@@ -337,94 +413,48 @@ class Taxonomy_Template_Loader {
         $templates_dir = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/';
         if (!is_dir($templates_dir)) {
             $issues[] = 'Templates директорията не съществува: ' . $templates_dir;
-        } elseif (!is_readable($templates_dir)) {
-            $issues[] = 'Templates директорията не е четима: ' . $templates_dir;
         }
         
-        // Проверяваме критичните template файлове
+        // Проверяваме write permissions
+        if (!is_writable($templates_dir)) {
+            $issues[] = 'Templates директорията не е writable: ' . $templates_dir;
+        }
+        
+        // Проверяваме ключови template файлове
         $critical_templates = array(
-            'taxonomy-perfumer.php' => 'Основен template за парфюмеристи',
-            'taxonomy-marki.php' => 'Template за марки',
-            'taxonomy-notes.php' => 'Template за нотки'
+            'single-parfume.php',
+            'archive-parfume.php',
+            'taxonomy-perfumer.php',
+            'archive-perfumer.php'
         );
         
-        foreach ($critical_templates as $template => $description) {
+        foreach ($critical_templates as $template) {
             $template_path = $templates_dir . $template;
             if (!file_exists($template_path)) {
-                $issues[] = "Липсва критичен template: {$template} ({$description})";
-            } elseif (!is_readable($template_path)) {
-                $issues[] = "Template файлът не е четим: {$template}";
-            } else {
-                // Проверяваме дали файлът има валиден PHP синтаксис
-                $content = file_get_contents($template_path);
-                if ($content === false) {
-                    $issues[] = "Не може да се прочете template файлът: {$template}";
-                } elseif (strpos($content, '<?php') === false) {
-                    $issues[] = "Template файлът изглежда невалиден (няма PHP код): {$template}";
-                }
+                $issues[] = "Липсва критичен template: {$template}";
             }
         }
         
-        // Проверяваме дали има конфликти с темата
-        $theme_template_conflicts = array();
-        foreach ($critical_templates as $template => $description) {
-            $theme_template = locate_template($template);
-            if ($theme_template) {
-                $theme_template_conflicts[] = "Темата има собствен template файл: {$template} в {$theme_template}";
-            }
-        }
-        
-        if (!empty($theme_template_conflicts)) {
-            $issues[] = 'Възможни конфликти с темата: ' . implode(', ', $theme_template_conflicts);
-        }
-        
-        return array(
-            'has_issues' => !empty($issues),
-            'issues' => $issues,
-            'stats' => $this->get_template_stats()
-        );
+        return $issues;
     }
     
     /**
-     * НОВА ФУНКЦИЯ - Генерира отчет за template системата
+     * НОВА ФУНКЦИЯ - Прави debug dump на template system-а
      */
-    public function generate_template_report() {
-        $check_result = $this->check_template_system();
-        $stats = $check_result['stats'];
-        
-        $report = array();
-        $report[] = "=== PARFUME REVIEWS TEMPLATE SYSTEM REPORT ===";
-        $report[] = "Дата: " . date('Y-m-d H:i:s');
-        $report[] = "";
-        
-        // Статистики
-        $report[] = "📊 СТАТИСТИКИ:";
-        $report[] = "- Общо templates: {$stats['total_templates']}";
-        $report[] = "- Съществуващи: {$stats['existing_templates']}";
-        $report[] = "- Липсващи: {$stats['missing_templates']}";
-        $report[] = "";
-        
-        // Детайли за всеки template
-        $report[] = "📁 TEMPLATE ФАЙЛОВЕ:";
-        foreach ($stats['template_list'] as $template) {
-            $status = $template['exists'] ? '✅' : '❌';
-            $report[] = "  {$status} {$template['name']} ({$template['taxonomy']})";
-        }
-        $report[] = "";
-        
-        // Проблеми
-        if ($check_result['has_issues']) {
-            $report[] = "⚠️  ОТКРИТИ ПРОБЛЕМИ:";
-            foreach ($check_result['issues'] as $issue) {
-                $report[] = "  - {$issue}";
-            }
-        } else {
-            $report[] = "✅ НЯМА ОТКРИТИ ПРОБЛЕМИ";
+    public function debug_template_system() {
+        if (!current_user_can('manage_options')) {
+            return array();
         }
         
-        $report[] = "";
-        $report[] = "=== КРАЙ НА ОТЧЕТА ===";
+        $debug_info = array(
+            'templates_dir' => PARFUME_REVIEWS_PLUGIN_DIR . 'templates/',
+            'templates_exist' => is_dir(PARFUME_REVIEWS_PLUGIN_DIR . 'templates/'),
+            'current_page_type' => $this->get_current_page_type(),
+            'missing_templates' => $this->get_missing_templates(),
+            'template_stats' => $this->get_template_stats(),
+            'system_issues' => $this->check_template_system()
+        );
         
-        return implode("\n", $report);
+        return $debug_info;
     }
 }
