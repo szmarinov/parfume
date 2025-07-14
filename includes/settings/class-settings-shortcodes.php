@@ -1,396 +1,633 @@
 <?php
-namespace Parfume_Reviews;
+namespace Parfume_Reviews\Settings;
 
-class Collections {
+/**
+ * Settings_Shortcodes class - Показва документация за shortcodes
+ * 
+ * Файл: includes/settings/class-settings-shortcodes.php
+ * Извлечен от оригинален class-settings.php
+ */
+class Settings_Shortcodes {
+    
     public function __construct() {
-        add_action('init', array($this, 'register_post_type'));
-        add_action('add_meta_boxes', array($this, 'add_meta_boxes'));
-        add_action('save_post', array($this, 'save_meta_boxes'));
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
-        add_action('wp_ajax_add_to_collection', array($this, 'add_to_collection'));
-        add_action('wp_ajax_remove_from_collection', array($this, 'remove_from_collection'));
-        add_action('wp_ajax_create_collection', array($this, 'create_collection'));
-        add_action('wp_ajax_delete_collection', array($this, 'delete_collection'));
-        add_action('wp_ajax_get_user_collections', array($this, 'get_user_collections'));
-        add_shortcode('parfume_collections', array($this, 'collections_shortcode'));
+        // Няма нужда от хукове тук - те се управляват от главния Settings клас
     }
     
-    public function register_post_type() {
-        $labels = array(
-            'name' => __('Collections', 'parfume-reviews'),
-            'singular_name' => __('Collection', 'parfume-reviews'),
-            'menu_name' => __('Collections', 'parfume-reviews'),
-            'name_admin_bar' => __('Collection', 'parfume-reviews'),
-            'add_new' => __('Add New', 'parfume-reviews'),
-            'add_new_item' => __('Add New Collection', 'parfume-reviews'),
-            'new_item' => __('New Collection', 'parfume-reviews'),
-            'edit_item' => __('Edit Collection', 'parfume-reviews'),
-            'view_item' => __('View Collection', 'parfume-reviews'),
-            'all_items' => __('All Collections', 'parfume-reviews'),
-            'search_items' => __('Search Collections', 'parfume-reviews'),
-            'parent_item_colon' => __('Parent Collections:', 'parfume-reviews'),
-            'not_found' => __('No collections found.', 'parfume-reviews'),
-            'not_found_in_trash' => __('No collections found in Trash.', 'parfume-reviews')
-        );
-        
-        $args = array(
-            'labels' => $labels,
-            'public' => true,
-            'publicly_queryable' => true,
-            'show_ui' => true,
-            'show_in_menu' => true,
-            'query_var' => true,
-            'rewrite' => array('slug' => 'collections'),
-            'capability_type' => 'post',
-            'has_archive' => true,
-            'hierarchical' => false,
-            'menu_position' => 6,
-            'supports' => array('title', 'editor', 'thumbnail', 'author', 'custom-fields'),
-            'show_in_rest' => true,
-            'menu_icon' => 'dashicons-portfolio',
-        );
-        
-        register_post_type('parfume_collection', $args);
+    /**
+     * Регистрира настройките за shortcodes (документация)
+     */
+    public function register_settings() {
+        // Shortcodes документация не изисква регистрация на настройки
+        // Това е само информационна секция
     }
     
-    public function add_meta_boxes() {
-        add_meta_box(
-            'collection_parfumes',
-            __('Parfumes in Collection', 'parfume-reviews'),
-            array($this, 'render_parfumes_meta_box'),
-            'parfume_collection',
-            'normal',
-            'high'
-        );
+    /**
+     * Рендерира секцията със shortcodes документация
+     */
+    public function render_section() {
+        ?>
+        <div class="shortcodes-documentation">
+            <?php $this->render_shortcodes_overview(); ?>
+            <?php $this->render_basic_shortcodes(); ?>
+            <?php $this->render_filtering_shortcodes(); ?>
+            <?php $this->render_archive_shortcodes(); ?>
+            <?php $this->render_advanced_shortcodes(); ?>
+            <?php $this->render_shortcode_generator(); ?>
+        </div>
         
-        add_meta_box(
-            'collection_privacy',
-            __('Privacy Settings', 'parfume-reviews'),
-            array($this, 'render_privacy_meta_box'),
-            'parfume_collection',
-            'side',
-            'default'
-        );
-    }
-    
-    public function render_parfumes_meta_box($post) {
-        wp_nonce_field('collection_parfumes_nonce', 'collection_parfumes_nonce');
-        
-        $parfumes = get_post_meta($post->ID, '_collection_parfumes', true);
-        $parfumes = !empty($parfumes) ? $parfumes : array();
-        
-        include PARFUME_REVIEWS_PLUGIN_DIR . 'includes/admin/views/meta-box-collection-parfumes.php';
-    }
-    
-    public function render_privacy_meta_box($post) {
-        wp_nonce_field('collection_privacy_nonce', 'collection_privacy_nonce');
-        
-        $privacy = get_post_meta($post->ID, '_collection_privacy', true);
-        $privacy = !empty($privacy) ? $privacy : 'public';
-        
-        include PARFUME_REVIEWS_PLUGIN_DIR . 'includes/admin/views/meta-box-collection-privacy.php';
-    }
-    
-    public function save_meta_boxes($post_id) {
-        if (!isset($_POST['collection_parfumes_nonce']) || !wp_verify_nonce($_POST['collection_parfumes_nonce'], 'collection_parfumes_nonce')) {
-            return;
+        <style>
+        .shortcodes-documentation {
+            max-width: 100%;
         }
-        
-        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
-            return;
+        .shortcode-section {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
         }
-        
-        if (!current_user_can('edit_post', $post_id)) {
-            return;
+        .shortcode-section h3 {
+            margin-top: 0;
+            color: #0073aa;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 10px;
         }
-        
-        // Save parfumes
-        if (isset($_POST['collection_parfumes'])) {
-            $parfumes = array_map('intval', $_POST['collection_parfumes']);
-            update_post_meta($post_id, '_collection_parfumes', $parfumes);
-        } else {
-            delete_post_meta($post_id, '_collection_parfumes');
+        .shortcode-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
         }
-        
-        // Save privacy
-        if (isset($_POST['collection_privacy_nonce']) && wp_verify_nonce($_POST['collection_privacy_nonce'], 'collection_privacy_nonce')) {
-            if (isset($_POST['collection_privacy'])) {
-                update_post_meta($post_id, '_collection_privacy', sanitize_text_field($_POST['collection_privacy']));
-            }
+        .shortcode-item h4 {
+            margin-top: 0;
+            color: #32373c;
         }
+        .shortcode-code {
+            background: #23282d;
+            color: #f8f8f2;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .shortcode-attributes {
+            background: #f1f1f1;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .shortcode-attributes ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        .shortcode-example {
+            background: #e7f3ff;
+            border-left: 4px solid #0073aa;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .copy-shortcode {
+            background: #0073aa;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .copy-shortcode:hover {
+            background: #005a87;
+        }
+        .shortcode-generator {
+            background: #fff;
+            border: 2px solid #0073aa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        .generator-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .generator-form label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+        .generator-output {
+            grid-column: 1 / -1;
+            margin-top: 15px;
+        }
+        </style>
+        <?php
     }
     
-    public function enqueue_scripts() {
-        if (is_singular('parfume')) {
-            wp_enqueue_script(
-                'parfume-collections',
-                PARFUME_REVIEWS_PLUGIN_URL . 'assets/js/collections.js',
-                array('jquery'),
-                PARFUME_REVIEWS_VERSION,
-                true
-            );
+    /**
+     * Рендерира общ преглед на shortcodes
+     */
+    private function render_shortcodes_overview() {
+        ?>
+        <div class="shortcode-section">
+            <h3><?php _e('Преглед на Shortcodes', 'parfume-reviews'); ?></h3>
+            <p><?php _e('Parfume Reviews плъгинът предоставя богат набор от shortcodes за показване на парфюмна информация във вашия сайт. Всички shortcodes могат да бъдат използвани в постове, страници и widgets.', 'parfume-reviews'); ?></p>
             
-            wp_localize_script('parfume-collections', 'parfumeCollections', array(
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('parfume-collections-nonce'),
-                'mustBeLoggedIn' => __('You must be logged in to manage collections', 'parfume-reviews'),
-                'collectionNameRequired' => __('Collection name is required', 'parfume-reviews'),
-                'confirmDelete' => __('Are you sure you want to delete this collection?', 'parfume-reviews'),
-            ));
-        }
+            <div class="shortcode-example">
+                <strong><?php _e('Бързо започване:', 'parfume-reviews'); ?></strong>
+                <p><?php _e('Копирайте и поставете някой от shortcodes по-долу директно в своето съдържание. Повечето shortcodes работят без настройки, но могат да бъдат персонализирани с параметри.', 'parfume-reviews'); ?></p>
+            </div>
+        </div>
+        <?php
     }
     
-    public function add_to_collection() {
-        check_ajax_referer('parfume-collections-nonce', 'nonce');
-        
-        if (!is_user_logged_in()) {
-            wp_send_json_error(__('You must be logged in to add to collections', 'parfume-reviews'));
-        }
-        
-        if (!isset($_POST['post_id'], $_POST['collection_id'])) {
-            wp_send_json_error(__('Invalid data', 'parfume-reviews'));
-        }
-        
-        $post_id = intval($_POST['post_id']);
-        $collection_id = intval($_POST['collection_id']);
-        
-        // Check if user owns the collection
-        $collection = get_post($collection_id);
-        if (!$collection || $collection->post_type != 'parfume_collection' || $collection->post_author != get_current_user_id()) {
-            wp_send_json_error(__('Invalid collection', 'parfume-reviews'));
-        }
-        
-        $parfumes = get_post_meta($collection_id, '_collection_parfumes', true);
-        $parfumes = !empty($parfumes) ? $parfumes : array();
-        
-        if (!in_array($post_id, $parfumes)) {
-            $parfumes[] = $post_id;
-            update_post_meta($collection_id, '_collection_parfumes', $parfumes);
+    /**
+     * Рендерира основните shortcodes
+     */
+    private function render_basic_shortcodes() {
+        ?>
+        <div class="shortcode-section">
+            <h3><?php _e('Основни Shortcodes', 'parfume-reviews'); ?></h3>
             
-            wp_send_json_success(__('Added to collection', 'parfume-reviews'));
-        } else {
-            wp_send_json_error(__('Already in collection', 'parfume-reviews'));
-        }
-    }
-    
-    public function remove_from_collection() {
-        check_ajax_referer('parfume-collections-nonce', 'nonce');
-        
-        if (!is_user_logged_in()) {
-            wp_send_json_error(__('You must be logged in to remove from collections', 'parfume-reviews'));
-        }
-        
-        if (!isset($_POST['post_id'], $_POST['collection_id'])) {
-            wp_send_json_error(__('Invalid data', 'parfume-reviews'));
-        }
-        
-        $post_id = intval($_POST['post_id']);
-        $collection_id = intval($_POST['collection_id']);
-        
-        // Check if user owns the collection
-        $collection = get_post($collection_id);
-        if (!$collection || $collection->post_type != 'parfume_collection' || $collection->post_author != get_current_user_id()) {
-            wp_send_json_error(__('Invalid collection', 'parfume-reviews'));
-        }
-        
-        $parfumes = get_post_meta($collection_id, '_collection_parfumes', true);
-        $parfumes = !empty($parfumes) ? $parfumes : array();
-        
-        $key = array_search($post_id, $parfumes);
-        if ($key !== false) {
-            unset($parfumes[$key]);
-            $parfumes = array_values($parfumes); // Reindex array
-            update_post_meta($collection_id, '_collection_parfumes', $parfumes);
-            
-            wp_send_json_success(__('Removed from collection', 'parfume-reviews'));
-        } else {
-            wp_send_json_error(__('Not found in collection', 'parfume-reviews'));
-        }
-    }
-    
-    public function create_collection() {
-        check_ajax_referer('parfume-collections-nonce', 'nonce');
-        
-        if (!is_user_logged_in()) {
-            wp_send_json_error(__('You must be logged in to create collections', 'parfume-reviews'));
-        }
-        
-        if (!isset($_POST['name']) || empty($_POST['name'])) {
-            wp_send_json_error(__('Collection name is required', 'parfume-reviews'));
-        }
-        
-        $name = sanitize_text_field($_POST['name']);
-        $privacy = isset($_POST['privacy']) ? sanitize_text_field($_POST['privacy']) : 'public';
-        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-        
-        $collection_id = wp_insert_post(array(
-            'post_title' => $name,
-            'post_type' => 'parfume_collection',
-            'post_status' => 'publish',
-            'post_author' => get_current_user_id(),
-        ));
-        
-        if (is_wp_error($collection_id)) {
-            wp_send_json_error($collection_id->get_error_message());
-        }
-        
-        update_post_meta($collection_id, '_collection_privacy', $privacy);
-        
-        if ($post_id) {
-            update_post_meta($collection_id, '_collection_parfumes', array($post_id));
-        }
-        
-        wp_send_json_success(array(
-            'id' => $collection_id,
-            'name' => $name,
-            'message' => __('Collection created', 'parfume-reviews'),
-        ));
-    }
-    
-    public function delete_collection() {
-        check_ajax_referer('parfume-collections-nonce', 'nonce');
-        
-        if (!is_user_logged_in()) {
-            wp_send_json_error(__('You must be logged in to delete collections', 'parfume-reviews'));
-        }
-        
-        if (!isset($_POST['collection_id'])) {
-            wp_send_json_error(__('Invalid collection', 'parfume-reviews'));
-        }
-        
-        $collection_id = intval($_POST['collection_id']);
-        $collection = get_post($collection_id);
-        
-        if (!$collection || $collection->post_type != 'parfume_collection' || $collection->post_author != get_current_user_id()) {
-            wp_send_json_error(__('Invalid collection', 'parfume-reviews'));
-        }
-        
-        $result = wp_delete_post($collection_id, true);
-        
-        if (!$result) {
-            wp_send_json_error(__('Could not delete collection', 'parfume-reviews'));
-        }
-        
-        wp_send_json_success(__('Collection deleted', 'parfume-reviews'));
-    }
-    
-    public function get_user_collections() {
-        check_ajax_referer('parfume-collections-nonce', 'nonce');
-        
-        if (!is_user_logged_in()) {
-            wp_send_json_error(__('You must be logged in to view collections', 'parfume-reviews'));
-        }
-        
-        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-        $user_id = get_current_user_id();
-        
-        $args = array(
-            'post_type' => 'parfume_collection',
-            'author' => $user_id,
-            'posts_per_page' => -1,
-            'fields' => 'ids',
-        );
-        
-        $collections = get_posts($args);
-        $data = array();
-        
-        foreach ($collections as $collection_id) {
-            $parfumes = get_post_meta($collection_id, '_collection_parfumes', true);
-            $parfumes = !empty($parfumes) ? $parfumes : array();
-            
-            $data[] = array(
-                'id' => $collection_id,
-                'name' => get_the_title($collection_id),
-                'has_parfume' => in_array($post_id, $parfumes),
-            );
-        }
-        
-        wp_send_json_success($data);
-    }
-    
-    public function collections_shortcode($atts) {
-        if (!is_user_logged_in()) {
-            return '<p>' . __('You must be logged in to view your collections.', 'parfume-reviews') . '</p>';
-        }
-        
-        $atts = shortcode_atts(array(
-            'user_id' => get_current_user_id(),
-        ), $atts);
-        
-        $user_id = intval($atts['user_id']);
-        
-        $args = array(
-            'post_type' => 'parfume_collection',
-            'author' => $user_id,
-            'posts_per_page' => -1,
-        );
-        
-        $collections = new \WP_Query($args);
-        
-        ob_start();
-        
-        if ($collections->have_posts()):
-            ?>
-            <div class="parfume-collections">
-                <div class="collections-grid">
-                    <?php while ($collections->have_posts()): $collections->the_post(); 
-                        $parfumes = get_post_meta(get_the_ID(), '_collection_parfumes', true);
-                        $parfumes = !empty($parfumes) ? $parfumes : array();
-                        $privacy = get_post_meta(get_the_ID(), '_collection_privacy', true);
-                    ?>
-                        <div class="collection-item">
-                            <a href="<?php the_permalink(); ?>">
-                                <h3><?php the_title(); ?></h3>
-                                <div class="collection-meta">
-                                    <span class="count"><?php echo count($parfumes); ?> <?php _e('items', 'parfume-reviews'); ?></span>
-                                    <span class="privacy"><?php echo ucfirst($privacy); ?></span>
-                                </div>
-                            </a>
-                        </div>
-                    <?php endwhile; ?>
+            <div class="shortcode-item">
+                <h4><?php _e('Рейтинг на парфюм', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва рейтинг звездички за текущия парфюм.', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [parfume_rating]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[parfume_rating]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>show_empty="true"</code> - <?php _e('Показва празен рейтинг ако няма оценка', 'parfume-reviews'); ?></li>
+                        <li><code>show_average="true"</code> - <?php _e('Показва средната оценка като число', 'parfume-reviews'); ?></li>
+                    </ul>
+                </div>
+                <div class="shortcode-example">
+                    <strong><?php _e('Пример:', 'parfume-reviews'); ?></strong>
+                    <div class="shortcode-code">[parfume_rating show_empty="false" show_average="true"]</div>
                 </div>
             </div>
-            <?php
-        else:
-            ?>
-            <p><?php _e('No collections found.', 'parfume-reviews'); ?></p>
-            <?php
-        endif;
-        
-        wp_reset_postdata();
-        
-        return ob_get_clean();
-    }
-    
-    public static function get_collections_dropdown($post_id) {
-        if (!is_user_logged_in()) {
-            return '';
-        }
-        
-        ob_start();
-        ?>
-        <div class="parfume-collections-dropdown">
-            <button class="collections-toggle">
-                <?php _e('Add to Collection', 'parfume-reviews'); ?>
-                <span class="dashicons dashicons-arrow-down"></span>
-            </button>
             
-            <div class="collections-dropdown-content">
-                <div class="collections-list"></div>
-                
-                <div class="create-collection-form">
-                    <input type="text" class="new-collection-name" placeholder="<?php _e('New collection name', 'parfume-reviews'); ?>">
-                    <select class="new-collection-privacy">
-                        <option value="public"><?php _e('Public', 'parfume-reviews'); ?></option>
-                        <option value="private"><?php _e('Private', 'parfume-reviews'); ?></option>
-                    </select>
-                    <button class="create-collection" data-post-id="<?php echo esc_attr($post_id); ?>">
-                        <?php _e('Create', 'parfume-reviews'); ?>
-                    </button>
+            <div class="shortcode-item">
+                <h4><?php _e('Детайли за парфюм', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва подробна информация за текущия парфюм (марка, тип, сезон, etc.).', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [parfume_details]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[parfume_details]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>show_brand="true"</code> - <?php _e('Показва марката', 'parfume-reviews'); ?></li>
+                        <li><code>show_type="true"</code> - <?php _e('Показва типа аромат', 'parfume-reviews'); ?></li>
+                        <li><code>show_season="true"</code> - <?php _e('Показва подходящия сезон', 'parfume-reviews'); ?></li>
+                        <li><code>show_notes="true"</code> - <?php _e('Показва ароматните ноти', 'parfume-reviews'); ?></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="shortcode-item">
+                <h4><?php _e('Магазини за парфюм', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва списък с магазини където може да се закупи парфюма.', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [parfume_stores]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[parfume_stores]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>show_prices="true"</code> - <?php _e('Показва цените', 'parfume-reviews'); ?></li>
+                        <li><code>show_logos="true"</code> - <?php _e('Показва логата на магазините', 'parfume-reviews'); ?></li>
+                        <li><code>limit="0"</code> - <?php _e('Ограничава броя показани магазини (0 = всички)', 'parfume-reviews'); ?></li>
+                    </ul>
                 </div>
             </div>
         </div>
         <?php
-        return ob_get_clean();
+    }
+    
+    /**
+     * Рендерира shortcodes за филтриране
+     */
+    private function render_filtering_shortcodes() {
+        ?>
+        <div class="shortcode-section">
+            <h3><?php _e('Филтриране и Търсене', 'parfume-reviews'); ?></h3>
+            
+            <div class="shortcode-item">
+                <h4><?php _e('Филтри за парфюми', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва интерактивни филтри за търсене на парфюми по различни критерии.', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [parfume_filters]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[parfume_filters]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>show_brands="true"</code> - <?php _e('Показва филтър за марки', 'parfume-reviews'); ?></li>
+                        <li><code>show_gender="true"</code> - <?php _e('Показва филтър за пол', 'parfume-reviews'); ?></li>
+                        <li><code>show_type="true"</code> - <?php _e('Показва филтър за тип аромат', 'parfume-reviews'); ?></li>
+                        <li><code>show_season="true"</code> - <?php _e('Показва филтър за сезон', 'parfume-reviews'); ?></li>
+                        <li><code>show_notes="true"</code> - <?php _e('Показва филтър за ноти', 'parfume-reviews'); ?></li>
+                        <li><code>show_intensity="true"</code> - <?php _e('Показва филтър за интензивност', 'parfume-reviews'); ?></li>
+                        <li><code>ajax="true"</code> - <?php _e('Използва AJAX за динамично филтриране', 'parfume-reviews'); ?></li>
+                    </ul>
+                </div>
+                <div class="shortcode-example">
+                    <strong><?php _e('Пример:', 'parfume-reviews'); ?></strong>
+                    <div class="shortcode-code">[parfume_filters show_brands="true" show_gender="true" ajax="true"]</div>
+                </div>
+            </div>
+            
+            <div class="shortcode-item">
+                <h4><?php _e('Решетка с парфюми', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва парфюми в решетъчен изглед с възможности за филтриране.', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [parfume_grid]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[parfume_grid]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>posts_per_page="12"</code> - <?php _e('Брой парфюми за показване', 'parfume-reviews'); ?></li>
+                        <li><code>columns="4"</code> - <?php _e('Брой колони в решетката', 'parfume-reviews'); ?></li>
+                        <li><code>orderby="date"</code> - <?php _e('Подреждане по (date, title, menu_order, etc.)', 'parfume-reviews'); ?></li>
+                        <li><code>order="DESC"</code> - <?php _e('Посока на подреждане (ASC или DESC)', 'parfume-reviews'); ?></li>
+                        <li><code>brand=""</code> - <?php _e('Филтър по конкретна марка', 'parfume-reviews'); ?></li>
+                        <li><code>gender=""</code> - <?php _e('Филтър по пол', 'parfume-reviews'); ?></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Рендерира архивни shortcodes
+     */
+    private function render_archive_shortcodes() {
+        ?>
+        <div class="shortcode-section">
+            <h3><?php _e('Архивни Shortcodes', 'parfume-reviews'); ?></h3>
+            
+            <div class="shortcode-item">
+                <h4><?php _e('Всички марки', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва списък или решетка с всички марки парфюми.', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [all_brands_archive]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[all_brands_archive]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>columns="4"</code> - <?php _e('Брой колони', 'parfume-reviews'); ?></li>
+                        <li><code>show_count="true"</code> - <?php _e('Показва броя парфюми на марката', 'parfume-reviews'); ?></li>
+                        <li><code>hide_empty="true"</code> - <?php _e('Скрива марки без парфюми', 'parfume-reviews'); ?></li>
+                        <li><code>orderby="name"</code> - <?php _e('Подреждане по име', 'parfume-reviews'); ?></li>
+                        <li><code>limit="0"</code> - <?php _e('Ограничава броя марки (0 = всички)', 'parfume-reviews'); ?></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="shortcode-item">
+                <h4><?php _e('Всички ноти', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва списък с всички ароматни ноти.', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [all_notes_archive]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[all_notes_archive]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>columns="6"</code> - <?php _e('Брой колони', 'parfume-reviews'); ?></li>
+                        <li><code>show_count="true"</code> - <?php _e('Показва броя парфюми с тази нота', 'parfume-reviews'); ?></li>
+                        <li><code>hide_empty="true"</code> - <?php _e('Скрива ноти без парфюми', 'parfume-reviews'); ?></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="shortcode-item">
+                <h4><?php _e('Всички парфюмеристи', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва списък с всички парфюмеристи.', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [all_perfumers_archive]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[all_perfumers_archive]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>columns="3"</code> - <?php _e('Брой колони', 'parfume-reviews'); ?></li>
+                        <li><code>show_bio="false"</code> - <?php _e('Показва биография на парфюмериста', 'parfume-reviews'); ?></li>
+                        <li><code>show_count="true"</code> - <?php _e('Показва броя парфюми', 'parfume-reviews'); ?></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Рендерира advanced shortcodes
+     */
+    private function render_advanced_shortcodes() {
+        ?>
+        <div class="shortcode-section">
+            <h3><?php _e('Разширени Shortcodes', 'parfume-reviews'); ?></h3>
+            
+            <div class="shortcode-item">
+                <h4><?php _e('Най-нови парфюми', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва най-новите публикувани парфюми.', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [latest_parfumes]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[latest_parfumes]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>count="6"</code> - <?php _e('Брой парфюми за показване', 'parfume-reviews'); ?></li>
+                        <li><code>columns="3"</code> - <?php _e('Брой колони в решетката', 'parfume-reviews'); ?></li>
+                        <li><code>show_excerpt="true"</code> - <?php _e('Показва кратко описание', 'parfume-reviews'); ?></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="shortcode-item">
+                <h4><?php _e('Препоръчани парфюми', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва парфюми маркирани като препоръчани (featured).', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [featured_parfumes]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[featured_parfumes]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>count="4"</code> - <?php _e('Брой парфюми за показване', 'parfume-reviews'); ?></li>
+                        <li><code>columns="4"</code> - <?php _e('Брой колони', 'parfume-reviews'); ?></li>
+                        <li><code>show_badge="true"</code> - <?php _e('Показва "препоръчан" бадж', 'parfume-reviews'); ?></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="shortcode-item">
+                <h4><?php _e('Най-високо оценени', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва парфюми с най-висок рейтинг.', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [top_rated_parfumes]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[top_rated_parfumes]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>count="5"</code> - <?php _e('Брой парфюми', 'parfume-reviews'); ?></li>
+                        <li><code>min_rating="4"</code> - <?php _e('Минимален рейтинг за включване', 'parfume-reviews'); ?></li>
+                        <li><code>show_rating="true"</code> - <?php _e('Показва рейтинга', 'parfume-reviews'); ?></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="shortcode-item">
+                <h4><?php _e('Подобни парфюми', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва парфюми подобни на текущия (базирано на ноти и тип).', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [parfume_similar]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[parfume_similar]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>count="4"</code> - <?php _e('Брой подобни парфюми', 'parfume-reviews'); ?></li>
+                        <li><code>exclude_current="true"</code> - <?php _e('Изключва текущия парфюм', 'parfume-reviews'); ?></li>
+                        <li><code>match_brand="false"</code> - <?php _e('Включва само от същата марка', 'parfume-reviews'); ?></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="shortcode-item">
+                <h4><?php _e('Продукти от марка', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва всички парфюми от конкретна марка.', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [parfume_brand_products]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[parfume_brand_products]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>brand=""</code> - <?php _e('Slug на марката (задължителен)', 'parfume-reviews'); ?></li>
+                        <li><code>count="12"</code> - <?php _e('Брой парфюми', 'parfume-reviews'); ?></li>
+                        <li><code>columns="4"</code> - <?php _e('Брой колони', 'parfume-reviews'); ?></li>
+                        <li><code>exclude=""</code> - <?php _e('ID на парфюми за изключване', 'parfume-reviews'); ?></li>
+                    </ul>
+                </div>
+                <div class="shortcode-example">
+                    <strong><?php _e('Пример:', 'parfume-reviews'); ?></strong>
+                    <div class="shortcode-code">[parfume_brand_products brand="chanel" count="8" columns="4"]</div>
+                </div>
+            </div>
+            
+            <div class="shortcode-item">
+                <h4><?php _e('Последно разгледани', 'parfume-reviews'); ?></h4>
+                <p><?php _e('Показва парфюмите които потребителят е разглеждал последно.', 'parfume-reviews'); ?></p>
+                <div class="shortcode-code">
+                    [parfume_recently_viewed]
+                    <button type="button" class="copy-shortcode" onclick="copyToClipboard('[parfume_recently_viewed]')"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                </div>
+                <div class="shortcode-attributes">
+                    <strong><?php _e('Параметри:', 'parfume-reviews'); ?></strong>
+                    <ul>
+                        <li><code>count="5"</code> - <?php _e('Брой парфюми', 'parfume-reviews'); ?></li>
+                        <li><code>title=""</code> - <?php _e('Заглавие на секцията', 'parfume-reviews'); ?></li>
+                        <li><code>show_empty="false"</code> - <?php _e('Показва съобщение ако няма разгледани', 'parfume-reviews'); ?></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Рендерира shortcode генератор
+     */
+    private function render_shortcode_generator() {
+        ?>
+        <div class="shortcode-generator">
+            <h3><?php _e('Shortcode Генератор', 'parfume-reviews'); ?></h3>
+            <p><?php _e('Използвайте този инструмент за лесно генериране на shortcodes с персонализирани параметри.', 'parfume-reviews'); ?></p>
+            
+            <div class="generator-form">
+                <div>
+                    <label for="shortcode-type"><?php _e('Тип Shortcode:', 'parfume-reviews'); ?></label>
+                    <select id="shortcode-type">
+                        <option value=""><?php _e('Изберете...', 'parfume-reviews'); ?></option>
+                        <option value="parfume_grid"><?php _e('Решетка с парфюми', 'parfume-reviews'); ?></option>
+                        <option value="latest_parfumes"><?php _e('Най-нови парфюми', 'parfume-reviews'); ?></option>
+                        <option value="featured_parfumes"><?php _e('Препоръчани парфюми', 'parfume-reviews'); ?></option>
+                        <option value="top_rated_parfumes"><?php _e('Най-високо оценени', 'parfume-reviews'); ?></option>
+                        <option value="all_brands_archive"><?php _e('Всички марки', 'parfume-reviews'); ?></option>
+                        <option value="all_notes_archive"><?php _e('Всички ноти', 'parfume-reviews'); ?></option>
+                        <option value="parfume_filters"><?php _e('Филтри', 'parfume-reviews'); ?></option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="shortcode-count"><?php _e('Брой елементи:', 'parfume-reviews'); ?></label>
+                    <input type="number" id="shortcode-count" min="1" max="50" value="6">
+                </div>
+                
+                <div>
+                    <label for="shortcode-columns"><?php _e('Брой колони:', 'parfume-reviews'); ?></label>
+                    <select id="shortcode-columns">
+                        <option value="2">2</option>
+                        <option value="3" selected>3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="shortcode-orderby"><?php _e('Подреждане по:', 'parfume-reviews'); ?></label>
+                    <select id="shortcode-orderby">
+                        <option value="date"><?php _e('Дата', 'parfume-reviews'); ?></option>
+                        <option value="title"><?php _e('Заглавие', 'parfume-reviews'); ?></option>
+                        <option value="menu_order"><?php _e('Ред', 'parfume-reviews'); ?></option>
+                        <option value="rand"><?php _e('Случайно', 'parfume-reviews'); ?></option>
+                    </select>
+                </div>
+                
+                <div class="generator-output">
+                    <label for="generated-shortcode"><?php _e('Генериран Shortcode:', 'parfume-reviews'); ?></label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="text" id="generated-shortcode" readonly class="large-text" style="font-family: monospace;">
+                        <button type="button" class="button button-primary" onclick="copyGeneratedShortcode()"><?php _e('Копирай', 'parfume-reviews'); ?></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            // Генератор на shortcodes
+            $('#shortcode-type, #shortcode-count, #shortcode-columns, #shortcode-orderby').on('change', function() {
+                generateShortcode();
+            });
+            
+            function generateShortcode() {
+                var type = $('#shortcode-type').val();
+                var count = $('#shortcode-count').val();
+                var columns = $('#shortcode-columns').val();
+                var orderby = $('#shortcode-orderby').val();
+                
+                if (!type) {
+                    $('#generated-shortcode').val('');
+                    return;
+                }
+                
+                var shortcode = '[' + type;
+                
+                if (count && count !== '6') {
+                    shortcode += ' count="' + count + '"';
+                }
+                
+                if (columns && columns !== '3') {
+                    shortcode += ' columns="' + columns + '"';
+                }
+                
+                if (orderby && orderby !== 'date') {
+                    shortcode += ' orderby="' + orderby + '"';
+                }
+                
+                shortcode += ']';
+                
+                $('#generated-shortcode').val(shortcode);
+            }
+        });
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('<?php _e('Shortcode копиран в клипборда!', 'parfume-reviews'); ?>');
+            }, function(err) {
+                // Fallback
+                var textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    alert('<?php _e('Shortcode копиран в клипборда!', 'parfume-reviews'); ?>');
+                } catch (err) {
+                    alert('<?php _e('Грешка при копиране. Моля копирайте ръчно.', 'parfume-reviews'); ?>');
+                }
+                document.body.removeChild(textArea);
+            });
+        }
+        
+        function copyGeneratedShortcode() {
+            var shortcode = document.getElementById('generated-shortcode').value;
+            if (shortcode) {
+                copyToClipboard(shortcode);
+            } else {
+                alert('<?php _e('Първо генерирайте shortcode.', 'parfume-reviews'); ?>');
+            }
+        }
+        </script>
+        <?php
+    }
+    
+    /**
+     * Получава всички регистрирани shortcodes от плъгина
+     */
+    public function get_available_shortcodes() {
+        return array(
+            'parfume_rating' => __('Рейтинг на парфюм', 'parfume-reviews'),
+            'parfume_details' => __('Детайли за парфюм', 'parfume-reviews'),
+            'parfume_stores' => __('Магазини за парфюм', 'parfume-reviews'),
+            'parfume_filters' => __('Филтри за парфюми', 'parfume-reviews'),
+            'parfume_similar' => __('Подобни парфюми', 'parfume-reviews'),
+            'parfume_brand_products' => __('Продукти от марка', 'parfume-reviews'),
+            'parfume_recently_viewed' => __('Последно разгледани', 'parfume-reviews'),
+            'parfume_grid' => __('Решетка с парфюми', 'parfume-reviews'),
+            'latest_parfumes' => __('Най-нови парфюми', 'parfume-reviews'),
+            'featured_parfumes' => __('Препоръчани парфюми', 'parfume-reviews'),
+            'top_rated_parfumes' => __('Най-високо оценени', 'parfume-reviews'),
+            'all_brands_archive' => __('Всички марки', 'parfume-reviews'),
+            'all_notes_archive' => __('Всички ноти', 'parfume-reviews'),
+            'all_perfumers_archive' => __('Всички парфюмеристи', 'parfume-reviews'),
+        );
+    }
+    
+    /**
+     * Проверява дали shortcode е регистриран
+     */
+    public function is_shortcode_registered($shortcode) {
+        return shortcode_exists($shortcode);
+    }
+    
+    /**
+     * Получава статистики за използването на shortcodes
+     */
+    public function get_shortcode_usage_stats() {
+        global $wpdb;
+        
+        $shortcodes = array_keys($this->get_available_shortcodes());
+        $stats = array();
+        
+        foreach ($shortcodes as $shortcode) {
+            $count = $wpdb->get_var($wpdb->prepare("
+                SELECT COUNT(*) 
+                FROM {$wpdb->posts} 
+                WHERE post_content LIKE %s 
+                AND post_status = 'publish'
+            ", '%[' . $shortcode . '%'));
+            
+            $stats[$shortcode] = intval($count);
+        }
+        
+        return $stats;
     }
 }

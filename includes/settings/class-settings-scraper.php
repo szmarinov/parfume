@@ -1,396 +1,645 @@
 <?php
-namespace Parfume_Reviews;
+namespace Parfume_Reviews\Settings;
 
-class Collections {
+/**
+ * Settings_Scraper class - Управлява настройките за product scraper
+ * 
+ * Файл: includes/settings/class-settings-scraper.php
+ * Извлечен от оригинален class-settings.php
+ */
+class Settings_Scraper {
+    
     public function __construct() {
-        add_action('init', array($this, 'register_post_type'));
-        add_action('add_meta_boxes', array($this, 'add_meta_boxes'));
-        add_action('save_post', array($this, 'save_meta_boxes'));
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
-        add_action('wp_ajax_add_to_collection', array($this, 'add_to_collection'));
-        add_action('wp_ajax_remove_from_collection', array($this, 'remove_from_collection'));
-        add_action('wp_ajax_create_collection', array($this, 'create_collection'));
-        add_action('wp_ajax_delete_collection', array($this, 'delete_collection'));
-        add_action('wp_ajax_get_user_collections', array($this, 'get_user_collections'));
-        add_shortcode('parfume_collections', array($this, 'collections_shortcode'));
+        // Няма нужда от хукове тук - те се управляват от главния Settings клас
     }
     
-    public function register_post_type() {
-        $labels = array(
-            'name' => __('Collections', 'parfume-reviews'),
-            'singular_name' => __('Collection', 'parfume-reviews'),
-            'menu_name' => __('Collections', 'parfume-reviews'),
-            'name_admin_bar' => __('Collection', 'parfume-reviews'),
-            'add_new' => __('Add New', 'parfume-reviews'),
-            'add_new_item' => __('Add New Collection', 'parfume-reviews'),
-            'new_item' => __('New Collection', 'parfume-reviews'),
-            'edit_item' => __('Edit Collection', 'parfume-reviews'),
-            'view_item' => __('View Collection', 'parfume-reviews'),
-            'all_items' => __('All Collections', 'parfume-reviews'),
-            'search_items' => __('Search Collections', 'parfume-reviews'),
-            'parent_item_colon' => __('Parent Collections:', 'parfume-reviews'),
-            'not_found' => __('No collections found.', 'parfume-reviews'),
-            'not_found_in_trash' => __('No collections found in Trash.', 'parfume-reviews')
+    /**
+     * Регистрира настройките за scraper
+     */
+    public function register_settings() {
+        // Scraper Section
+        add_settings_section(
+            'parfume_reviews_scraper_section',
+            __('Product Scraper настройки', 'parfume-reviews'),
+            array($this, 'section_description'),
+            'parfume-reviews-settings'
         );
         
-        $args = array(
-            'labels' => $labels,
-            'public' => true,
-            'publicly_queryable' => true,
-            'show_ui' => true,
-            'show_in_menu' => true,
-            'query_var' => true,
-            'rewrite' => array('slug' => 'collections'),
-            'capability_type' => 'post',
-            'has_archive' => true,
-            'hierarchical' => false,
-            'menu_position' => 6,
-            'supports' => array('title', 'editor', 'thumbnail', 'author', 'custom-fields'),
-            'show_in_rest' => true,
-            'menu_icon' => 'dashicons-portfolio',
+        add_settings_field(
+            'scraper_enabled',
+            __('Активирай Scraper', 'parfume-reviews'),
+            array($this, 'scraper_enabled_callback'),
+            'parfume-reviews-settings',
+            'parfume_reviews_scraper_section'
         );
         
-        register_post_type('parfume_collection', $args);
-    }
-    
-    public function add_meta_boxes() {
-        add_meta_box(
-            'collection_parfumes',
-            __('Parfumes in Collection', 'parfume-reviews'),
-            array($this, 'render_parfumes_meta_box'),
-            'parfume_collection',
-            'normal',
-            'high'
+        add_settings_field(
+            'scraper_frequency',
+            __('Честота на скрейпване', 'parfume-reviews'),
+            array($this, 'scraper_frequency_callback'),
+            'parfume-reviews-settings',
+            'parfume_reviews_scraper_section'
         );
         
-        add_meta_box(
-            'collection_privacy',
-            __('Privacy Settings', 'parfume-reviews'),
-            array($this, 'render_privacy_meta_box'),
-            'parfume_collection',
-            'side',
-            'default'
+        add_settings_field(
+            'scraper_timeout',
+            __('Timeout', 'parfume-reviews'),
+            array($this, 'scraper_timeout_callback'),
+            'parfume-reviews-settings',
+            'parfume_reviews_scraper_section'
+        );
+        
+        add_settings_field(
+            'scraper_user_agent',
+            __('User Agent', 'parfume-reviews'),
+            array($this, 'scraper_user_agent_callback'),
+            'parfume-reviews-settings',
+            'parfume_reviews_scraper_section'
+        );
+        
+        add_settings_field(
+            'scraper_concurrent_requests',
+            __('Едновременни заявки', 'parfume-reviews'),
+            array($this, 'scraper_concurrent_requests_callback'),
+            'parfume-reviews-settings',
+            'parfume_reviews_scraper_section'
+        );
+        
+        add_settings_field(
+            'scraper_delay_between_requests',
+            __('Забавяне между заявките (секунди)', 'parfume-reviews'),
+            array($this, 'scraper_delay_between_requests_callback'),
+            'parfume-reviews-settings',
+            'parfume_reviews_scraper_section'
+        );
+        
+        add_settings_field(
+            'scraper_max_retries',
+            __('Максимални опити', 'parfume-reviews'),
+            array($this, 'scraper_max_retries_callback'),
+            'parfume-reviews-settings',
+            'parfume_reviews_scraper_section'
         );
     }
     
-    public function render_parfumes_meta_box($post) {
-        wp_nonce_field('collection_parfumes_nonce', 'collection_parfumes_nonce');
-        
-        $parfumes = get_post_meta($post->ID, '_collection_parfumes', true);
-        $parfumes = !empty($parfumes) ? $parfumes : array();
-        
-        include PARFUME_REVIEWS_PLUGIN_DIR . 'includes/admin/views/meta-box-collection-parfumes.php';
+    /**
+     * Описание на секцията
+     */
+    public function section_description() {
+        echo '<p>' . __('Конфигурирайте настройките за автоматично извличане на информация за продукти от магазини.', 'parfume-reviews') . '</p>';
     }
     
-    public function render_privacy_meta_box($post) {
-        wp_nonce_field('collection_privacy_nonce', 'collection_privacy_nonce');
-        
-        $privacy = get_post_meta($post->ID, '_collection_privacy', true);
-        $privacy = !empty($privacy) ? $privacy : 'public';
-        
-        include PARFUME_REVIEWS_PLUGIN_DIR . 'includes/admin/views/meta-box-collection-privacy.php';
-    }
-    
-    public function save_meta_boxes($post_id) {
-        if (!isset($_POST['collection_parfumes_nonce']) || !wp_verify_nonce($_POST['collection_parfumes_nonce'], 'collection_parfumes_nonce')) {
-            return;
-        }
-        
-        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
-            return;
-        }
-        
-        if (!current_user_can('edit_post', $post_id)) {
-            return;
-        }
-        
-        // Save parfumes
-        if (isset($_POST['collection_parfumes'])) {
-            $parfumes = array_map('intval', $_POST['collection_parfumes']);
-            update_post_meta($post_id, '_collection_parfumes', $parfumes);
-        } else {
-            delete_post_meta($post_id, '_collection_parfumes');
-        }
-        
-        // Save privacy
-        if (isset($_POST['collection_privacy_nonce']) && wp_verify_nonce($_POST['collection_privacy_nonce'], 'collection_privacy_nonce')) {
-            if (isset($_POST['collection_privacy'])) {
-                update_post_meta($post_id, '_collection_privacy', sanitize_text_field($_POST['collection_privacy']));
-            }
-        }
-    }
-    
-    public function enqueue_scripts() {
-        if (is_singular('parfume')) {
-            wp_enqueue_script(
-                'parfume-collections',
-                PARFUME_REVIEWS_PLUGIN_URL . 'assets/js/collections.js',
-                array('jquery'),
-                PARFUME_REVIEWS_VERSION,
-                true
-            );
-            
-            wp_localize_script('parfume-collections', 'parfumeCollections', array(
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('parfume-collections-nonce'),
-                'mustBeLoggedIn' => __('You must be logged in to manage collections', 'parfume-reviews'),
-                'collectionNameRequired' => __('Collection name is required', 'parfume-reviews'),
-                'confirmDelete' => __('Are you sure you want to delete this collection?', 'parfume-reviews'),
-            ));
-        }
-    }
-    
-    public function add_to_collection() {
-        check_ajax_referer('parfume-collections-nonce', 'nonce');
-        
-        if (!is_user_logged_in()) {
-            wp_send_json_error(__('You must be logged in to add to collections', 'parfume-reviews'));
-        }
-        
-        if (!isset($_POST['post_id'], $_POST['collection_id'])) {
-            wp_send_json_error(__('Invalid data', 'parfume-reviews'));
-        }
-        
-        $post_id = intval($_POST['post_id']);
-        $collection_id = intval($_POST['collection_id']);
-        
-        // Check if user owns the collection
-        $collection = get_post($collection_id);
-        if (!$collection || $collection->post_type != 'parfume_collection' || $collection->post_author != get_current_user_id()) {
-            wp_send_json_error(__('Invalid collection', 'parfume-reviews'));
-        }
-        
-        $parfumes = get_post_meta($collection_id, '_collection_parfumes', true);
-        $parfumes = !empty($parfumes) ? $parfumes : array();
-        
-        if (!in_array($post_id, $parfumes)) {
-            $parfumes[] = $post_id;
-            update_post_meta($collection_id, '_collection_parfumes', $parfumes);
-            
-            wp_send_json_success(__('Added to collection', 'parfume-reviews'));
-        } else {
-            wp_send_json_error(__('Already in collection', 'parfume-reviews'));
-        }
-    }
-    
-    public function remove_from_collection() {
-        check_ajax_referer('parfume-collections-nonce', 'nonce');
-        
-        if (!is_user_logged_in()) {
-            wp_send_json_error(__('You must be logged in to remove from collections', 'parfume-reviews'));
-        }
-        
-        if (!isset($_POST['post_id'], $_POST['collection_id'])) {
-            wp_send_json_error(__('Invalid data', 'parfume-reviews'));
-        }
-        
-        $post_id = intval($_POST['post_id']);
-        $collection_id = intval($_POST['collection_id']);
-        
-        // Check if user owns the collection
-        $collection = get_post($collection_id);
-        if (!$collection || $collection->post_type != 'parfume_collection' || $collection->post_author != get_current_user_id()) {
-            wp_send_json_error(__('Invalid collection', 'parfume-reviews'));
-        }
-        
-        $parfumes = get_post_meta($collection_id, '_collection_parfumes', true);
-        $parfumes = !empty($parfumes) ? $parfumes : array();
-        
-        $key = array_search($post_id, $parfumes);
-        if ($key !== false) {
-            unset($parfumes[$key]);
-            $parfumes = array_values($parfumes); // Reindex array
-            update_post_meta($collection_id, '_collection_parfumes', $parfumes);
-            
-            wp_send_json_success(__('Removed from collection', 'parfume-reviews'));
-        } else {
-            wp_send_json_error(__('Not found in collection', 'parfume-reviews'));
-        }
-    }
-    
-    public function create_collection() {
-        check_ajax_referer('parfume-collections-nonce', 'nonce');
-        
-        if (!is_user_logged_in()) {
-            wp_send_json_error(__('You must be logged in to create collections', 'parfume-reviews'));
-        }
-        
-        if (!isset($_POST['name']) || empty($_POST['name'])) {
-            wp_send_json_error(__('Collection name is required', 'parfume-reviews'));
-        }
-        
-        $name = sanitize_text_field($_POST['name']);
-        $privacy = isset($_POST['privacy']) ? sanitize_text_field($_POST['privacy']) : 'public';
-        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-        
-        $collection_id = wp_insert_post(array(
-            'post_title' => $name,
-            'post_type' => 'parfume_collection',
-            'post_status' => 'publish',
-            'post_author' => get_current_user_id(),
-        ));
-        
-        if (is_wp_error($collection_id)) {
-            wp_send_json_error($collection_id->get_error_message());
-        }
-        
-        update_post_meta($collection_id, '_collection_privacy', $privacy);
-        
-        if ($post_id) {
-            update_post_meta($collection_id, '_collection_parfumes', array($post_id));
-        }
-        
-        wp_send_json_success(array(
-            'id' => $collection_id,
-            'name' => $name,
-            'message' => __('Collection created', 'parfume-reviews'),
-        ));
-    }
-    
-    public function delete_collection() {
-        check_ajax_referer('parfume-collections-nonce', 'nonce');
-        
-        if (!is_user_logged_in()) {
-            wp_send_json_error(__('You must be logged in to delete collections', 'parfume-reviews'));
-        }
-        
-        if (!isset($_POST['collection_id'])) {
-            wp_send_json_error(__('Invalid collection', 'parfume-reviews'));
-        }
-        
-        $collection_id = intval($_POST['collection_id']);
-        $collection = get_post($collection_id);
-        
-        if (!$collection || $collection->post_type != 'parfume_collection' || $collection->post_author != get_current_user_id()) {
-            wp_send_json_error(__('Invalid collection', 'parfume-reviews'));
-        }
-        
-        $result = wp_delete_post($collection_id, true);
-        
-        if (!$result) {
-            wp_send_json_error(__('Could not delete collection', 'parfume-reviews'));
-        }
-        
-        wp_send_json_success(__('Collection deleted', 'parfume-reviews'));
-    }
-    
-    public function get_user_collections() {
-        check_ajax_referer('parfume-collections-nonce', 'nonce');
-        
-        if (!is_user_logged_in()) {
-            wp_send_json_error(__('You must be logged in to view collections', 'parfume-reviews'));
-        }
-        
-        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-        $user_id = get_current_user_id();
-        
-        $args = array(
-            'post_type' => 'parfume_collection',
-            'author' => $user_id,
-            'posts_per_page' => -1,
-            'fields' => 'ids',
-        );
-        
-        $collections = get_posts($args);
-        $data = array();
-        
-        foreach ($collections as $collection_id) {
-            $parfumes = get_post_meta($collection_id, '_collection_parfumes', true);
-            $parfumes = !empty($parfumes) ? $parfumes : array();
-            
-            $data[] = array(
-                'id' => $collection_id,
-                'name' => get_the_title($collection_id),
-                'has_parfume' => in_array($post_id, $parfumes),
-            );
-        }
-        
-        wp_send_json_success($data);
-    }
-    
-    public function collections_shortcode($atts) {
-        if (!is_user_logged_in()) {
-            return '<p>' . __('You must be logged in to view your collections.', 'parfume-reviews') . '</p>';
-        }
-        
-        $atts = shortcode_atts(array(
-            'user_id' => get_current_user_id(),
-        ), $atts);
-        
-        $user_id = intval($atts['user_id']);
-        
-        $args = array(
-            'post_type' => 'parfume_collection',
-            'author' => $user_id,
-            'posts_per_page' => -1,
-        );
-        
-        $collections = new \WP_Query($args);
-        
-        ob_start();
-        
-        if ($collections->have_posts()):
-            ?>
-            <div class="parfume-collections">
-                <div class="collections-grid">
-                    <?php while ($collections->have_posts()): $collections->the_post(); 
-                        $parfumes = get_post_meta(get_the_ID(), '_collection_parfumes', true);
-                        $parfumes = !empty($parfumes) ? $parfumes : array();
-                        $privacy = get_post_meta(get_the_ID(), '_collection_privacy', true);
-                    ?>
-                        <div class="collection-item">
-                            <a href="<?php the_permalink(); ?>">
-                                <h3><?php the_title(); ?></h3>
-                                <div class="collection-meta">
-                                    <span class="count"><?php echo count($parfumes); ?> <?php _e('items', 'parfume-reviews'); ?></span>
-                                    <span class="privacy"><?php echo ucfirst($privacy); ?></span>
-                                </div>
-                            </a>
-                        </div>
-                    <?php endwhile; ?>
-                </div>
-            </div>
-            <?php
-        else:
-            ?>
-            <p><?php _e('No collections found.', 'parfume-reviews'); ?></p>
-            <?php
-        endif;
-        
-        wp_reset_postdata();
-        
-        return ob_get_clean();
-    }
-    
-    public static function get_collections_dropdown($post_id) {
-        if (!is_user_logged_in()) {
-            return '';
-        }
-        
-        ob_start();
+    /**
+     * Рендерира секцията с scraper настройки
+     */
+    public function render_section() {
         ?>
-        <div class="parfume-collections-dropdown">
-            <button class="collections-toggle">
-                <?php _e('Add to Collection', 'parfume-reviews'); ?>
-                <span class="dashicons dashicons-arrow-down"></span>
-            </button>
-            
-            <div class="collections-dropdown-content">
-                <div class="collections-list"></div>
-                
-                <div class="create-collection-form">
-                    <input type="text" class="new-collection-name" placeholder="<?php _e('New collection name', 'parfume-reviews'); ?>">
-                    <select class="new-collection-privacy">
-                        <option value="public"><?php _e('Public', 'parfume-reviews'); ?></option>
-                        <option value="private"><?php _e('Private', 'parfume-reviews'); ?></option>
-                    </select>
-                    <button class="create-collection" data-post-id="<?php echo esc_attr($post_id); ?>">
-                        <?php _e('Create', 'parfume-reviews'); ?>
-                    </button>
+        <table class="form-table" role="presentation">
+            <tbody>
+                <tr>
+                    <th scope="row">
+                        <label for="scraper_enabled"><?php _e('Активирай Scraper', 'parfume-reviews'); ?></label>
+                    </th>
+                    <td>
+                        <?php $this->scraper_enabled_callback(); ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="scraper_frequency"><?php _e('Честота на скрейпване', 'parfume-reviews'); ?></label>
+                    </th>
+                    <td>
+                        <?php $this->scraper_frequency_callback(); ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="scraper_timeout"><?php _e('Timeout', 'parfume-reviews'); ?></label>
+                    </th>
+                    <td>
+                        <?php $this->scraper_timeout_callback(); ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="scraper_user_agent"><?php _e('User Agent', 'parfume-reviews'); ?></label>
+                    </th>
+                    <td>
+                        <?php $this->scraper_user_agent_callback(); ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="scraper_concurrent_requests"><?php _e('Едновременни заявки', 'parfume-reviews'); ?></label>
+                    </th>
+                    <td>
+                        <?php $this->scraper_concurrent_requests_callback(); ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="scraper_delay_between_requests"><?php _e('Забавяне между заявките', 'parfume-reviews'); ?></label>
+                    </th>
+                    <td>
+                        <?php $this->scraper_delay_between_requests_callback(); ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="scraper_max_retries"><?php _e('Максимални опити', 'parfume-reviews'); ?></label>
+                    </th>
+                    <td>
+                        <?php $this->scraper_max_retries_callback(); ?>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <?php $this->render_scraper_statistics(); ?>
+        <?php $this->render_scraper_queue_management(); ?>
+        <?php
+    }
+    
+    /**
+     * Callback за scraper_enabled настройката
+     */
+    public function scraper_enabled_callback() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $value = isset($settings['scraper_enabled']) ? $settings['scraper_enabled'] : false;
+        
+        echo '<input type="checkbox" 
+                     id="scraper_enabled"
+                     name="parfume_reviews_settings[scraper_enabled]" 
+                     value="1" ' . checked(1, $value, false) . ' />';
+        echo '<p class="description">' . __('Включва автоматично скрейпване на данни от продуктови страници.', 'parfume-reviews') . '</p>';
+    }
+    
+    /**
+     * Callback за scraper_frequency настройката
+     */
+    public function scraper_frequency_callback() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $value = isset($settings['scraper_frequency']) ? $settings['scraper_frequency'] : 24;
+        
+        echo '<select id="scraper_frequency" name="parfume_reviews_settings[scraper_frequency]">';
+        $frequencies = array(
+            '1' => __('На час', 'parfume-reviews'),
+            '6' => __('На 6 часа', 'parfume-reviews'),
+            '12' => __('На 12 часа', 'parfume-reviews'),
+            '24' => __('Дневно', 'parfume-reviews'),
+            '48' => __('На 2 дни', 'parfume-reviews'),
+            '72' => __('На 3 дни', 'parfume-reviews'),
+            '168' => __('Седмично', 'parfume-reviews')
+        );
+        
+        foreach ($frequencies as $freq => $label) {
+            echo '<option value="' . esc_attr($freq) . '" ' . selected($value, $freq, false) . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select>';
+        echo '<p class="description">' . __('Колко често да се извършва автоматично скрейпване на продуктите.', 'parfume-reviews') . '</p>';
+    }
+    
+    /**
+     * Callback за scraper_timeout настройката
+     */
+    public function scraper_timeout_callback() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $value = isset($settings['scraper_timeout']) ? $settings['scraper_timeout'] : 30;
+        
+        echo '<input type="number" 
+                     id="scraper_timeout"
+                     name="parfume_reviews_settings[scraper_timeout]" 
+                     value="' . esc_attr($value) . '" 
+                     min="5" 
+                     max="120" 
+                     class="small-text" />';
+        echo ' ' . __('секунди', 'parfume-reviews');
+        echo '<p class="description">' . __('Максимално време за изчакване на отговор от магазина.', 'parfume-reviews') . '</p>';
+    }
+    
+    /**
+     * Callback за scraper_user_agent настройката
+     */
+    public function scraper_user_agent_callback() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $value = isset($settings['scraper_user_agent']) ? $settings['scraper_user_agent'] : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
+        
+        echo '<textarea id="scraper_user_agent"
+                        name="parfume_reviews_settings[scraper_user_agent]" 
+                        rows="3" 
+                        cols="50" 
+                        class="large-text">' . esc_textarea($value) . '</textarea>';
+        echo '<p class="description">' . __('User Agent string, който ще се използва при HTTP заявките.', 'parfume-reviews') . '</p>';
+    }
+    
+    /**
+     * Callback за scraper_concurrent_requests настройката
+     */
+    public function scraper_concurrent_requests_callback() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $value = isset($settings['scraper_concurrent_requests']) ? $settings['scraper_concurrent_requests'] : 3;
+        
+        echo '<input type="number" 
+                     id="scraper_concurrent_requests"
+                     name="parfume_reviews_settings[scraper_concurrent_requests]" 
+                     value="' . esc_attr($value) . '" 
+                     min="1" 
+                     max="10" 
+                     class="small-text" />';
+        echo '<p class="description">' . __('Брой едновременни заявки към различни магазини.', 'parfume-reviews') . '</p>';
+    }
+    
+    /**
+     * Callback за scraper_delay_between_requests настройката
+     */
+    public function scraper_delay_between_requests_callback() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $value = isset($settings['scraper_delay_between_requests']) ? $settings['scraper_delay_between_requests'] : 2;
+        
+        echo '<input type="number" 
+                     id="scraper_delay_between_requests"
+                     name="parfume_reviews_settings[scraper_delay_between_requests]" 
+                     value="' . esc_attr($value) . '" 
+                     min="0" 
+                     max="30" 
+                     class="small-text" />';
+        echo ' ' . __('секунди', 'parfume-reviews');
+        echo '<p class="description">' . __('Забавяне между заявките към същия магазин (за да не натоварваме сървъра).', 'parfume-reviews') . '</p>';
+    }
+    
+    /**
+     * Callback за scraper_max_retries настройката
+     */
+    public function scraper_max_retries_callback() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $value = isset($settings['scraper_max_retries']) ? $settings['scraper_max_retries'] : 3;
+        
+        echo '<input type="number" 
+                     id="scraper_max_retries"
+                     name="parfume_reviews_settings[scraper_max_retries]" 
+                     value="' . esc_attr($value) . '" 
+                     min="1" 
+                     max="10" 
+                     class="small-text" />';
+        echo '<p class="description">' . __('Брой опити при неуспешна заявка преди да се счита за неуспешна.', 'parfume-reviews') . '</p>';
+    }
+    
+    /**
+     * Рендерира статистики за scraper
+     */
+    private function render_scraper_statistics() {
+        $stats = $this->get_scraper_statistics();
+        ?>
+        <div class="scraper-stats-section" style="margin-top: 30px; background: #f8f9fa; padding: 20px; border-radius: 8px;">
+            <h3><?php _e('Статистики за Scraper', 'parfume-reviews'); ?></h3>
+            <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="stat-item">
+                    <strong><?php _e('Общо продукти:', 'parfume-reviews'); ?></strong>
+                    <span><?php echo esc_html($stats['total_products']); ?></span>
+                </div>
+                <div class="stat-item">
+                    <strong><?php _e('Продукти със scraping:', 'parfume-reviews'); ?></strong>
+                    <span><?php echo esc_html($stats['products_with_scraping']); ?></span>
+                </div>
+                <div class="stat-item">
+                    <strong><?php _e('Последни 24ч скрейпвания:', 'parfume-reviews'); ?></strong>
+                    <span><?php echo esc_html($stats['recent_scrapes']); ?></span>
+                </div>
+                <div class="stat-item">
+                    <strong><?php _e('Неуспешни опити:', 'parfume-reviews'); ?></strong>
+                    <span><?php echo esc_html($stats['failed_scrapes']); ?></span>
                 </div>
             </div>
         </div>
         <?php
-        return ob_get_clean();
+    }
+    
+    /**
+     * Рендерира управление на scraper queue
+     */
+    private function render_scraper_queue_management() {
+        ?>
+        <div class="scraper-queue-section" style="margin-top: 30px; background: #fff; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px;">
+            <h3><?php _e('Управление на Scraper Queue', 'parfume-reviews'); ?></h3>
+            <div class="queue-actions" style="margin-bottom: 15px;">
+                <button type="button" class="button button-primary" id="run-scraper-now">
+                    <?php _e('Стартирай скрейпване сега', 'parfume-reviews'); ?>
+                </button>
+                <button type="button" class="button button-secondary" id="clear-scraper-queue">
+                    <?php _e('Изчисти опашката', 'parfume-reviews'); ?>
+                </button>
+                <button type="button" class="button button-secondary" id="reset-failed-scrapes">
+                    <?php _e('Рестартирай неуспешни', 'parfume-reviews'); ?>
+                </button>
+            </div>
+            
+            <div class="queue-status">
+                <h4><?php _e('Статус на опашката', 'parfume-reviews'); ?></h4>
+                <div id="scraper-queue-status">
+                    <?php $this->render_queue_status(); ?>
+                </div>
+            </div>
+        </div>
+        
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            // Стартирай scraper сега
+            $('#run-scraper-now').on('click', function() {
+                var button = $(this);
+                button.prop('disabled', true).text('<?php _e('Стартира...', 'parfume-reviews'); ?>');
+                
+                $.post(ajaxurl, {
+                    action: 'parfume_run_scraper_now',
+                    nonce: '<?php echo wp_create_nonce('parfume_scraper_action'); ?>'
+                }, function(response) {
+                    if (response.success) {
+                        alert('<?php _e('Scraper е стартиран успешно.', 'parfume-reviews'); ?>');
+                        location.reload();
+                    } else {
+                        alert('<?php _e('Грешка при стартиране на scraper.', 'parfume-reviews'); ?>');
+                    }
+                }).always(function() {
+                    button.prop('disabled', false).text('<?php _e('Стартирай скрейпване сега', 'parfume-reviews'); ?>');
+                });
+            });
+            
+            // Изчисти queue
+            $('#clear-scraper-queue').on('click', function() {
+                if (confirm('<?php _e('Сигурни ли сте, че искате да изчистите опашката?', 'parfume-reviews'); ?>')) {
+                    $.post(ajaxurl, {
+                        action: 'parfume_clear_scraper_queue',
+                        nonce: '<?php echo wp_create_nonce('parfume_scraper_action'); ?>'
+                    }, function(response) {
+                        if (response.success) {
+                            alert('<?php _e('Опашката е изчистена.', 'parfume-reviews'); ?>');
+                            location.reload();
+                        }
+                    });
+                }
+            });
+            
+            // Рестартирай неуспешни
+            $('#reset-failed-scrapes').on('click', function() {
+                $.post(ajaxurl, {
+                    action: 'parfume_reset_failed_scrapes',
+                    nonce: '<?php echo wp_create_nonce('parfume_scraper_action'); ?>'
+                }, function(response) {
+                    if (response.success) {
+                        alert('<?php _e('Неуспешните скрейпвания са рестартирани.', 'parfume-reviews'); ?>');
+                        location.reload();
+                    }
+                });
+            });
+        });
+        </script>
+        <?php
+    }
+    
+    /**
+     * Рендерира статуса на queue
+     */
+    private function render_queue_status() {
+        $queue_items = $this->get_queue_items();
+        
+        if (empty($queue_items)) {
+            echo '<p>' . __('Опашката е празна.', 'parfume-reviews') . '</p>';
+            return;
+        }
+        
+        echo '<table class="widefat">';
+        echo '<thead>';
+        echo '<tr>';
+        echo '<th>' . __('Продукт', 'parfume-reviews') . '</th>';
+        echo '<th>' . __('Магазин', 'parfume-reviews') . '</th>';
+        echo '<th>' . __('Статус', 'parfume-reviews') . '</th>';
+        echo '<th>' . __('Следващо скрейпване', 'parfume-reviews') . '</th>';
+        echo '</tr>';
+        echo '</thead>';
+        echo '<tbody>';
+        
+        foreach ($queue_items as $item) {
+            echo '<tr>';
+            echo '<td><a href="' . esc_url(get_edit_post_link($item['post_id'])) . '">' . esc_html(get_the_title($item['post_id'])) . '</a></td>';
+            echo '<td>' . esc_html($item['store_name']) . '</td>';
+            echo '<td><span class="status-' . esc_attr($item['status']) . '">' . esc_html($this->get_status_label($item['status'])) . '</span></td>';
+            echo '<td>' . esc_html($item['next_scrape']) . '</td>';
+            echo '</tr>';
+        }
+        
+        echo '</tbody>';
+        echo '</table>';
+    }
+    
+    /**
+     * Получава статистики за scraper
+     */
+    private function get_scraper_statistics() {
+        global $wpdb;
+        
+        $stats = array(
+            'total_products' => 0,
+            'products_with_scraping' => 0,
+            'recent_scrapes' => 0,
+            'failed_scrapes' => 0
+        );
+        
+        // Общо продукти
+        $stats['total_products'] = wp_count_posts('parfume')->publish;
+        
+        // Продукти със scraping
+        $products_with_stores = $wpdb->get_var("
+            SELECT COUNT(DISTINCT post_id) 
+            FROM {$wpdb->postmeta} 
+            WHERE meta_key = '_parfume_stores' 
+            AND meta_value != ''
+        ");
+        $stats['products_with_scraping'] = intval($products_with_stores);
+        
+        // Последни скрейпвания (последните 24 часа)
+        $yesterday = date('Y-m-d H:i:s', strtotime('-24 hours'));
+        $recent_scrapes = $wpdb->get_var($wpdb->prepare("
+            SELECT COUNT(*) 
+            FROM {$wpdb->options} 
+            WHERE option_name LIKE 'parfume_scraper_log_%' 
+            AND option_value LIKE %s
+        ", '%"timestamp":"' . date('Y-m-d') . '%'));
+        $stats['recent_scrapes'] = intval($recent_scrapes);
+        
+        // Неуспешни скрейпвания
+        $failed_scrapes = $wpdb->get_var("
+            SELECT COUNT(*) 
+            FROM {$wpdb->options} 
+            WHERE option_name LIKE 'parfume_scraper_failed_%'
+        ");
+        $stats['failed_scrapes'] = intval($failed_scrapes);
+        
+        return $stats;
+    }
+    
+    /**
+     * Получава елементите от queue
+     */
+    private function get_queue_items() {
+        global $wpdb;
+        
+        $queue_items = array();
+        
+        // Намираме всички постове с магазини
+        $posts_with_stores = $wpdb->get_results("
+            SELECT post_id, meta_value 
+            FROM {$wpdb->postmeta} 
+            WHERE meta_key = '_parfume_stores'
+            AND meta_value != ''
+            LIMIT 50
+        ");
+        
+        foreach ($posts_with_stores as $post_meta) {
+            $stores = maybe_unserialize($post_meta->meta_value);
+            if (!is_array($stores)) continue;
+            
+            foreach ($stores as $store) {
+                if (empty($store['product_url'])) continue;
+                
+                $queue_items[] = array(
+                    'post_id' => $post_meta->post_id,
+                    'store_name' => $store['name'],
+                    'status' => isset($store['scrape_status']) ? $store['scrape_status'] : 'pending',
+                    'next_scrape' => isset($store['next_scrape']) ? $store['next_scrape'] : __('Неизвестно', 'parfume-reviews')
+                );
+            }
+        }
+        
+        return $queue_items;
+    }
+    
+    /**
+     * Получава етикета за статус
+     */
+    private function get_status_label($status) {
+        $labels = array(
+            'pending' => __('Чакащ', 'parfume-reviews'),
+            'running' => __('Изпълнява се', 'parfume-reviews'),
+            'completed' => __('Завършен', 'parfume-reviews'),
+            'failed' => __('Неуспешен', 'parfume-reviews'),
+            'skipped' => __('Пропуснат', 'parfume-reviews')
+        );
+        
+        return isset($labels[$status]) ? $labels[$status] : $status;
+    }
+    
+    /**
+     * Получава настройките за export
+     */
+    public function get_all_settings() {
+        $settings = get_option('parfume_reviews_settings', array());
+        
+        return array(
+            'scraper_enabled' => isset($settings['scraper_enabled']) ? $settings['scraper_enabled'] : false,
+            'scraper_frequency' => isset($settings['scraper_frequency']) ? $settings['scraper_frequency'] : 24,
+            'scraper_timeout' => isset($settings['scraper_timeout']) ? $settings['scraper_timeout'] : 30,
+            'scraper_user_agent' => isset($settings['scraper_user_agent']) ? $settings['scraper_user_agent'] : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'scraper_concurrent_requests' => isset($settings['scraper_concurrent_requests']) ? $settings['scraper_concurrent_requests'] : 3,
+            'scraper_delay_between_requests' => isset($settings['scraper_delay_between_requests']) ? $settings['scraper_delay_between_requests'] : 2,
+            'scraper_max_retries' => isset($settings['scraper_max_retries']) ? $settings['scraper_max_retries'] : 3
+        );
+    }
+    
+    /**
+     * Валидира настройките преди запазване
+     */
+    public function validate_settings($input) {
+        $validated = array();
+        
+        // scraper_enabled
+        $validated['scraper_enabled'] = isset($input['scraper_enabled']) ? true : false;
+        
+        // scraper_frequency
+        $validated['scraper_frequency'] = intval($input['scraper_frequency']);
+        if ($validated['scraper_frequency'] < 1) {
+            $validated['scraper_frequency'] = 24;
+        }
+        
+        // scraper_timeout
+        $validated['scraper_timeout'] = intval($input['scraper_timeout']);
+        if ($validated['scraper_timeout'] < 5 || $validated['scraper_timeout'] > 120) {
+            $validated['scraper_timeout'] = 30;
+        }
+        
+        // scraper_user_agent
+        $validated['scraper_user_agent'] = sanitize_textarea_field($input['scraper_user_agent']);
+        if (empty($validated['scraper_user_agent'])) {
+            $validated['scraper_user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
+        }
+        
+        // scraper_concurrent_requests
+        $validated['scraper_concurrent_requests'] = intval($input['scraper_concurrent_requests']);
+        if ($validated['scraper_concurrent_requests'] < 1 || $validated['scraper_concurrent_requests'] > 10) {
+            $validated['scraper_concurrent_requests'] = 3;
+        }
+        
+        // scraper_delay_between_requests
+        $validated['scraper_delay_between_requests'] = intval($input['scraper_delay_between_requests']);
+        if ($validated['scraper_delay_between_requests'] < 0 || $validated['scraper_delay_between_requests'] > 30) {
+            $validated['scraper_delay_between_requests'] = 2;
+        }
+        
+        // scraper_max_retries
+        $validated['scraper_max_retries'] = intval($input['scraper_max_retries']);
+        if ($validated['scraper_max_retries'] < 1 || $validated['scraper_max_retries'] > 10) {
+            $validated['scraper_max_retries'] = 3;
+        }
+        
+        return $validated;
+    }
+    
+    /**
+     * Експортира scraper настройките в JSON формат
+     */
+    public function export_settings() {
+        $settings = $this->get_all_settings();
+        
+        return json_encode(array(
+            'component' => 'scraper',
+            'version' => PARFUME_REVIEWS_VERSION,
+            'timestamp' => current_time('mysql'),
+            'settings' => $settings
+        ), JSON_PRETTY_PRINT);
+    }
+    
+    /**
+     * Импортира scraper настройки от JSON данни
+     */
+    public function import_settings($json_data) {
+        $data = json_decode($json_data, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return new \WP_Error('invalid_json', __('Невалиден JSON формат.', 'parfume-reviews'));
+        }
+        
+        if (!isset($data['component']) || $data['component'] !== 'scraper') {
+            return new \WP_Error('invalid_component', __('Файлът не съдържа scraper настройки.', 'parfume-reviews'));
+        }
+        
+        if (!isset($data['settings']) || !is_array($data['settings'])) {
+            return new \WP_Error('invalid_settings', __('Невалидни настройки в файла.', 'parfume-reviews'));
+        }
+        
+        // Валидираме и запазваме настройките
+        $validated_settings = $this->validate_settings($data['settings']);
+        $current_settings = get_option('parfume_reviews_settings', array());
+        
+        // Запазваме настройките от други компоненти
+        foreach ($validated_settings as $key => $value) {
+            $current_settings[$key] = $value;
+        }
+        
+        $result = update_option('parfume_reviews_settings', $current_settings);
+        
+        if ($result) {
+            // Изчистваме cache за scraper настройките
+            delete_transient('parfume_scraper_settings_cache');
+        }
+        
+        return $result;
     }
 }
