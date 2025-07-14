@@ -1,104 +1,89 @@
 <?php
 /**
- * Template hooks for Parfume Reviews
+ * Template Hooks - закачалки за template-ите
+ * ПОПРАВЕНА ВЕРСИЯ - правилно зареждане на single-perfumer.css
  */
 
+// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
 
 /**
- * Add meta tags for single parfume pages
+ * Display parfume rating in header
+ */
+add_action('parfume_header_after_title', function() {
+    if (is_singular('parfume')) {
+        $rating = get_post_meta(get_the_ID(), '_parfume_rating', true);
+        if (!empty($rating)) {
+            echo '<div class="parfume-rating">';
+            echo parfume_reviews_display_rating($rating);
+            echo '</div>';
+        }
+    }
+});
+
+/**
+ * Display parfume meta info
+ */
+add_action('parfume_meta_display', function() {
+    if (is_singular('parfume')) {
+        $perfumers = wp_get_post_terms(get_the_ID(), 'perfumer');
+        $brands = wp_get_post_terms(get_the_ID(), 'marki');
+        
+        if (!empty($brands)) {
+            echo '<span class="parfume-brand">';
+            foreach ($brands as $brand) {
+                echo '<a href="' . get_term_link($brand) . '">' . esc_html($brand->name) . '</a> ';
+            }
+            echo '</span>';
+        }
+        
+        if (!empty($perfumers)) {
+            echo '<span class="parfume-perfumer">';
+            echo __('от ', 'parfume-reviews');
+            foreach ($perfumers as $perfumer) {
+                echo '<a href="' . get_term_link($perfumer) . '">' . esc_html($perfumer->name) . '</a> ';
+            }
+            echo '</span>';
+        }
+    }
+});
+
+/**
+ * Add structured data for parfume
  */
 add_action('wp_head', function() {
     if (is_singular('parfume')) {
-        global $post;
+        $post_id = get_the_ID();
+        $rating = get_post_meta($post_id, '_parfume_rating', true);
+        $brands = wp_get_post_terms($post_id, 'marki');
         
-        // Get parfume metadata
-        $description = get_post_meta($post->ID, '_parfume_description', true);
-        $gender = get_post_meta($post->ID, '_parfume_gender', true);
-        $release_year = get_post_meta($post->ID, '_parfume_release_year', true);
-        $notes = wp_get_post_terms($post->ID, 'notes', array('fields' => 'names'));
-        $brand = wp_get_post_terms($post->ID, 'marki', array('fields' => 'names'));
-        $rating = get_post_meta($post->ID, '_parfume_rating', true);
-        
-        // Add basic meta tags
-        if (!empty($description)) {
-            echo '<meta name="description" content="' . esc_attr($description) . '">' . "\n";
-        }
-        
-        // Add Open Graph tags
-        echo '<meta property="og:title" content="' . esc_attr(get_the_title($post->ID)) . '">' . "\n";
-        echo '<meta property="og:type" content="product">' . "\n";
-        echo '<meta property="og:url" content="' . esc_url(get_permalink($post->ID)) . '">' . "\n";
-        
-        if (!empty($description)) {
-            echo '<meta property="og:description" content="' . esc_attr($description) . '">' . "\n";
-        }
-        
-        if (has_post_thumbnail($post->ID)) {
-            $thumbnail_url = get_the_post_thumbnail_url($post->ID, 'large');
-            if ($thumbnail_url) {
-                echo '<meta property="og:image" content="' . esc_url($thumbnail_url) . '">' . "\n";
-            }
-        }
-        
-        // Add structured data (JSON-LD) for SEO
         $schema = array(
             '@context' => 'https://schema.org',
             '@type' => 'Product',
-            'name' => get_the_title($post->ID),
-            'url' => get_permalink($post->ID),
+            'name' => get_the_title(),
+            'description' => get_the_excerpt() ?: wp_trim_words(get_the_content(), 30),
+            'url' => get_permalink(),
         );
         
-        if (!empty($description)) {
-            $schema['description'] = $description;
-        }
-        
-        if (!empty($brand) && is_array($brand)) {
+        if (!empty($brands)) {
             $schema['brand'] = array(
                 '@type' => 'Brand',
-                'name' => sanitize_text_field($brand[0]),
+                'name' => $brands[0]->name
             );
         }
         
-        // Add rating if exists
         if (!empty($rating)) {
             $schema['aggregateRating'] = array(
                 '@type' => 'AggregateRating',
-                'ratingValue' => sanitize_text_field($rating),
+                'ratingValue' => $rating,
                 'bestRating' => '5',
                 'worstRating' => '1',
-                'ratingCount' => '1',
+                'ratingCount' => '1'
             );
         }
         
-        // Add image if exists
-        if (has_post_thumbnail($post->ID)) {
-            $thumbnail_url = get_the_post_thumbnail_url($post->ID, 'full');
-            if ($thumbnail_url) {
-                $schema['image'] = $thumbnail_url;
-            }
-        }
-        
-        // Add additional properties if they exist
-        if (!empty($gender)) {
-            $schema['additionalProperty'] = array(
-                '@type' => 'PropertyValue',
-                'name' => 'gender',
-                'value' => sanitize_text_field($gender),
-            );
-        }
-        
-        if (!empty($release_year)) {
-            $schema['releaseDate'] = sanitize_text_field($release_year);
-        }
-        
-        if (!empty($notes) && is_array($notes)) {
-            $schema['keywords'] = implode(', ', array_map('sanitize_text_field', $notes));
-        }
-        
-        // Use wp_json_encode for better compatibility
         echo '<script type="application/ld+json">' . wp_json_encode($schema, JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
     }
 });
@@ -117,6 +102,11 @@ add_filter('body_class', function($classes) {
         $queried_object = get_queried_object();
         if ($queried_object && isset($queried_object->taxonomy)) {
             $classes[] = 'parfume-taxonomy-' . $queried_object->taxonomy;
+            
+            // СПЕЦИАЛНО за perfumer таксономия
+            if ($queried_object->taxonomy === 'perfumer') {
+                $classes[] = 'single-perfumer-page';
+            }
         }
     }
     
@@ -125,7 +115,7 @@ add_filter('body_class', function($classes) {
 
 /**
  * Enqueue styles and scripts for parfume pages
- * ОБНОВЕНО - ДОБАВЕН FILTERS.CSS!
+ * ПОПРАВЕНА ВЕРСИЯ - ПРАВИЛНО ЗАРЕЖДАНЕ НА SINGLE-PERFUMER.CSS!
  */
 add_action('wp_enqueue_scripts', function() {
     if (parfume_reviews_is_parfume_page()) {
@@ -138,7 +128,7 @@ add_action('wp_enqueue_scripts', function() {
             PARFUME_REVIEWS_VERSION
         );
         
-        // Filters CSS - НОВ ФАЙЛ!
+        // Filters CSS
         wp_enqueue_style(
             'parfume-reviews-filters',
             PARFUME_REVIEWS_PLUGIN_URL . 'assets/css/filters.css',
@@ -162,6 +152,25 @@ add_action('wp_enqueue_scripts', function() {
                 array('parfume-reviews-frontend'),
                 PARFUME_REVIEWS_VERSION
             );
+        }
+        
+        // ПОПРАВЕНО! Single perfumer specific CSS - РАЗШИРЕНО УСЛОВИЕ
+        if (is_tax('perfumer') || 
+            (is_tax() && get_queried_object() && get_queried_object()->taxonomy === 'perfumer') ||
+            (isset($GLOBALS['wp_query']) && $GLOBALS['wp_query']->is_tax('perfumer')) ||
+            in_array('single-perfumer-page', get_body_class())) {
+            
+            wp_enqueue_style(
+                'parfume-reviews-single-perfumer',
+                PARFUME_REVIEWS_PLUGIN_URL . 'assets/css/single-perfumer.css',
+                array('parfume-reviews-frontend'),
+                time() // Force refresh за тестване
+            );
+            
+            // DEBUG лог
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('PERFUMER CSS: Loading single-perfumer.css for URL: ' . $_SERVER['REQUEST_URI']);
+            }
         }
         
         // JavaScript files
@@ -189,146 +198,152 @@ add_action('wp_enqueue_scripts', function() {
             true
         );
         
-        // Localization
+        // Localize script data
         wp_localize_script('parfume-reviews-frontend', 'parfumeReviews', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('parfume-reviews-nonce'),
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('parfume_reviews_nonce'),
             'strings' => array(
-                'loading' => __('Зареждане...', 'parfume-reviews'),
-                'error' => __('Възникна грешка', 'parfume-reviews'),
-                'success' => __('Успех', 'parfume-reviews'),
-            ),
+                'addToComparison' => __('Добави за сравняване', 'parfume-reviews'),
+                'removeFromComparison' => __('Премахни от сравняването', 'parfume-reviews'),
+                'comparisonLimit' => __('Можете да сравнявате максимум 4 парфюма', 'parfume-reviews'),
+                'noResults' => __('Няма намерени резултати', 'parfume-reviews'),
+                'loading' => __('Зареждане...', 'parfume-reviews')
+            )
         ));
+    }
+});
+
+/**
+ * АЛТЕРНАТИВЕН HOOK - Ако горният не работи
+ * Зарежда CSS директно за perfumer страници
+ */
+add_action('wp_enqueue_scripts', function() {
+    // Проверяваме дали сме на perfumer страница по различен начин
+    if (is_tax('perfumer') || 
+        (function_exists('get_queried_object') && 
+         get_queried_object() && 
+         isset(get_queried_object()->taxonomy) && 
+         get_queried_object()->taxonomy === 'perfumer')) {
         
-        wp_localize_script('parfume-comparison', 'parfumeComparison', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('parfume-comparison-nonce'),
-            'maxItems' => 4,
-            'addedText' => __('Added to comparison', 'parfume-reviews'),
-            'addText' => __('Add to comparison', 'parfume-reviews'),
-            'removeText' => __('Remove', 'parfume-reviews'),
-            'compareText' => __('Compare', 'parfume-reviews'),
-            'emptyText' => __('No items to compare', 'parfume-reviews'),
-            'alreadyAddedText' => __('Already added to comparison', 'parfume-reviews'),
-        ));
-    }
-});
-
-/**
- * Add custom hooks for theme integration
- */
-
-// Hook before main content on archive pages
-if (!has_action('parfume_reviews_before_archive_content')) {
-    add_action('parfume_reviews_before_archive_content', function() {
-        // Placeholder for themes to hook into
-    });
-}
-
-// Hook after main content on archive pages
-if (!has_action('parfume_reviews_after_archive_content')) {
-    add_action('parfume_reviews_after_archive_content', function() {
-        // Placeholder for themes to hook into
-    });
-}
-
-// Hook before single parfume content
-if (!has_action('parfume_reviews_before_single_content')) {
-    add_action('parfume_reviews_before_single_content', function() {
-        // Placeholder for themes to hook into
-    });
-}
-
-// Hook after single parfume content
-if (!has_action('parfume_reviews_after_single_content')) {
-    add_action('parfume_reviews_after_single_content', function() {
-        // Placeholder for themes to hook into
-    });
-}
-
-/**
- * Custom navigation for parfume archives
- */
-add_action('parfume_reviews_archive_navigation', function() {
-    if (is_post_type_archive('parfume') || is_tax(array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity'))) {
-        the_posts_pagination(array(
-            'mid_size' => 2,
-            'prev_text' => __('&laquo; Previous', 'parfume-reviews'),
-            'next_text' => __('Next &raquo;', 'parfume-reviews'),
-            'before_page_number' => '<span class="screen-reader-text">' . __('Page', 'parfume-reviews') . ' </span>',
-        ));
-    }
-});
-
-/**
- * Add breadcrumbs for parfume pages
- */
-add_action('parfume_reviews_breadcrumbs', function() {
-    if (!is_singular('parfume') && !is_post_type_archive('parfume') && !is_tax(array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity'))) {
-        return;
-    }
-    
-    $breadcrumbs = array();
-    $breadcrumbs[] = '<a href="' . home_url() . '">' . __('Home', 'parfume-reviews') . '</a>';
-    
-    if (is_singular('parfume')) {
-        $breadcrumbs[] = '<a href="' . get_post_type_archive_link('parfume') . '">' . __('Parfumes', 'parfume-reviews') . '</a>';
-        $breadcrumbs[] = '<span>' . get_the_title() . '</span>';
-    } elseif (is_post_type_archive('parfume')) {
-        $breadcrumbs[] = '<span>' . __('Parfumes', 'parfume-reviews') . '</span>';
-    } elseif (is_tax()) {
-        $queried_object = get_queried_object();
-        $breadcrumbs[] = '<a href="' . get_post_type_archive_link('parfume') . '">' . __('Parfumes', 'parfume-reviews') . '</a>';
+        wp_enqueue_style(
+            'parfume-reviews-single-perfumer-fallback',
+            PARFUME_REVIEWS_PLUGIN_URL . 'assets/css/single-perfumer.css',
+            array(),
+            time() // Force refresh
+        );
         
-        if ($queried_object && isset($queried_object->name)) {
-            $breadcrumbs[] = '<span>' . esc_html($queried_object->name) . '</span>';
-        }
+        // DEBUG съобщение
+        add_action('wp_footer', function() {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                echo '<!-- PERFUMER CSS: Fallback CSS loaded -->';
+            }
+        });
     }
-    
-    if (!empty($breadcrumbs)) {
-        echo '<nav class="parfume-breadcrumbs" aria-label="' . esc_attr__('Breadcrumbs', 'parfume-reviews') . '">';
-        echo '<ol class="breadcrumb-list">';
-        foreach ($breadcrumbs as $crumb) {
-            echo '<li class="breadcrumb-item">' . $crumb . '</li>';
-        }
-        echo '</ol>';
-        echo '</nav>';
+}, 20); // По-висок приоритет
+
+/**
+ * Add noindex to comparison pages for SEO
+ */
+add_action('wp_head', function() {
+    if (is_page() && get_query_var('comparison')) {
+        echo '<meta name="robots" content="noindex, nofollow">' . "\n";
     }
 });
 
 /**
- * Add search form for parfume archives
+ * Remove WordPress version from head for security
  */
-add_action('parfume_reviews_search_form', function() {
-    if (is_post_type_archive('parfume') || is_tax(array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity'))) {
-        ?>
-        <form role="search" method="get" class="parfume-search-form" action="<?php echo esc_url(home_url('/')); ?>">
-            <label class="screen-reader-text" for="parfume-search"><?php _e('Search for:', 'parfume-reviews'); ?></label>
-            <input type="search" id="parfume-search" class="search-field" placeholder="<?php esc_attr_e('Search parfumes...', 'parfume-reviews'); ?>" value="<?php echo get_search_query(); ?>" name="s" />
-            <input type="hidden" name="post_type" value="parfume" />
-            <button type="submit" class="search-submit">
-                <span class="screen-reader-text"><?php _e('Search', 'parfume-reviews'); ?></span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 21L16.514 16.506L21 21ZM19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
-        </form>
-        <?php
-    }
-});
+add_filter('the_generator', '__return_empty_string');
 
 /**
- * Add comparison widget to footer (if not already present)
+ * Optimize images for parfume pages
  */
-add_action('wp_footer', function() {
+add_filter('wp_get_attachment_image_attributes', function($attr, $attachment, $size) {
     if (parfume_reviews_is_parfume_page()) {
-        ?>
-        <div class="comparison-widget" style="display: none;">
-            <span class="widget-icon">⚖️</span>
-            <span class="widget-text"><?php _e('Comparison', 'parfume-reviews'); ?></span>
-            <span class="widget-count">0</span>
-            <button class="widget-button"><?php _e('View', 'parfume-reviews'); ?></button>
-        </div>
-        <?php
+        $attr['loading'] = 'lazy';
+        if (!isset($attr['decoding'])) {
+            $attr['decoding'] = 'async';
+        }
+    }
+    return $attr;
+}, 10, 3);
+
+/**
+ * Add custom CSS variables for theming
+ */
+add_action('wp_head', function() {
+    if (parfume_reviews_is_parfume_page()) {
+        echo '<style>
+        :root {
+            --parfume-primary-color: #667eea;
+            --parfume-secondary-color: #764ba2;
+            --parfume-accent-color: #f093fb;
+            --parfume-text-color: #333;
+            --parfume-light-bg: #f8f9fa;
+            --parfume-border-color: #e1e5e9;
+            --parfume-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --parfume-border-radius: 8px;
+        }
+        </style>';
+    }
+}, 5);
+
+/**
+ * Improve excerpt for parfume posts
+ */
+add_filter('get_the_excerpt', function($excerpt, $post) {
+    if ($post && $post->post_type === 'parfume' && empty($excerpt)) {
+        // Generate excerpt from content if not set
+        $content = wp_strip_all_tags($post->post_content);
+        $excerpt = wp_trim_words($content, 30, '...');
+    }
+    return $excerpt;
+}, 10, 2);
+
+/**
+ * Add Open Graph meta tags for better social sharing
+ */
+add_action('wp_head', function() {
+    if (is_singular('parfume') || parfume_reviews_is_parfume_taxonomy()) {
+        $title = wp_get_document_title();
+        $description = '';
+        $image = '';
+        
+        if (is_singular('parfume')) {
+            $description = get_the_excerpt() ?: wp_trim_words(get_the_content(), 30);
+            $image = get_the_post_thumbnail_url(get_the_ID(), 'large');
+        } elseif (is_tax()) {
+            $term = get_queried_object();
+            $description = $term->description ?: sprintf(__('Разгледайте всички парфюми в категорията %s', 'parfume-reviews'), $term->name);
+            $taxonomy = $term->taxonomy;
+            $image_id = get_term_meta($term->term_id, $taxonomy . '-image-id', true);
+            if ($image_id) {
+                $image = wp_get_attachment_image_url($image_id, 'large');
+            }
+        }
+        
+        if ($description) {
+            echo '<meta property="og:description" content="' . esc_attr($description) . '">' . "\n";
+            echo '<meta name="description" content="' . esc_attr($description) . '">' . "\n";
+        }
+        
+        if ($image) {
+            echo '<meta property="og:image" content="' . esc_url($image) . '">' . "\n";
+        }
     }
 });
+
+/**
+ * DEBUG ФУНКЦИЯ - Показва кои CSS файлове се зареждат
+ */
+if (defined('WP_DEBUG') && WP_DEBUG) {
+    add_action('wp_footer', function() {
+        if (is_tax('perfumer')) {
+            echo '<!-- DEBUG INFO: ';
+            echo 'URL: ' . $_SERVER['REQUEST_URI'] . ', ';
+            echo 'Taxonomy: ' . (get_queried_object() ? get_queried_object()->taxonomy : 'none') . ', ';
+            echo 'Classes: ' . implode(' ', get_body_class());
+            echo ' -->';
+        }
+    });
+}

@@ -1,10 +1,16 @@
 <?php
 namespace Parfume_Reviews;
 
+/**
+ * Import_Export class - управлява импорт и експорт на данни
+ * ПОПРАВЕНА ВЕРСИЯ - добавен импорт за парфюмеристи
+ */
 class Import_Export {
     public function __construct() {
         add_action('admin_init', array($this, 'handle_import'));
         add_action('admin_init', array($this, 'handle_export'));
+        add_action('admin_init', array($this, 'handle_perfumer_import'));
+        add_action('admin_init', array($this, 'handle_perfumer_export'));
     }
     
     public function handle_import() {
@@ -125,6 +131,221 @@ class Import_Export {
         add_settings_error('parfume_import', 'parfume_import_success', $message, $imported > 0 || $updated > 0 ? 'updated' : 'error');
     }
     
+    /**
+     * НОВА ФУНКЦИЯ - Обработва импорт на парфюмеристи
+     */
+    public function handle_perfumer_import() {
+        if (!isset($_POST['perfumer_import_nonce']) || !wp_verify_nonce($_POST['perfumer_import_nonce'], 'perfumer_import')) {
+            return;
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Нямате достатъчно права за достъп до тази страница.', 'parfume-reviews'));
+        }
+        
+        if (empty($_FILES['perfumer_import_file']['tmp_name']) || $_FILES['perfumer_import_file']['error'] !== UPLOAD_ERR_OK) {
+            add_settings_error('perfumer_import', 'perfumer_import_error', __('Моля изберете валиден файл за импорт на парфюмеристи.', 'parfume-reviews'), 'error');
+            return;
+        }
+        
+        // Check file type
+        $file_info = pathinfo($_FILES['perfumer_import_file']['name']);
+        if (empty($file_info['extension']) || strtolower($file_info['extension']) !== 'json') {
+            add_settings_error('perfumer_import', 'perfumer_import_error', __('Позволени са само JSON файлове.', 'parfume-reviews'), 'error');
+            return;
+        }
+        
+        $file_content = file_get_contents($_FILES['perfumer_import_file']['tmp_name']);
+        $data = json_decode($file_content, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
+            add_settings_error('perfumer_import', 'perfumer_import_error', __('Невалиден JSON файл за парфюмеристи.', 'parfume-reviews'), 'error');
+            return;
+        }
+        
+        $imported = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = array();
+        
+        foreach ($data as $index => $perfumer_data) {
+            try {
+                if (empty($perfumer_data['name']) || !is_string($perfumer_data['name'])) {
+                    $skipped++;
+                    $errors[] = sprintf(__('Парфюмерист %d: Липсва или невалидно име', 'parfume-reviews'), $index + 1);
+                    continue;
+                }
+                
+                $perfumer_name = sanitize_text_field($perfumer_data['name']);
+                
+                // Проверяваме дали парфюмеристът съществува
+                $existing_term = get_term_by('name', $perfumer_name, 'perfumer');
+                
+                $term_args = array(
+                    'description' => isset($perfumer_data['description']) ? wp_kses_post($perfumer_data['description']) : '',
+                    'slug' => isset($perfumer_data['slug']) ? sanitize_title($perfumer_data['slug']) : sanitize_title($perfumer_name)
+                );
+                
+                if ($existing_term) {
+                    // Обновяваме съществуващ парфюмерист
+                    $result = wp_update_term($existing_term->term_id, 'perfumer', $term_args);
+                    if (!is_wp_error($result)) {
+                        $term_id = $existing_term->term_id;
+                        $updated++;
+                    } else {
+                        $skipped++;
+                        $errors[] = sprintf(__('Парфюмерист %d: %s', 'parfume-reviews'), $index + 1, $result->get_error_message());
+                        continue;
+                    }
+                } else {
+                    // Създаваме нов парфюмерист
+                    $result = wp_insert_term($perfumer_name, 'perfumer', $term_args);
+                    if (!is_wp_error($result)) {
+                        $term_id = $result['term_id'];
+                        $imported++;
+                    } else {
+                        $skipped++;
+                        $errors[] = sprintf(__('Парфюмерист %d: %s', 'parfume-reviews'), $index + 1, $result->get_error_message());
+                        continue;
+                    }
+                }
+                
+                // Импортираме meta полета за парфюмериста
+                $this->import_perfumer_meta($term_id, $perfumer_data);
+                
+            } catch (Exception $e) {
+                $skipped++;
+                $errors[] = sprintf(__('Парфюмерист %d: %s', 'parfume-reviews'), $index + 1, $e->getMessage());
+            }
+        }
+        
+        $message = sprintf(__('Импортът на парфюмеристи завърши: %d импортирани, %d обновени, %d пропуснати.', 'parfume-reviews'), $imported, $updated, $skipped);
+        
+        if (!empty($errors)) {
+            $message .= ' ' . __('Грешки:', 'parfume-reviews') . ' ' . implode('; ', array_slice($errors, 0, 3));
+            if (count($errors) > 3) {
+                $message .= sprintf(__(' и още %d грешки.', 'parfume-reviews'), count($errors) - 3);
+            }
+        }
+        
+        add_settings_error('perfumer_import', 'perfumer_import_success', $message, $imported > 0 || $updated > 0 ? 'updated' : 'error');
+    }
+    
+    /**
+     * НОВА ФУНКЦИЯ - Импортира meta полета за парфюмеристи
+     */
+    private function import_perfumer_meta($term_id, $perfumer_data) {
+        // Импорт на изображение
+        if (!empty($perfumer_data['image']) && filter_var($perfumer_data['image'], FILTER_VALIDATE_URL)) {
+            $image_id = $this->import_image_from_url($perfumer_data['image']);
+            if ($image_id) {
+                update_term_meta($term_id, 'perfumer-image-id', $image_id);
+            }
+        }
+        
+        // Допълнителни мета полета за парфюмеристи
+        $meta_fields = array(
+            'birth_date' => 'perfumer_birth_date',
+            'nationality' => 'perfumer_nationality', 
+            'education' => 'perfumer_education',
+            'career_start' => 'perfumer_career_start',
+            'signature_style' => 'perfumer_signature_style',
+            'famous_fragrances' => 'perfumer_famous_fragrances',
+            'awards' => 'perfumer_awards',
+            'website' => 'perfumer_website',
+            'social_media' => 'perfumer_social_media'
+        );
+        
+        foreach ($meta_fields as $json_key => $meta_key) {
+            if (isset($perfumer_data[$json_key])) {
+                $value = is_array($perfumer_data[$json_key]) ? 
+                    implode("\n", array_map('sanitize_text_field', $perfumer_data[$json_key])) :
+                    sanitize_text_field($perfumer_data[$json_key]);
+                    
+                update_term_meta($term_id, $meta_key, $value);
+            }
+        }
+    }
+    
+    /**
+     * НОВА ФУНКЦИЯ - Експорт на парфюмеристи
+     */
+    public function handle_perfumer_export() {
+        if (!isset($_POST['perfumer_export_nonce']) || !wp_verify_nonce($_POST['perfumer_export_nonce'], 'perfumer_export')) {
+            return;
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Нямате достатъчно права за достъп до тази страница.', 'parfume-reviews'));
+        }
+        
+        $perfumers = get_terms(array(
+            'taxonomy' => 'perfumer',
+            'hide_empty' => false,
+            'orderby' => 'name',
+            'order' => 'ASC'
+        ));
+        
+        if (is_wp_error($perfumers)) {
+            wp_die(__('Грешка при експорта на парфюмеристи.', 'parfume-reviews'));
+        }
+        
+        $data = array();
+        
+        foreach ($perfumers as $perfumer) {
+            $perfumer_data = array(
+                'name' => $perfumer->name,
+                'slug' => $perfumer->slug,
+                'description' => $perfumer->description
+            );
+            
+            // Експорт на meta полета
+            $image_id = get_term_meta($perfumer->term_id, 'perfumer-image-id', true);
+            if ($image_id) {
+                $image_url = wp_get_attachment_image_url($image_id, 'full');
+                if ($image_url) {
+                    $perfumer_data['image'] = $image_url;
+                }
+            }
+            
+            // Допълнителни мета полета
+            $meta_fields = array(
+                'perfumer_birth_date' => 'birth_date',
+                'perfumer_nationality' => 'nationality',
+                'perfumer_education' => 'education',
+                'perfumer_career_start' => 'career_start',
+                'perfumer_signature_style' => 'signature_style',
+                'perfumer_famous_fragrances' => 'famous_fragrances',
+                'perfumer_awards' => 'awards',
+                'perfumer_website' => 'website',
+                'perfumer_social_media' => 'social_media'
+            );
+            
+            foreach ($meta_fields as $meta_key => $json_key) {
+                $value = get_term_meta($perfumer->term_id, $meta_key, true);
+                if (!empty($value)) {
+                    // Ако съдържа нови редове, прави масив
+                    if (strpos($value, "\n") !== false) {
+                        $perfumer_data[$json_key] = explode("\n", $value);
+                    } else {
+                        $perfumer_data[$json_key] = $value;
+                    }
+                }
+            }
+            
+            $data[] = $perfumer_data;
+        }
+        
+        // Set headers for download
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename="perfumers-export-' . date('Y-m-d-H-i-s') . '.json"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        
+        echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    
     private function import_taxonomies($post_id, $item) {
         $taxonomies = array(
             'gender' => isset($item['gender']) ? (array)$item['gender'] : array(),
@@ -137,122 +358,86 @@ class Import_Export {
         );
         
         foreach ($taxonomies as $taxonomy => $terms) {
-            if (!empty($terms) && taxonomy_exists($taxonomy)) {
-                $term_ids = array();
-                
-                foreach ($terms as $term_name) {
-                    $term_name = sanitize_text_field(trim($term_name));
-                    if (empty($term_name)) continue;
-                    
-                    $term = term_exists($term_name, $taxonomy);
-                    
-                    if (!$term) {
-                        $term = wp_insert_term($term_name, $taxonomy);
-                    }
-                    
-                    if (!is_wp_error($term) && isset($term['term_id'])) {
-                        $term_ids[] = intval($term['term_id']);
-                    }
-                }
-                
-                if (!empty($term_ids)) {
-                    wp_set_object_terms($post_id, $term_ids, $taxonomy);
-                }
+            if (!empty($terms)) {
+                wp_set_object_terms($post_id, $terms, $taxonomy);
             }
         }
     }
     
     private function import_meta_fields($post_id, $item) {
-        $meta_fields = array(
-            '_parfume_rating' => isset($item['rating']) && is_numeric($item['rating']) ? floatval($item['rating']) : 0,
-            '_parfume_gender' => isset($item['gender_text']) ? sanitize_text_field($item['gender_text']) : '',
-            '_parfume_release_year' => isset($item['release_year']) ? sanitize_text_field($item['release_year']) : '',
-            '_parfume_longevity' => isset($item['longevity']) ? sanitize_text_field($item['longevity']) : '',
-            '_parfume_sillage' => isset($item['sillage']) ? sanitize_text_field($item['sillage']) : '',
-            '_parfume_bottle_size' => isset($item['bottle_size']) ? sanitize_text_field($item['bottle_size']) : '',
-            '_parfume_freshness' => isset($item['aroma_chart']['freshness']) ? intval($item['aroma_chart']['freshness']) : 0,
-            '_parfume_sweetness' => isset($item['aroma_chart']['sweetness']) ? intval($item['aroma_chart']['sweetness']) : 0,
-            '_parfume_intensity' => isset($item['aroma_chart']['intensity']) ? intval($item['aroma_chart']['intensity']) : 0,
-            '_parfume_warmth' => isset($item['aroma_chart']['warmth']) ? intval($item['aroma_chart']['warmth']) : 0,
-            '_parfume_pros' => isset($item['pros']) ? sanitize_textarea_field($item['pros']) : '',
-            '_parfume_cons' => isset($item['cons']) ? sanitize_textarea_field($item['cons']) : '',
+        $meta_mapping = array(
+            'rating' => '_parfume_rating',
+            'gender_text' => '_parfume_gender_text',
+            'release_year' => '_parfume_release_year',
+            'longevity' => '_parfume_longevity',
+            'sillage' => '_parfume_sillage',
+            'bottle_size' => '_parfume_bottle_size',
+            'pros' => '_parfume_pros',
+            'cons' => '_parfume_cons',
         );
         
-        foreach ($meta_fields as $key => $value) {
-            if (!empty($value) || is_numeric($value)) {
-                update_post_meta($post_id, $key, $value);
+        foreach ($meta_mapping as $item_key => $meta_key) {
+            if (isset($item[$item_key])) {
+                update_post_meta($post_id, $meta_key, sanitize_text_field($item[$item_key]));
             }
+        }
+        
+        // Import aroma chart
+        if (!empty($item['aroma_chart']) && is_array($item['aroma_chart'])) {
+            update_post_meta($post_id, '_parfume_aroma_chart', $item['aroma_chart']);
         }
     }
     
-    private function import_stores($post_id, $stores_data) {
-        $stores = array();
+    private function import_stores($post_id, $stores) {
+        $clean_stores = array();
         
-        foreach ($stores_data as $store) {
-            if (empty($store['name'])) continue;
-            
-            $stores[] = array(
-                'name' => sanitize_text_field($store['name']),
-                'logo' => isset($store['logo']) && filter_var($store['logo'], FILTER_VALIDATE_URL) ? esc_url_raw($store['logo']) : '',
-                'url' => isset($store['url']) && filter_var($store['url'], FILTER_VALIDATE_URL) ? esc_url_raw($store['url']) : '',
-                'affiliate_url' => isset($store['affiliate_url']) && filter_var($store['affiliate_url'], FILTER_VALIDATE_URL) ? esc_url_raw($store['affiliate_url']) : '',
-                'affiliate_class' => isset($store['affiliate_class']) ? sanitize_text_field($store['affiliate_class']) : '',
-                'affiliate_rel' => isset($store['affiliate_rel']) ? sanitize_text_field($store['affiliate_rel']) : 'nofollow',
-                'affiliate_target' => isset($store['affiliate_target']) ? sanitize_text_field($store['affiliate_target']) : '_blank',
-                'affiliate_anchor' => isset($store['affiliate_anchor']) ? sanitize_text_field($store['affiliate_anchor']) : '',
-                'promo_code' => isset($store['promo_code']) ? sanitize_text_field($store['promo_code']) : '',
-                'promo_text' => isset($store['promo_text']) ? sanitize_text_field($store['promo_text']) : '',
-                'price' => isset($store['price']) ? sanitize_text_field($store['price']) : '',
-                'size' => isset($store['size']) ? sanitize_text_field($store['size']) : '',
-                'availability' => isset($store['availability']) ? sanitize_text_field($store['availability']) : '',
-                'shipping_cost' => isset($store['shipping_cost']) ? sanitize_text_field($store['shipping_cost']) : '',
-                'last_updated' => current_time('mysql'),
-            );
+        foreach ($stores as $store) {
+            if (!empty($store['name']) && !empty($store['url'])) {
+                $clean_stores[] = array_map('sanitize_text_field', $store);
+            }
         }
         
-        if (!empty($stores)) {
-            update_post_meta($post_id, '_parfume_stores', $stores);
+        if (!empty($clean_stores)) {
+            update_post_meta($post_id, '_parfume_stores', $clean_stores);
         }
     }
     
     private function import_featured_image($post_id, $image_url) {
-        require_once ABSPATH . 'wp-admin/includes/image.php';
-        require_once ABSPATH . 'wp-admin/includes/file.php';
-        require_once ABSPATH . 'wp-admin/includes/media.php';
-        
-        // Download the file
-        $tmp = download_url($image_url);
-        
-        if (is_wp_error($tmp)) {
+        $image_id = $this->import_image_from_url($image_url);
+        if ($image_id) {
+            set_post_thumbnail($post_id, $image_id);
+        }
+    }
+    
+    private function import_image_from_url($url) {
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
             return false;
         }
         
-        // Get file info
+        require_once(ABSPATH . 'wp-admin/includes/media.php');
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+        require_once(ABSPATH . 'wp-admin/includes/image.php');
+        
+        $temp_file = download_url($url);
+        
+        if (is_wp_error($temp_file)) {
+            return false;
+        }
+        
         $file_array = array(
-            'name' => basename(parse_url($image_url, PHP_URL_PATH)),
-            'tmp_name' => $tmp,
+            'name' => basename($url),
+            'tmp_name' => $temp_file
         );
         
-        // Validate file type
-        $wp_filetype = wp_check_filetype($file_array['name']);
-        if (!$wp_filetype['type']) {
-            @unlink($file_array['tmp_name']);
-            return false;
-        }
+        $attachment_id = media_handle_sideload($file_array, 0);
         
-        // Import the image
-        $id = media_handle_sideload($file_array, $post_id);
+        @unlink($temp_file);
         
-        if (is_wp_error($id)) {
-            @unlink($file_array['tmp_name']);
-            return false;
-        }
-        
-        return set_post_thumbnail($post_id, $id);
+        return is_wp_error($attachment_id) ? false : $attachment_id;
     }
     
     public function handle_export() {
-        if (!isset($_GET['parfume_export']) || !wp_verify_nonce($_GET['_wpnonce'], 'parfume_export')) {
+        if (!isset($_POST['parfume_export_nonce']) || !wp_verify_nonce($_POST['parfume_export_nonce'], 'parfume_export')) {
             return;
         }
         
@@ -260,68 +445,74 @@ class Import_Export {
             wp_die(__('Нямате достатъчно права за достъп до тази страница.', 'parfume-reviews'));
         }
         
-        $args = array(
+        $posts = get_posts(array(
             'post_type' => 'parfume',
-            'posts_per_page' => -1,
             'post_status' => 'publish',
-            'orderby' => 'date',
-            'order' => 'DESC',
-        );
+            'numberposts' => -1,
+            'orderby' => 'title',
+            'order' => 'ASC'
+        ));
         
-        $query = new \WP_Query($args);
         $data = array();
         
-        if ($query->have_posts()) {
-            while ($query->have_posts()) {
-                $query->the_post();
-                $post_id = get_the_ID();
-                
-                $item = array(
-                    'title' => get_the_title(),
-                    'content' => get_the_content(),
-                    'excerpt' => get_the_excerpt(),
-                    'rating' => floatval(get_post_meta($post_id, '_parfume_rating', true)),
-                    'gender_text' => get_post_meta($post_id, '_parfume_gender', true),
-                    'release_year' => get_post_meta($post_id, '_parfume_release_year', true),
-                    'longevity' => get_post_meta($post_id, '_parfume_longevity', true),
-                    'sillage' => get_post_meta($post_id, '_parfume_sillage', true),
-                    'bottle_size' => get_post_meta($post_id, '_parfume_bottle_size', true),
-                    'aroma_chart' => array(
-                        'freshness' => intval(get_post_meta($post_id, '_parfume_freshness', true)),
-                        'sweetness' => intval(get_post_meta($post_id, '_parfume_sweetness', true)),
-                        'intensity' => intval(get_post_meta($post_id, '_parfume_intensity', true)),
-                        'warmth' => intval(get_post_meta($post_id, '_parfume_warmth', true)),
-                    ),
-                    'pros' => get_post_meta($post_id, '_parfume_pros', true),
-                    'cons' => get_post_meta($post_id, '_parfume_cons', true),
-                );
-                
-                // Get featured image URL
-                if (has_post_thumbnail($post_id)) {
-                    $item['featured_image'] = get_the_post_thumbnail_url($post_id, 'full');
-                }
-                
-                // Get taxonomies
-                $taxonomies = array('gender', 'aroma_type', 'marki', 'season', 'intensity', 'notes', 'perfumer');
-                
-                foreach ($taxonomies as $taxonomy) {
-                    if (taxonomy_exists($taxonomy)) {
-                        $terms = wp_get_post_terms($post_id, $taxonomy, array('fields' => 'names'));
-                        if (!empty($terms) && !is_wp_error($terms)) {
-                            $key = ($taxonomy === 'marki') ? 'brand' : $taxonomy;
-                            $item[$key] = $terms;
-                        }
-                    }
-                }
-                
-                // Get stores
-                $stores = get_post_meta($post_id, '_parfume_stores', true);
-                if (!empty($stores) && is_array($stores)) {
-                    $item['stores'] = $stores;
-                }
-                
-                $data[] = $item;
+        foreach ($posts as $post) {
+            $post_id = $post->ID;
+            
+            $item = array(
+                'title' => $post->post_title,
+                'content' => $post->post_content,
+                'excerpt' => $post->post_excerpt,
+            );
+            
+            // Get featured image
+            $featured_image_id = get_post_thumbnail_id($post_id);
+            if ($featured_image_id) {
+                $item['featured_image'] = wp_get_attachment_image_url($featured_image_id, 'full');
             }
+            
+            // Get meta fields
+            $meta_fields = array(
+                '_parfume_rating' => 'rating',
+                '_parfume_gender_text' => 'gender_text',
+                '_parfume_release_year' => 'release_year',
+                '_parfume_longevity' => 'longevity',
+                '_parfume_sillage' => 'sillage',
+                '_parfume_bottle_size' => 'bottle_size',
+                '_parfume_pros' => 'pros',
+                '_parfume_cons' => 'cons',
+            );
+            
+            foreach ($meta_fields as $meta_key => $item_key) {
+                $value = get_post_meta($post_id, $meta_key, true);
+                if (!empty($value)) {
+                    $item[$item_key] = $value;
+                }
+            }
+            
+            // Get aroma chart
+            $aroma_chart = get_post_meta($post_id, '_parfume_aroma_chart', true);
+            if (!empty($aroma_chart)) {
+                $item['aroma_chart'] = $aroma_chart;
+            }
+            
+            // Get taxonomies
+            $taxonomies = array('gender', 'aroma_type', 'marki', 'season', 'intensity', 'notes', 'perfumer');
+            
+            foreach ($taxonomies as $taxonomy) {
+                $terms = wp_get_post_terms($post_id, $taxonomy, array('fields' => 'names'));
+                if (!empty($terms) && !is_wp_error($terms)) {
+                    $key = $taxonomy === 'marki' ? 'brand' : $taxonomy;
+                    $item[$key] = $terms;
+                }
+            }
+            
+            // Get stores
+            $stores = get_post_meta($post_id, '_parfume_stores', true);
+            if (!empty($stores) && is_array($stores)) {
+                $item['stores'] = $stores;
+            }
+            
+            $data[] = $item;
         }
         
         wp_reset_postdata();
@@ -334,6 +525,122 @@ class Import_Export {
         
         echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         exit;
+    }
+    
+    /**
+     * НОВА ФУНКЦИЯ - Инструкции за JSON формат на парфюмеристи
+     */
+    public static function get_perfumer_json_format_instructions() {
+        ob_start();
+        ?>
+        <div class="json-format-instructions perfumer-instructions">
+            <h3><?php _e('Инструкции за JSON формат на парфюмеристи', 'parfume-reviews'); ?></h3>
+            <p><?php _e('JSON файлът трябва да бъде масив от обекти, където всеки обект представлява парфюмерист със следната структура:', 'parfume-reviews'); ?></p>
+            
+            <details>
+                <summary><?php _e('Кликнете за да видите примерен JSON формат за парфюмеристи', 'parfume-reviews'); ?></summary>
+                <pre><code>[
+  {
+    "name": "Франсоа Демаши",
+    "slug": "francois-demachy",
+    "description": "Главен парфюмер на Dior от 2006 година. Създател на множество култови аромати.",
+    "image": "https://example.com/francois-demachy.jpg",
+    "birth_date": "1952-03-15",
+    "nationality": "Френски",
+    "education": "Версай - Институт за международни парфюмни изследвания",
+    "career_start": "1978",
+    "signature_style": "Елегантни, изискани композиции с акцент върху натуралните суровини",
+    "famous_fragrances": [
+      "Dior Sauvage",
+      "J'adore Dior",
+      "Miss Dior Cherie"
+    ],
+    "awards": [
+      "Prix François Coty 2010",
+      "Lifetime Achievement Award - Fragrance Foundation 2018"
+    ],
+    "website": "https://dior.com",
+    "social_media": "https://instagram.com/dior"
+  },
+  {
+    "name": "Доминик Ропион",
+    "slug": "dominique-ropion",
+    "description": "Легендарен парфюмер, познат с новаторския си подход към съвременните мъжки аромати.",
+    "image": "https://example.com/dominique-ropion.jpg",
+    "birth_date": "1960-08-22",
+    "nationality": "Френски",
+    "education": "ISIPCA - International School of Perfumery, Cosmetics and Food Flavoring",
+    "career_start": "1985",
+    "signature_style": "Смели, новаторски композиции с неочаквани съчетания",
+    "famous_fragrances": [
+      "Frédéric Malle Portrait of a Lady",
+      "Tom Ford Oud Wood",
+      "Paco Rabanne Pure XS"
+    ],
+    "awards": [
+      "Fragrance Foundation Award 2007",
+      "International Fragrance Award 2015"
+    ]
+  }
+]</code></pre>
+            </details>
+            
+            <h4><?php _e('Описание на полетата за парфюмеристи', 'parfume-reviews'); ?></h4>
+            <ul>
+                <li><strong>name</strong>: <?php _e('Задължително. Име на парфюмериста.', 'parfume-reviews'); ?></li>
+                <li><strong>slug</strong>: <?php _e('Опционално. URL-friendly версия на името.', 'parfume-reviews'); ?></li>
+                <li><strong>description</strong>: <?php _e('Опционално. Кратко описание на парфюмериста.', 'parfume-reviews'); ?></li>
+                <li><strong>image</strong>: <?php _e('Опционално. URL към снимка на парфюмериста.', 'parfume-reviews'); ?></li>
+                <li><strong>birth_date</strong>: <?php _e('Опционално. Дата на раждане (YYYY-MM-DD).', 'parfume-reviews'); ?></li>
+                <li><strong>nationality</strong>: <?php _e('Опционално. Националност.', 'parfume-reviews'); ?></li>
+                <li><strong>education</strong>: <?php _e('Опционално. Образование.', 'parfume-reviews'); ?></li>
+                <li><strong>career_start</strong>: <?php _e('Опционално. Година на започване на кариерата.', 'parfume-reviews'); ?></li>
+                <li><strong>signature_style</strong>: <?php _e('Опционално. Характерен стил.', 'parfume-reviews'); ?></li>
+                <li><strong>famous_fragrances</strong>: <?php _e('Опционално. Масив от известни парфюми.', 'parfume-reviews'); ?></li>
+                <li><strong>awards</strong>: <?php _e('Опционално. Масив от награди.', 'parfume-reviews'); ?></li>
+                <li><strong>website</strong>: <?php _e('Опционално. Уебсайт.', 'parfume-reviews'); ?></li>
+                <li><strong>social_media</strong>: <?php _e('Опционално. Социални мрежи.', 'parfume-reviews'); ?></li>
+            </ul>
+            
+            <h4><?php _e('Примерна AI заявка за генериране на парфюмеристи', 'parfume-reviews'); ?></h4>
+            <div class="ai-prompt-example">
+                <p><?php _e('Когато питате AI да генерира информация за парфюмерист, използвайте заявка като:', 'parfume-reviews'); ?></p>
+                
+                <blockquote>
+                    <p><em>"Създай JSON информация за парфюмерист [Име] според примерната структура. Включи реална биографична информация, образование, най-известни парфюми, награди и стил. Описанието трябва да бъде информативно, но не повече от 2-3 изречения. Включи реални парфюми, които е създал. Използвай български език за описанието и националността."</em></p>
+                </blockquote>
+            </div>
+            
+            <div class="import-tips">
+                <h4><?php _e('Съвети за импорт на парфюмеристи', 'parfume-reviews'); ?></h4>
+                <ul>
+                    <li><?php _e('Максимален размер на файла: 10MB', 'parfume-reviews'); ?></li>
+                    <li><?php _e('Приемат се само JSON файлове', 'parfume-reviews'); ?></li>
+                    <li><?php _e('Съществуващи парфюмеристи със същото име ще бъдат обновени', 'parfume-reviews'); ?></li>
+                    <li><?php _e('Изображенията ще бъдат изтеглени и добавени в медийната библиотека', 'parfume-reviews'); ?></li>
+                    <li><?php _e('Всички мета полета са опционални освен името', 'parfume-reviews'); ?></li>
+                </ul>
+            </div>
+        </div>
+        
+        <style>
+        .perfumer-instructions .json-format-instructions pre {
+            background: #f0f8ff;
+            border-left: 4px solid #667eea;
+        }
+        
+        .perfumer-instructions .ai-prompt-example blockquote {
+            background: #e6f3ff;
+            border-left: 4px solid #0073aa;
+        }
+        
+        .perfumer-instructions .import-tips {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+        }
+        </style>
+        <?php
+        return ob_get_clean();
     }
     
     public static function get_json_format_instructions() {
