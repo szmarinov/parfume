@@ -2,6 +2,8 @@
 /**
  * Template Functions - глобални функции за template файлове
  * ПЪЛЕН ФАЙЛ С ВСИЧКИ НУЖНИ ФУНКЦИИ
+ * 
+ * Файл: includes/template-functions.php
  */
 
 // Prevent direct access
@@ -287,283 +289,20 @@ function parfume_reviews_display_price_info($post_id) {
     ?>
     <div class="parfume-prices">
         <h3><?php _e('Цени в магазини', 'parfume-reviews'); ?></h3>
-        <div class="price-comparison">
+        <ul class="price-list">
             <?php foreach ($prices as $store => $price): ?>
-            <div class="price-item">
-                <span class="store-name"><?php echo esc_html(ucfirst($store)); ?></span>
-                <span class="store-price"><?php echo esc_html($price); ?></span>
-            </div>
+                <li class="price-item">
+                    <span class="store-name"><?php echo esc_html(ucfirst($store)); ?>:</span>
+                    <span class="store-price"><?php echo esc_html($price); ?></span>
+                </li>
             <?php endforeach; ?>
-        </div>
+        </ul>
     </div>
     <?php
 }
 
 /**
- * Генерира кратко описание на парфюм
- */
-function parfume_reviews_get_excerpt($post_id, $length = 150) {
-    $post = get_post($post_id);
-    if (!$post) {
-        return '';
-    }
-    
-    $excerpt = $post->post_excerpt;
-    if (!$excerpt) {
-        $excerpt = $post->post_content;
-    }
-    
-    $excerpt = wp_strip_all_tags($excerpt);
-    
-    if (strlen($excerpt) > $length) {
-        $excerpt = substr($excerpt, 0, $length);
-        $excerpt = rtrim($excerpt, " \t\n\r\0\x0B.,;") . '...';
-    }
-    
-    return $excerpt;
-}
-
-/**
- * Показва филтри за архивните страници
- */
-function parfume_reviews_display_archive_filters() {
-    $settings = get_option('parfume_reviews_settings', array());
-    $show_sidebar = isset($settings['show_archive_sidebar']) ? $settings['show_archive_sidebar'] : 1;
-    
-    if (!$show_sidebar) {
-        return;
-    }
-    
-    // Получаваме активните филтри
-    $active_filters = parfume_reviews_get_active_filters();
-    $supported_taxonomies = array('gender', 'aroma_type', 'marki', 'season', 'intensity', 'notes', 'perfumer');
-    
-    ?>
-    <div class="parfume-filters-sidebar">
-        <form class="parfume-filters-form" method="get">
-            <h3><?php _e('Филтри', 'parfume-reviews'); ?></h3>
-            
-            <?php foreach ($supported_taxonomies as $taxonomy): ?>
-                <?php
-                $taxonomy_obj = get_taxonomy($taxonomy);
-                if (!$taxonomy_obj) continue;
-                
-                $terms = get_terms(array(
-                    'taxonomy' => $taxonomy,
-                    'hide_empty' => true,
-                    'number' => 50
-                ));
-                
-                if (empty($terms) || is_wp_error($terms)) continue;
-                ?>
-                
-                <div class="filter-section">
-                    <h4 class="filter-title">
-                        <?php echo esc_html($taxonomy_obj->labels->name); ?>
-                        <span class="toggle-arrow">▼</span>
-                    </h4>
-                    <div class="filter-options">
-                        <?php foreach ($terms as $term): ?>
-                            <label class="filter-option">
-                                <input type="checkbox" 
-                                       name="<?php echo esc_attr($taxonomy); ?>[]" 
-                                       value="<?php echo esc_attr($term->slug); ?>"
-                                       <?php checked(in_array($term->slug, isset($active_filters[$taxonomy]) ? $active_filters[$taxonomy] : array())); ?>>
-                                <span class="checkmark"></span>
-                                <?php echo esc_html($term->name); ?>
-                                <span class="term-count">(<?php echo $term->count; ?>)</span>
-                            </label>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-            
-            <!-- Price Range Filter -->
-            <div class="filter-section">
-                <h4 class="filter-title">
-                    <?php _e('Ценови диапазон', 'parfume-reviews'); ?>
-                    <span class="toggle-arrow">▼</span>
-                </h4>
-                <div class="filter-options">
-                    <div class="price-range-inputs">
-                        <input type="number" name="min_price" placeholder="<?php _e('Мин. цена', 'parfume-reviews'); ?>" 
-                               value="<?php echo isset($_GET['min_price']) ? esc_attr($_GET['min_price']) : ''; ?>" min="0" step="0.01">
-                        <span class="price-separator">-</span>
-                        <input type="number" name="max_price" placeholder="<?php _e('Макс. цена', 'parfume-reviews'); ?>" 
-                               value="<?php echo isset($_GET['max_price']) ? esc_attr($_GET['max_price']) : ''; ?>" min="0" step="0.01">
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Rating Filter -->
-            <div class="filter-section">
-                <h4 class="filter-title">
-                    <?php _e('Минимален рейтинг', 'parfume-reviews'); ?>
-                    <span class="toggle-arrow">▼</span>
-                </h4>
-                <div class="filter-options">
-                    <select name="min_rating">
-                        <option value=""><?php _e('Всички рейтинги', 'parfume-reviews'); ?></option>
-                        <option value="4" <?php selected(isset($_GET['min_rating']) ? $_GET['min_rating'] : '', '4'); ?>>4+ звезди</option>
-                        <option value="3" <?php selected(isset($_GET['min_rating']) ? $_GET['min_rating'] : '', '3'); ?>>3+ звезди</option>
-                        <option value="2" <?php selected(isset($_GET['min_rating']) ? $_GET['min_rating'] : '', '2'); ?>>2+ звезди</option>
-                        <option value="1" <?php selected(isset($_GET['min_rating']) ? $_GET['min_rating'] : '', '1'); ?>>1+ звезди</option>
-                    </select>
-                </div>
-            </div>
-            
-            <!-- Sorting -->
-            <div class="filter-section">
-                <h4 class="filter-title">
-                    <?php _e('Сортиране', 'parfume-reviews'); ?>
-                    <span class="toggle-arrow">▼</span>
-                </h4>
-                <div class="filter-options">
-                    <select name="orderby">
-                        <option value="date" <?php selected(isset($_GET['orderby']) ? $_GET['orderby'] : '', 'date'); ?>><?php _e('Най-нови', 'parfume-reviews'); ?></option>
-                        <option value="title" <?php selected(isset($_GET['orderby']) ? $_GET['orderby'] : '', 'title'); ?>><?php _e('По име', 'parfume-reviews'); ?></option>
-                        <option value="rating" <?php selected(isset($_GET['orderby']) ? $_GET['orderby'] : '', 'rating'); ?>><?php _e('По рейтинг', 'parfume-reviews'); ?></option>
-                        <option value="price" <?php selected(isset($_GET['orderby']) ? $_GET['orderby'] : '', 'price'); ?>><?php _e('По цена', 'parfume-reviews'); ?></option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="filter-actions">
-                <button type="submit" class="button button-primary"><?php _e('Приложи филтри', 'parfume-reviews'); ?></button>
-                <a href="<?php echo esc_url(strtok($_SERVER['REQUEST_URI'], '?')); ?>" class="button button-secondary"><?php _e('Изчисти', 'parfume-reviews'); ?></a>
-            </div>
-        </form>
-    </div>
-    <?php
-}
-
-/**
- * Показва активните филтри
- */
-function parfume_reviews_display_active_filters() {
-    $active_filters = parfume_reviews_get_active_filters();
-    
-    if (empty($active_filters)) {
-        return;
-    }
-    
-    ?>
-    <div class="active-filters">
-        <h4><?php _e('Активни филтри:', 'parfume-reviews'); ?></h4>
-        <div class="filter-tags">
-            <?php foreach ($active_filters as $filter_type => $filter_values): ?>
-                <?php if (is_array($filter_values)): ?>
-                    <?php foreach ($filter_values as $value): ?>
-                        <?php
-                        $remove_filters = $active_filters;
-                        $key = array_search($value, $remove_filters[$filter_type]);
-                        if ($key !== false) {
-                            unset($remove_filters[$filter_type][$key]);
-                            if (empty($remove_filters[$filter_type])) {
-                                unset($remove_filters[$filter_type]);
-                            }
-                        }
-                        $remove_url = parfume_reviews_build_filter_url($remove_filters);
-                        
-                        $term = get_term_by('slug', $value, $filter_type);
-                        $display_name = $term ? $term->name : $value;
-                        ?>
-                        <span class="filter-tag">
-                            <?php echo esc_html($display_name); ?>
-                            <a href="<?php echo esc_url($remove_url); ?>" class="remove-filter" aria-label="<?php _e('Премахни филтър', 'parfume-reviews'); ?>">×</a>
-                        </span>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <?php
-                    $remove_filters = $active_filters;
-                    unset($remove_filters[$filter_type]);
-                    $remove_url = parfume_reviews_build_filter_url($remove_filters);
-                    ?>
-                    <span class="filter-tag">
-                        <?php echo esc_html($filter_type . ': ' . $filter_values); ?>
-                        <a href="<?php echo esc_url($remove_url); ?>" class="remove-filter" aria-label="<?php _e('Премахни филтър', 'parfume-reviews'); ?>">×</a>
-                    </span>
-                <?php endif; ?>
-            <?php endforeach; ?>
-        </div>
-    </div>
-    <?php
-}
-
-/**
- * Показва debug информация за филтри (само в WP_DEBUG режим)
- */
-function parfume_reviews_display_filters_debug() {
-    if (!defined('WP_DEBUG') || !WP_DEBUG || !current_user_can('manage_options')) {
-        return;
-    }
-    
-    $active_filters = parfume_reviews_get_active_filters();
-    
-    if (!empty($active_filters)) {
-        echo '<div class="filters-debug" style="background: #f0f0f0; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 12px;">';
-        echo '<strong>Debug - Active Filters:</strong>';
-        echo '<pre>' . print_r($active_filters, true) . '</pre>';
-        echo '</div>';
-    }
-}
-
-/**
- * Показва mobile филтърен toggle бутон
- */
-function parfume_reviews_display_mobile_filter_toggle() {
-    ?>
-    <button class="mobile-filters-toggle" aria-label="<?php _e('Отвори филтри', 'parfume-reviews'); ?>">
-        <span class="toggle-icon">⚙️</span>
-        <span class="toggle-text"><?php _e('Филтри', 'parfume-reviews'); ?></span>
-    </button>
-    <?php
-}
-
-/**
- * Връща HTML за comparison бутон
- */
-function parfume_reviews_get_comparison_button($post_id) {
-    return '<button type="button" class="button compare-add" data-id="' . esc_attr($post_id) . '">' . 
-           __('Сравни', 'parfume-reviews') . 
-           '</button>';
-}
-
-/**
- * Връща HTML за collections dropdown
- */
-function parfume_reviews_get_collections_dropdown($post_id) {
-    return '<button type="button" class="button collections-add" data-id="' . esc_attr($post_id) . '">' . 
-           __('Добави в колекция', 'parfume-reviews') . 
-           '</button>';
-}
-
-/**
- * Получава meta информация за SEO
- */
-function parfume_reviews_get_archive_meta() {
-    $meta = array();
-    
-    if (is_post_type_archive('parfume')) {
-        $meta['title'] = __('Всички парфюми - Най-добрите аромати', 'parfume-reviews');
-        $meta['description'] = __('Открийте най-добрите парфюми с нашите подробни ревюта и сравнения. Филтрирайте по марка, нотки, сезон и още.', 'parfume-reviews');
-    } elseif (is_tax()) {
-        $queried_object = get_queried_object();
-        if ($queried_object) {
-            $meta['title'] = sprintf(__('%s - Парфюми', 'parfume-reviews'), $queried_object->name);
-            $meta['description'] = $queried_object->description ? $queried_object->description : sprintf(__('Парфюми от категория %s. Открийте най-добрите аромати.', 'parfume-reviews'), $queried_object->name);
-        }
-    }
-    
-    return $meta;
-}
-
-/**
- * НОВИ ФУНКЦИИ ЗА STORES ДАННИ
- */
-
-/**
- * Получава най-ниската цена от stores данните
+ * Получава най-ниската цена за парфюм
  */
 function parfume_reviews_get_lowest_price($post_id) {
     $stores = get_post_meta($post_id, '_parfume_stores', true);
@@ -576,11 +315,6 @@ function parfume_reviews_get_lowest_price($post_id) {
     $lowest_store = null;
     
     foreach ($stores as $store) {
-        if (empty($store['name'])) {
-            continue;
-        }
-        
-        // Check variants if they exist
         if (!empty($store['variants']) && is_array($store['variants'])) {
             foreach ($store['variants'] as $variant) {
                 if (!empty($variant['price'])) {
@@ -588,7 +322,7 @@ function parfume_reviews_get_lowest_price($post_id) {
                     if ($price > 0 && ($lowest_price === null || $price < $lowest_price)) {
                         $lowest_price = $price;
                         $lowest_store = array(
-                            'name' => $store['name'],
+                            'name' => isset($store['name']) ? $store['name'] : '',
                             'price' => $variant['price'],
                             'size' => isset($variant['size']) ? $variant['size'] : '',
                             'url' => isset($store['affiliate_url']) ? $store['affiliate_url'] : '',
@@ -596,19 +330,16 @@ function parfume_reviews_get_lowest_price($post_id) {
                     }
                 }
             }
-        } else {
-            // Single price
-            if (!empty($store['price'])) {
-                $price = parfume_reviews_extract_price_number($store['price']);
-                if ($price > 0 && ($lowest_price === null || $price < $lowest_price)) {
-                    $lowest_price = $price;
-                    $lowest_store = array(
-                        'name' => $store['name'],
-                        'price' => $store['price'],
-                        'size' => isset($store['size']) ? $store['size'] : '',
-                        'url' => isset($store['affiliate_url']) ? $store['affiliate_url'] : '',
-                    );
-                }
+        } elseif (!empty($store['price'])) {
+            $price = parfume_reviews_extract_price_number($store['price']);
+            if ($price > 0 && ($lowest_price === null || $price < $lowest_price)) {
+                $lowest_price = $price;
+                $lowest_store = array(
+                    'name' => isset($store['name']) ? $store['name'] : '',
+                    'price' => $store['price'],
+                    'size' => isset($store['size']) ? $store['size'] : '',
+                    'url' => isset($store['affiliate_url']) ? $store['affiliate_url'] : '',
+                );
             }
         }
     }
@@ -687,8 +418,8 @@ function parfume_reviews_display_store_card($store_data) {
         <?php endif; ?>
         
         <?php if (!empty($store_data['url'])): ?>
-            <a href="<?php echo esc_url($store_data['url']); ?>" target="_blank" rel="nofollow" class="store-button">
-                <?php _e('Към магазина', 'parfume-reviews'); ?>
+            <a href="<?php echo esc_url($store_data['url']); ?>" target="_blank" rel="nofollow" class="store-link">
+                <?php _e('Виж в магазина', 'parfume-reviews'); ?>
             </a>
         <?php endif; ?>
     </div>
@@ -696,45 +427,9 @@ function parfume_reviews_display_store_card($store_data) {
 }
 
 /**
- * Получава всички магазини за парфюм
+ * Проверява дали има промоция за парфюм
  */
-function parfume_reviews_get_all_stores($post_id) {
-    $stores = get_post_meta($post_id, '_parfume_stores', true);
-    
-    if (empty($stores) || !is_array($stores)) {
-        return array();
-    }
-    
-    $formatted_stores = array();
-    
-    foreach ($stores as $store) {
-        if (!empty($store['name'])) {
-            $formatted_stores[] = wp_parse_args($store, array(
-                'name' => '',
-                'logo' => '',
-                'price' => '',
-                'original_price' => '',
-                'discount' => '',
-                'availability' => '',
-                'shipping_info' => '',
-                'size' => '',
-                'affiliate_url' => '',
-                'promo_code' => '',
-                'promo_code_info' => '',
-                'promo_url' => '',
-                'variants' => array(),
-                'features' => array(),
-            ));
-        }
-    }
-    
-    return $formatted_stores;
-}
-
-/**
- * Проверява дали има промоции в stores
- */
-function parfume_reviews_has_promotions($post_id) {
+function parfume_reviews_has_promotion($post_id) {
     $stores = get_post_meta($post_id, '_parfume_stores', true);
     
     if (empty($stores) || !is_array($stores)) {
@@ -742,12 +437,12 @@ function parfume_reviews_has_promotions($post_id) {
     }
     
     foreach ($stores as $store) {
-        // Check for promo code
-        if (!empty($store['promo_code'])) {
+        // Check for discount flag
+        if (!empty($store['has_discount']) || !empty($store['has_promotion'])) {
             return true;
         }
         
-        // Check for discount
+        // Check for original vs current price
         if (!empty($store['original_price']) && !empty($store['price'])) {
             $original = parfume_reviews_extract_price_number($store['original_price']);
             $current = parfume_reviews_extract_price_number($store['price']);
@@ -817,24 +512,9 @@ function parfume_reviews_format_price($price, $currency = 'лв') {
     return $price;
 }
 
-
-
 /**
- * КРИТИЧНА ПОПРАВКА ЗА ФАТАЛНА ГРЕШКА
- * 
- * ИНСТРУКЦИИ ЗА ДОБАВЯНЕ:
- * 1. Отворете файла includes/template-functions.php
- * 2. Идете в самия край на файла (след последната функция parfume_reviews_format_price)
- * 3. ДОБАВЕТЕ следния код в края на файла преди затварящия PHP таг ?>
- * 
- * НЕ ЗАМЕНЯЙТЕ НИЩО - САМО ДОБАВЕТЕ В КРАЯ!
- */
-
-/**
- * КРИТИЧНА ПОПРАВКА: Добавяне на липсващата функция
- * Тази функция се използва в templates/archive-perfumer.php на ред 136
- * 
- * Получава най-евтината доставка за парфюм
+ * ПОПРАВКА - Получава най-евтината доставка за парфюм
+ * Тази функция се използва в taxonomy-perfumer.php
  */
 function parfume_reviews_get_cheapest_shipping($post_id) {
     $stores = get_post_meta($post_id, '_parfume_stores', true);
@@ -880,147 +560,394 @@ function parfume_reviews_get_cheapest_shipping($post_id) {
         }
     }
     
-    if (empty($shipping_options)) {
-        return '';
+    // Сортираме по цена
+    if (!empty($shipping_options)) {
+        usort($shipping_options, function($a, $b) {
+            return $a['price'] <=> $b['price'];
+        });
+        
+        return $shipping_options[0]['text'];
     }
     
-    // Сортираме по цена (най-евтина първо)
-    usort($shipping_options, function($a, $b) {
-        return $a['price'] <=> $b['price'];
-    });
-    
-    // Връщаме най-евтината опция
-    return $shipping_options[0]['text'];
+    return '';
 }
 
 /**
- * БОНУС ФУНКЦИЯ: Получава най-евтината доставка с детайли
+ * Получава всички термини от дадена таксономия
  */
-function parfume_reviews_get_cheapest_shipping_details($post_id) {
-    $stores = get_post_meta($post_id, '_parfume_stores', true);
-    
-    if (empty($stores) || !is_array($stores)) {
-        return false;
-    }
-    
-    $cheapest_shipping = null;
-    $lowest_price = null;
-    
-    foreach ($stores as $store) {
-        if (!empty($store['shipping_info'])) {
-            $shipping_text = $store['shipping_info'];
-            
-            // Извличаме цена от shipping информацията
-            if (preg_match('/(\d+[\.,]?\d*)\s*(лв|bgn|eur|€)/i', $shipping_text, $matches)) {
-                $price = floatval(str_replace(',', '.', $matches[1]));
-                
-                if ($lowest_price === null || $price < $lowest_price) {
-                    $lowest_price = $price;
-                    $cheapest_shipping = array(
-                        'text' => $shipping_text,
-                        'price' => $price,
-                        'store' => isset($store['name']) ? $store['name'] : '',
-                        'formatted_price' => number_format($price, 2) . ' лв'
-                    );
-                }
-            } elseif (stripos($shipping_text, 'безплатна') !== false || 
-                     stripos($shipping_text, 'free') !== false ||
-                     stripos($shipping_text, 'безплатно') !== false) {
-                // Безплатна доставка е най-евтина
-                $cheapest_shipping = array(
-                    'text' => $shipping_text,
-                    'price' => 0,
-                    'store' => isset($store['name']) ? $store['name'] : '',
-                    'formatted_price' => 'Безплатна'
-                );
-                $lowest_price = 0;
-                break; // Не може да бъде по-евтино от безплатно
-            }
-        }
-    }
-    
-    return $cheapest_shipping;
-}
-/**
- * Генерира breadcrumbs за parfume страници
- */
-function parfume_reviews_breadcrumbs() {
-    if (!parfume_reviews_is_parfume_page()) {
-        return;
-    }
-    
-    $breadcrumbs = array();
-    $breadcrumbs[] = array(
-        'title' => __('Начало', 'parfume-reviews'),
-        'url' => home_url('/')
+function parfume_reviews_get_taxonomy_terms($taxonomy, $args = array()) {
+    $default_args = array(
+        'taxonomy' => $taxonomy,
+        'hide_empty' => false,
+        'orderby' => 'name',
+        'order' => 'ASC',
     );
     
-    if (is_singular('parfume')) {
-        $breadcrumbs[] = array(
-            'title' => __('Парфюми', 'parfume-reviews'),
-            'url' => get_post_type_archive_link('parfume')
-        );
-        
-        $brands = wp_get_post_terms(get_the_ID(), 'marki');
-        if (!empty($brands)) {
-            $breadcrumbs[] = array(
-                'title' => $brands[0]->name,
-                'url' => get_term_link($brands[0])
-            );
-        }
-        
-        $breadcrumbs[] = array(
-            'title' => get_the_title(),
-            'url' => ''
-        );
-        
-    } elseif (is_post_type_archive('parfume')) {
-        $breadcrumbs[] = array(
-            'title' => __('Парфюми', 'parfume-reviews'),
-            'url' => ''
-        );
-        
-    } elseif (is_tax()) {
-        $queried_object = get_queried_object();
-        $taxonomy_obj = get_taxonomy($queried_object->taxonomy);
-        
-        $breadcrumbs[] = array(
-            'title' => __('Парфюми', 'parfume-reviews'),
-            'url' => get_post_type_archive_link('parfume')
-        );
-        
-        $breadcrumbs[] = array(
-            'title' => $taxonomy_obj->labels->name,
-            'url' => get_term_link($queried_object)
-        );
-        
-        $breadcrumbs[] = array(
-            'title' => $queried_object->name,
-            'url' => ''
-        );
+    $args = wp_parse_args($args, $default_args);
+    
+    return get_terms($args);
+}
+
+/**
+ * Показва таксономични връзки за парфюм
+ */
+function parfume_reviews_display_taxonomy_links($post_id, $taxonomy, $label = '') {
+    $terms = wp_get_post_terms($post_id, $taxonomy);
+    
+    if (empty($terms) || is_wp_error($terms)) {
+        return;
     }
     
-    if (count($breadcrumbs) <= 1) {
-        return;
+    if (empty($label)) {
+        $tax_obj = get_taxonomy($taxonomy);
+        $label = $tax_obj->labels->name;
     }
     
     ?>
-    <nav class="parfume-breadcrumbs" aria-label="<?php esc_attr_e('Breadcrumbs', 'parfume-reviews'); ?>">
-        <ol class="breadcrumb-list">
-            <?php foreach ($breadcrumbs as $index => $breadcrumb): ?>
-                <li class="breadcrumb-item <?php echo $index === count($breadcrumbs) - 1 ? 'active' : ''; ?>">
-                    <?php if (!empty($breadcrumb['url'])): ?>
-                        <a href="<?php echo esc_url($breadcrumb['url']); ?>"><?php echo esc_html($breadcrumb['title']); ?></a>
-                    <?php else: ?>
-                        <span><?php echo esc_html($breadcrumb['title']); ?></span>
-                    <?php endif; ?>
-                    
-                    <?php if ($index < count($breadcrumbs) - 1): ?>
-                        <span class="breadcrumb-separator">/</span>
-                    <?php endif; ?>
-                </li>
+    <div class="parfume-taxonomy-links taxonomy-<?php echo esc_attr($taxonomy); ?>">
+        <span class="taxonomy-label"><?php echo esc_html($label); ?>:</span>
+        <div class="taxonomy-terms">
+            <?php foreach ($terms as $term): ?>
+                <a href="<?php echo esc_url(get_term_link($term)); ?>" class="taxonomy-term">
+                    <?php echo esc_html($term->name); ?>
+                </a>
             <?php endforeach; ?>
-        </ol>
+        </div>
+    </div>
+    <?php
+}
+
+/**
+ * Получава броя парфюми в дадена таксономия
+ */
+function parfume_reviews_get_taxonomy_count($taxonomy) {
+    $terms = get_terms(array(
+        'taxonomy' => $taxonomy,
+        'hide_empty' => true,
+        'fields' => 'count'
+    ));
+    
+    return is_array($terms) ? array_sum($terms) : 0;
+}
+
+/**
+ * Проверява дали термин има изображение
+ */
+function parfume_reviews_term_has_image($term_id) {
+    $image = get_term_meta($term_id, 'taxonomy_image', true);
+    return !empty($image);
+}
+
+/**
+ * Получава URL на изображението на термин
+ */
+function parfume_reviews_get_term_image_url($term_id, $size = 'medium') {
+    $image_id = get_term_meta($term_id, 'taxonomy_image_id', true);
+    
+    if ($image_id) {
+        return wp_get_attachment_image_url($image_id, $size);
+    }
+    
+    // Fallback към URL path
+    $image_url = get_term_meta($term_id, 'taxonomy_image', true);
+    return !empty($image_url) ? $image_url : false;
+}
+
+/**
+ * Показва хлебните трохи за таксономични страници
+ */
+function parfume_reviews_display_taxonomy_breadcrumbs($current_term = null) {
+    ?>
+    <nav class="parfume-breadcrumbs">
+        <div class="breadcrumb-trail">
+            <a href="<?php echo esc_url(home_url('/')); ?>" class="breadcrumb-link">
+                <?php _e('Начало', 'parfume-reviews'); ?>
+            </a>
+            <span class="breadcrumb-separator"> › </span>
+            
+            <a href="<?php echo esc_url(home_url('/parfiumi/')); ?>" class="breadcrumb-link">
+                <?php _e('Парфюми', 'parfume-reviews'); ?>
+            </a>
+            <span class="breadcrumb-separator"> › </span>
+            
+            <?php if ($current_term && isset($current_term->taxonomy)): ?>
+                <?php
+                $taxonomy_obj = get_taxonomy($current_term->taxonomy);
+                $taxonomy_archive_url = '';
+                
+                // Специални URL-ти за различните таксономии
+                switch ($current_term->taxonomy) {
+                    case 'perfumer':
+                        $taxonomy_archive_url = home_url('/parfiumi/parfumeri/');
+                        break;
+                    case 'marki':
+                        $taxonomy_archive_url = home_url('/parfiumi/marki/');
+                        break;
+                    case 'notes':
+                        $taxonomy_archive_url = home_url('/parfiumi/notes/');
+                        break;
+                    default:
+                        $taxonomy_archive_url = home_url('/parfiumi/');
+                        break;
+                }
+                ?>
+                
+                <a href="<?php echo esc_url($taxonomy_archive_url); ?>" class="breadcrumb-link">
+                    <?php echo esc_html($taxonomy_obj->labels->name); ?>
+                </a>
+                <span class="breadcrumb-separator"> › </span>
+                
+                <span class="breadcrumb-current"><?php echo esc_html($current_term->name); ?></span>
+            <?php endif; ?>
+        </div>
     </nav>
     <?php
+}
+
+/**
+ * Проверява дали има парфюми в дадена таксономия
+ */
+function parfume_reviews_taxonomy_has_parfumes($taxonomy, $term_slug = '') {
+    $args = array(
+        'post_type' => 'parfume',
+        'posts_per_page' => 1,
+        'meta_query' => array(
+            array(
+                'key' => '_post_status',
+                'value' => 'publish',
+                'compare' => '='
+            )
+        )
+    );
+    
+    if (!empty($term_slug)) {
+        $args['tax_query'] = array(
+            array(
+                'taxonomy' => $taxonomy,
+                'field' => 'slug',
+                'terms' => $term_slug
+            )
+        );
+    }
+    
+    $query = new WP_Query($args);
+    return $query->have_posts();
+}
+
+/**
+ * Получава популярните термини от таксономия
+ */
+function parfume_reviews_get_popular_terms($taxonomy, $limit = 10) {
+    return get_terms(array(
+        'taxonomy' => $taxonomy,
+        'orderby' => 'count',
+        'order' => 'DESC',
+        'number' => $limit,
+        'hide_empty' => true
+    ));
+}
+
+/**
+ * Форматира описанието на термин
+ */
+function parfume_reviews_format_term_description($description, $length = 150) {
+    if (empty($description)) {
+        return '';
+    }
+    
+    // Премахваме HTML тагове
+    $description = wp_strip_all_tags($description);
+    
+    // Съкращаваме ако е прекалено дълъг
+    if (strlen($description) > $length) {
+        $description = substr($description, 0, $length) . '...';
+    }
+    
+    return $description;
+}
+
+/**
+ * Генерира excerpt за парфюм
+ */
+function parfume_reviews_get_parfume_excerpt($post_id, $length = 150) {
+    $post = get_post($post_id);
+    
+    if (!$post) {
+        return '';
+    }
+    
+    $excerpt = '';
+    
+    // Първо опитваме excerpt полето
+    if (!empty($post->post_excerpt)) {
+        $excerpt = $post->post_excerpt;
+    } else {
+        // После content-а
+        $excerpt = $post->post_content;
+    }
+    
+    // Почистваме HTML
+    $excerpt = wp_strip_all_tags($excerpt);
+    
+    // Съкращаваме
+    if (strlen($excerpt) > $length) {
+        $excerpt = substr($excerpt, 0, $length) . '...';
+    }
+    
+    return $excerpt;
+}
+
+/**
+ * Проверява дали парфюм е нов (създаден в последните X дни)
+ */
+function parfume_reviews_is_new_parfume($post_id, $days = 30) {
+    $post = get_post($post_id);
+    
+    if (!$post) {
+        return false;
+    }
+    
+    $post_date = strtotime($post->post_date);
+    $cutoff_date = strtotime("-{$days} days");
+    
+    return $post_date > $cutoff_date;
+}
+
+/**
+ * Получава цветовия код за наличност
+ */
+function parfume_reviews_get_availability_color($availability) {
+    switch (strtolower($availability)) {
+        case 'available':
+        case 'в наличност':
+        case 'наличен':
+            return '#28a745'; // Зелено
+        case 'limited':
+        case 'ограничено количество':
+            return '#ffc107'; // Жълто
+        case 'discontinued':
+        case 'прекратен':
+            return '#dc3545'; // Червено
+        case 'preorder':
+        case 'предварителна поръчка':
+            return '#17a2b8'; // Синьо
+        default:
+            return '#6c757d'; // Сиво
+    }
+}
+
+/**
+ * Получава иконката за наличност
+ */
+function parfume_reviews_get_availability_icon($availability) {
+    switch (strtolower($availability)) {
+        case 'available':
+        case 'в наличност':
+        case 'наличен':
+            return '✓';
+        case 'limited':
+        case 'ограничено количество':
+            return '⚠';
+        case 'discontinued':
+        case 'прекратен':
+            return '✗';
+        case 'preorder':
+        case 'предварителна поръчка':
+            return '⏰';
+        default:
+            return '?';
+    }
+}
+
+/**
+ * Показва статус на наличност с цвят и икона
+ */
+function parfume_reviews_display_availability_status($availability) {
+    if (empty($availability)) {
+        return;
+    }
+    
+    $color = parfume_reviews_get_availability_color($availability);
+    $icon = parfume_reviews_get_availability_icon($availability);
+    
+    ?>
+    <span class="availability-status" style="color: <?php echo esc_attr($color); ?>;">
+        <span class="availability-icon"><?php echo esc_html($icon); ?></span>
+        <span class="availability-text"><?php echo esc_html($availability); ?></span>
+    </span>
+    <?php
+}
+
+/**
+ * Генерира structured data за парфюм
+ */
+function parfume_reviews_get_parfume_structured_data($post_id) {
+    $post = get_post($post_id);
+    
+    if (!$post || $post->post_type !== 'parfume') {
+        return array();
+    }
+    
+    $structured_data = array(
+        '@context' => 'https://schema.org',
+        '@type' => 'Product',
+        'name' => get_the_title($post_id),
+        'description' => parfume_reviews_get_parfume_excerpt($post_id),
+        'url' => get_permalink($post_id),
+    );
+    
+    // Добавяме изображение
+    if (has_post_thumbnail($post_id)) {
+        $structured_data['image'] = get_the_post_thumbnail_url($post_id, 'large');
+    }
+    
+    // Добавяме марка
+    $brand = wp_get_post_terms($post_id, 'marki', array('fields' => 'names'));
+    if (!empty($brand)) {
+        $structured_data['brand'] = array(
+            '@type' => 'Brand',
+            'name' => $brand[0]
+        );
+    }
+    
+    // Добавяме рейтинг
+    $rating = get_post_meta($post_id, '_parfume_rating', true);
+    if (!empty($rating)) {
+        $structured_data['aggregateRating'] = array(
+            '@type' => 'AggregateRating',
+            'ratingValue' => $rating,
+            'bestRating' => '5',
+            'worstRating' => '1'
+        );
+    }
+    
+    // Добавяме цена
+    $lowest_store = parfume_reviews_get_lowest_price($post_id);
+    if ($lowest_store) {
+        $price = parfume_reviews_extract_price_number($lowest_store['price']);
+        if ($price > 0) {
+            $structured_data['offers'] = array(
+                '@type' => 'Offer',
+                'price' => $price,
+                'priceCurrency' => 'BGN',
+                'availability' => 'https://schema.org/InStock',
+                'url' => isset($lowest_store['url']) ? $lowest_store['url'] : get_permalink($post_id)
+            );
+        }
+    }
+    
+    return $structured_data;
+}
+
+/**
+ * Изписва structured data за парфюм
+ */
+function parfume_reviews_output_parfume_structured_data($post_id) {
+    $structured_data = parfume_reviews_get_parfume_structured_data($post_id);
+    
+    if (!empty($structured_data)) {
+        echo '<script type="application/ld+json">';
+        echo wp_json_encode($structured_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        echo '</script>';
+    }
 }

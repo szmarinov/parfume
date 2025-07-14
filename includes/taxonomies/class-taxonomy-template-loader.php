@@ -4,6 +4,8 @@ namespace Parfume_Reviews\Taxonomies;
 /**
  * Taxonomy Template Loader - управлява зареждането на template файлове за таксономии
  * ПОДОБРЕНА ВЕРСИЯ С ДЕБЪГ И 404 ЗАЩИТА
+ * 
+ * Файл: includes/taxonomies/class-taxonomy-template-loader.php
  */
 class Taxonomy_Template_Loader {
     
@@ -88,20 +90,22 @@ class Taxonomy_Template_Loader {
     }
     
     /**
-     * НОВА ФУНКЦИЯ - Зарежда single template за таксономия
+     * ПОПРАВЕНА ФУНКЦИЯ - Зарежда template за таксономия
+     * Сега правилно работи с taxonomy-perfumer.php файла
      */
     private function load_taxonomy_template($taxonomy, $term_object) {
         $templates_to_try = array();
         
         // Специален случай за perfumer таксономия
         if ($taxonomy === 'perfumer') {
-            // За конкретен парфюмьор
+            // За конкретен парфюмерист term
             if ($term_object && !empty($term_object->slug) && !empty($term_object->name)) {
-                $templates_to_try[] = 'single-perfumer.php';
-                $this->debug_log("Perfumer single page: {$term_object->name}");
+                // Опитваме се за специфичен template за термина
+                $templates_to_try[] = "taxonomy-perfumer-{$term_object->slug}.php";
+                $this->debug_log("Perfumer single page: {$term_object->name} (slug: {$term_object->slug})");
             }
             
-            // За общ archive на парфюмьори
+            // За общ perfumer template (работи и за archive и за single)
             $templates_to_try[] = 'taxonomy-perfumer.php';
         } else {
             // За други таксономии
@@ -205,7 +209,7 @@ class Taxonomy_Template_Loader {
         $templates = array();
         
         if ($taxonomy === 'perfumer') {
-            $templates[] = 'single-perfumer.php';
+            $templates[] = "taxonomy-perfumer-{$term_object->slug}.php";
             $templates[] = 'taxonomy-perfumer.php';
         } else {
             $templates[] = "taxonomy-{$taxonomy}-{$term_object->slug}.php";
@@ -285,5 +289,142 @@ class Taxonomy_Template_Loader {
         }
         
         return $missing;
+    }
+    
+    /**
+     * НОВА ФУНКЦИЯ - Получава статистики за template файлове
+     */
+    public function get_template_stats() {
+        $stats = array(
+            'total_templates' => 0,
+            'existing_templates' => 0,
+            'missing_templates' => 0,
+            'template_list' => array()
+        );
+        
+        $taxonomies = array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity');
+        
+        foreach ($taxonomies as $taxonomy) {
+            $template_name = "taxonomy-{$taxonomy}.php";
+            $template_path = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/' . $template_name;
+            $exists = file_exists($template_path);
+            
+            $stats['total_templates']++;
+            if ($exists) {
+                $stats['existing_templates']++;
+            } else {
+                $stats['missing_templates']++;
+            }
+            
+            $stats['template_list'][] = array(
+                'name' => $template_name,
+                'taxonomy' => $taxonomy,
+                'exists' => $exists,
+                'path' => $template_path
+            );
+        }
+        
+        return $stats;
+    }
+    
+    /**
+     * НОВА ФУНКЦИЯ - Проверява template система
+     */
+    public function check_template_system() {
+        $issues = array();
+        
+        // Проверяваме основната templates директория
+        $templates_dir = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/';
+        if (!is_dir($templates_dir)) {
+            $issues[] = 'Templates директорията не съществува: ' . $templates_dir;
+        } elseif (!is_readable($templates_dir)) {
+            $issues[] = 'Templates директорията не е четима: ' . $templates_dir;
+        }
+        
+        // Проверяваме критичните template файлове
+        $critical_templates = array(
+            'taxonomy-perfumer.php' => 'Основен template за парфюмеристи',
+            'taxonomy-marki.php' => 'Template за марки',
+            'taxonomy-notes.php' => 'Template за нотки'
+        );
+        
+        foreach ($critical_templates as $template => $description) {
+            $template_path = $templates_dir . $template;
+            if (!file_exists($template_path)) {
+                $issues[] = "Липсва критичен template: {$template} ({$description})";
+            } elseif (!is_readable($template_path)) {
+                $issues[] = "Template файлът не е четим: {$template}";
+            } else {
+                // Проверяваме дали файлът има валиден PHP синтаксис
+                $content = file_get_contents($template_path);
+                if ($content === false) {
+                    $issues[] = "Не може да се прочете template файлът: {$template}";
+                } elseif (strpos($content, '<?php') === false) {
+                    $issues[] = "Template файлът изглежда невалиден (няма PHP код): {$template}";
+                }
+            }
+        }
+        
+        // Проверяваме дали има конфликти с темата
+        $theme_template_conflicts = array();
+        foreach ($critical_templates as $template => $description) {
+            $theme_template = locate_template($template);
+            if ($theme_template) {
+                $theme_template_conflicts[] = "Темата има собствен template файл: {$template} в {$theme_template}";
+            }
+        }
+        
+        if (!empty($theme_template_conflicts)) {
+            $issues[] = 'Възможни конфликти с темата: ' . implode(', ', $theme_template_conflicts);
+        }
+        
+        return array(
+            'has_issues' => !empty($issues),
+            'issues' => $issues,
+            'stats' => $this->get_template_stats()
+        );
+    }
+    
+    /**
+     * НОВА ФУНКЦИЯ - Генерира отчет за template системата
+     */
+    public function generate_template_report() {
+        $check_result = $this->check_template_system();
+        $stats = $check_result['stats'];
+        
+        $report = array();
+        $report[] = "=== PARFUME REVIEWS TEMPLATE SYSTEM REPORT ===";
+        $report[] = "Дата: " . date('Y-m-d H:i:s');
+        $report[] = "";
+        
+        // Статистики
+        $report[] = "📊 СТАТИСТИКИ:";
+        $report[] = "- Общо templates: {$stats['total_templates']}";
+        $report[] = "- Съществуващи: {$stats['existing_templates']}";
+        $report[] = "- Липсващи: {$stats['missing_templates']}";
+        $report[] = "";
+        
+        // Детайли за всеки template
+        $report[] = "📁 TEMPLATE ФАЙЛОВЕ:";
+        foreach ($stats['template_list'] as $template) {
+            $status = $template['exists'] ? '✅' : '❌';
+            $report[] = "  {$status} {$template['name']} ({$template['taxonomy']})";
+        }
+        $report[] = "";
+        
+        // Проблеми
+        if ($check_result['has_issues']) {
+            $report[] = "⚠️  ОТКРИТИ ПРОБЛЕМИ:";
+            foreach ($check_result['issues'] as $issue) {
+                $report[] = "  - {$issue}";
+            }
+        } else {
+            $report[] = "✅ НЯМА ОТКРИТИ ПРОБЛЕМИ";
+        }
+        
+        $report[] = "";
+        $report[] = "=== КРАЙ НА ОТЧЕТА ===";
+        
+        return implode("\n", $report);
     }
 }
