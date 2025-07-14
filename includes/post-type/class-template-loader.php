@@ -58,21 +58,21 @@ class Template_Loader {
                 
                 // СПЕЦИАЛНО ОБРАБОТВАНЕ ЗА PERFUMER ТАКСОНОМИЯ
                 if ($taxonomy === 'perfumer') {
-                    // Проверяваме дали имаме конкретен term (single perfumer) или всички (archive)
-                    if (!empty($queried_object->slug) && !empty($queried_object->name)) {
-                        // Single perfumer page - използва single-perfumer.php ако съществува
-                        $single_perfumer_template = $this->locate_template('single-perfumer.php');
-                        if ($single_perfumer_template) {
-                            return $single_perfumer_template;
-                        }
-                        
-                        // Fallback към taxonomy-perfumer.php
+                    // Проверяваме дали е archive (няма конкретен term) или single perfumer
+                    global $wp_query;
+                    
+                    // Проверяваме дали е perfumer archive (flag от rewrite handler)
+                    $is_perfumer_archive = isset($wp_query->query_vars['is_perfumer_archive']);
+                    
+                    // Ако няма queried object или е archive flag
+                    if ($is_perfumer_archive || empty($queried_object->name) || empty($queried_object->slug)) {
+                        // Archive всички парфюмеристи
                         $taxonomy_perfumer_template = $this->locate_template('taxonomy-perfumer.php');
                         if ($taxonomy_perfumer_template) {
                             return $taxonomy_perfumer_template;
                         }
                     } else {
-                        // Archive всички парфюмеристи - използва taxonomy-perfumer.php
+                        // Single perfumer - също използва taxonomy-perfumer.php
                         $taxonomy_perfumer_template = $this->locate_template('taxonomy-perfumer.php');
                         if ($taxonomy_perfumer_template) {
                             return $taxonomy_perfumer_template;
