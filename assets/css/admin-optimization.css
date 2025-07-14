@@ -1,0 +1,467 @@
+/**
+ * Parfume Reviews Admin Optimization CSS
+ * Стилове за оптимизираните taxonomy meta boxes
+ * 
+ * Файл: assets/css/admin-optimization.css
+ */
+
+/* ==========================================================================
+   Основни стилове за оптимизирани taxonomy boxes
+   ========================================================================== */
+
+.categorydiv {
+    max-height: none; /* Премахваме ограничението по височина */
+}
+
+/* Търсене в таксономии */
+.taxonomy-search-wrap {
+    position: relative;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.taxonomy-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.taxonomy-search-input:focus {
+    border-color: #0073aa;
+    box-shadow: 0 0 0 1px #0073aa;
+    outline: none;
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.search-results .search-result-term {
+    display: block;
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.search-results .search-result-term:hover {
+    background-color: #f0f8ff;
+}
+
+.search-results .search-result-term:last-child {
+    border-bottom: none;
+}
+
+.search-results .search-loading,
+.search-results .no-results,
+.search-results .error {
+    padding: 12px;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+.search-results .error {
+    color: #d32f2f;
+}
+
+/* Популярни терми */
+.taxonomy-quick-access {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f0f8ff;
+    border: 1px solid #c3d9ff;
+    border-radius: 4px;
+}
+
+.taxonomy-quick-access h4 {
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0073aa;
+}
+
+.popular-terms-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.popular-term {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.popular-term:hover {
+    background: #0073aa;
+    color: white;
+    border-color: #0073aa;
+}
+
+.popular-term input[type="checkbox"] {
+    margin: 0 4px 0 0;
+}
+
+.popular-term .count {
+    margin-left: 4px;
+    opacity: 0.7;
+}
+
+/* Избрани терми */
+.taxonomy-selected-terms {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f0fff0;
+    border: 1px solid #c3d69b;
+    border-radius: 4px;
+}
+
+.taxonomy-selected-terms h4 {
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2e7d32;
+}
+
+.taxonomy-selected-terms .categorychecklist {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.taxonomy-selected-terms .categorychecklist li {
+    position: relative;
+}
+
+.remove-term {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #d32f2f;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    line-height: 1;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.taxonomy-selected-terms .categorychecklist li:hover .remove-term {
+    opacity: 1;
+}
+
+.remove-term:hover {
+    background: #b71c1c;
+}
+
+/* Load more бутон */
+.taxonomy-load-more {
+    margin: 15px 0;
+    text-align: center;
+}
+
+.load-more-terms {
+    background: #0073aa;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.load-more-terms:hover {
+    background: #005a87;
+}
+
+.load-more-terms:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Всички терми контейнер */
+.all-terms-container {
+    margin-top: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.all-terms-container .categorychecklist {
+    margin: 0;
+    padding: 10px;
+}
+
+/* Добавяне на нов терм */
+.taxonomy-add-new {
+    margin-top: 15px;
+    padding: 10px;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+}
+
+.taxonomy-add-new h4 {
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #856404;
+}
+
+.new-term-form {
+    display: flex;
+    gap: 8px;
+}
+
+.new-term-name {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.add-new-term {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+    transition: background-color 0.2s ease;
+}
+
+.add-new-term:hover {
+    background: #218838;
+}
+
+.add-new-term:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Responsive стилове
+   ========================================================================== */
+
+@media (max-width: 782px) {
+    .popular-terms-list {
+        flex-direction: column;
+    }
+    
+    .popular-term {
+        justify-content: space-between;
+    }
+    
+    .new-term-form {
+        flex-direction: column;
+    }
+    
+    .taxonomy-search-input {
+        font-size: 16px; /* Предотвратява zoom на iOS */
+    }
+}
+
+/* ==========================================================================
+   Loading states и animations
+   ========================================================================== */
+
+.taxonomy-loading {
+    position: relative;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.taxonomy-loading::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255,255,255,0.8);
+    z-index: 100;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    vertical-align: middle;
+    margin-right: 5px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Fade in animations */
+.taxonomy-selected-terms,
+.all-terms-container,
+.search-results {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   Accessibility improvements
+   ========================================================================== */
+
+.taxonomy-search-input:focus,
+.new-term-name:focus,
+.load-more-terms:focus,
+.add-new-term:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .taxonomy-search-wrap,
+    .taxonomy-quick-access,
+    .taxonomy-selected-terms,
+    .taxonomy-add-new {
+        border-width: 2px;
+    }
+    
+    .popular-term,
+    .search-result-term {
+        border-width: 2px;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .popular-term,
+    .load-more-terms,
+    .add-new-term,
+    .remove-term,
+    .search-result-term {
+        transition: none;
+    }
+    
+    .taxonomy-selected-terms,
+    .all-terms-container,
+    .search-results {
+        animation: none;
+    }
+    
+    .loading-spinner {
+        animation: none;
+    }
+}
+
+/* ==========================================================================
+   Dark mode support (ако admin темата поддържа)
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+    .taxonomy-search-wrap {
+        background: #2c3338;
+        border-color: #3c434a;
+    }
+    
+    .taxonomy-search-input {
+        background: #2c3338;
+        border-color: #3c434a;
+        color: #c3c4c7;
+    }
+    
+    .search-results {
+        background: #2c3338;
+        border-color: #3c434a;
+    }
+    
+    .popular-term {
+        background: #2c3338;
+        border-color: #3c434a;
+        color: #c3c4c7;
+    }
+    
+    .popular-term:hover {
+        background: #0073aa;
+        color: white;
+    }
+}
+
+/* ==========================================================================
+   Print styles
+   ========================================================================== */
+
+@media print {
+    .taxonomy-search-wrap,
+    .taxonomy-load-more,
+    .taxonomy-add-new,
+    .remove-term {
+        display: none;
+    }
+    
+    .taxonomy-selected-terms,
+    .all-terms-container {
+        border: 1px solid #000;
+        background: white;
+    }
+}
+
+/* ==========================================================================
+   Keyboard navigation improvements
+   ========================================================================== */
+
+.categorychecklist input[type="checkbox"]:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+}
+
+.categorychecklist li:hover {
+    background: rgba(0, 115, 170, 0.05);
+}
+
+/* Focus visible support */
+.categorychecklist input[type="checkbox"]:focus-visible {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+}
+
+.categorychecklist input[type="checkbox"]:focus:not(:focus-visible) {
+    outline: none;
+}
