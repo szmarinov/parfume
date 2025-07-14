@@ -1,0 +1,392 @@
+/* ==========================================================================
+   Parfume Reviews Admin Settings - Tabs and Styling
+   assets/css/admin-settings.css
+   ========================================================================== */
+
+/* Tab Navigation */
+.parfume-settings-tabs {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ccc;
+    background: #f1f1f1;
+    padding: 0;
+    border-radius: 6px 6px 0 0;
+}
+
+.parfume-settings-tabs .nav-tab {
+    position: relative;
+    text-decoration: none;
+    color: #0073aa;
+    transition: all 0.3s ease;
+    border-radius: 4px 4px 0 0;
+    margin: 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    background: transparent;
+}
+
+.parfume-settings-tabs .nav-tab:hover {
+    background: #f0f8ff;
+    color: #005a87;
+    border-color: #c3c4c7;
+}
+
+.parfume-settings-tabs .nav-tab-active {
+    background: #fff !important;
+    color: #000 !important;
+    border-color: #c3c4c7 !important;
+    border-bottom: 1px solid #fff !important;
+    margin-bottom: -1px;
+    position: relative;
+    z-index: 2;
+}
+
+.parfume-settings-tabs .nav-tab-active:hover {
+    background: #fff !important;
+    color: #000 !important;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none; /* Скрити по подразбиране */
+    padding: 20px 0;
+    animation: fadeIn 0.3s ease-in-out;
+    min-height: 400px; /* Предотвратява скок при превключване */
+}
+
+.tab-content-active {
+    display: block !important; /* Показва активния таб */
+}
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(10px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* Enhanced Form Styling */
+.tab-content .form-table {
+    margin-top: 20px;
+}
+
+.tab-content .form-table th {
+    width: 200px;
+    font-weight: 600;
+    color: #333;
+}
+
+.tab-content .form-table td {
+    position: relative;
+    padding-right: 10px;
+}
+
+/* View Archive Buttons */
+.view-archive-btn {
+    margin-left: 10px;
+    height: 30px;
+    line-height: 28px;
+    vertical-align: top;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.3s ease;
+}
+
+.view-archive-btn:hover:not(.button-disabled) {
+    background: #0073aa;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 115, 170, 0.3);
+}
+
+.view-archive-btn .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+}
+
+.view-archive-btn.button-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Input Field Enhancements */
+.tab-content input[type="text"],
+.tab-content input[type="number"],
+.tab-content select,
+.tab-content textarea {
+    transition: all 0.3s ease;
+}
+
+.tab-content input[type="text"]:focus,
+.tab-content input[type="number"]:focus,
+.tab-content select:focus,
+.tab-content textarea:focus {
+    border-color: #0073aa;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.1);
+    transform: translateY(-1px);
+}
+
+/* URL Structure Info */
+.url-structure-info {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 30px;
+}
+
+.url-structure-info h3 {
+    margin-top: 0;
+    color: #0073aa;
+}
+
+.url-structure-info ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.url-structure-info li {
+    margin-bottom: 8px;
+    font-family: monospace;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border-left: 3px solid #0073aa;
+}
+
+.url-structure-info code {
+    background: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: bold;
+    color: #0073aa;
+}
+
+/* Import/Export Section */
+.import-export-section {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.import-export-section h3 {
+    margin-top: 0;
+    color: #333;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 10px;
+}
+
+.import-export-section p {
+    margin-bottom: 15px;
+    color: #666;
+}
+
+.import-export-section form {
+    margin-top: 15px;
+}
+
+.import-export-section input[type="file"] {
+    margin-right: 10px;
+    padding: 5px;
+}
+
+/* Shortcodes Table */
+.wp-list-table.striped > tbody > :nth-child(odd) {
+    background-color: #f8f9fa;
+}
+
+.wp-list-table th,
+.wp-list-table td {
+    padding: 12px 8px;
+}
+
+.wp-list-table code {
+    background: #e9ecef;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    color: #0073aa;
+}
+
+.wp-list-table ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.wp-list-table li {
+    margin-bottom: 5px;
+}
+
+/* Field Descriptions */
+.description {
+    font-style: italic;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* Checkbox Labels */
+label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+label:hover {
+    color: #0073aa;
+}
+
+label input[type="checkbox"] {
+    margin: 0;
+}
+
+/* Submit Button */
+.submit {
+    padding-top: 20px;
+    border-top: 1px solid #dee2e6;
+    margin-top: 30px;
+}
+
+.submit .button-primary {
+    background: linear-gradient(135deg, #0073aa, #005a87);
+    border: none;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 115, 170, 0.3);
+}
+
+.submit .button-primary:hover {
+    background: linear-gradient(135deg, #005a87, #004470);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 115, 170, 0.4);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .parfume-settings-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+    
+    .parfume-settings-tabs .nav-tab {
+        font-size: 12px;
+        padding: 8px 12px;
+        flex: 1;
+        text-align: center;
+        min-width: 0;
+    }
+    
+    .tab-content .form-table,
+    .tab-content .form-table tbody,
+    .tab-content .form-table tr,
+    .tab-content .form-table td,
+    .tab-content .form-table th {
+        display: block;
+        width: 100%;
+    }
+    
+    .tab-content .form-table th {
+        padding-bottom: 5px;
+        font-weight: bold;
+    }
+    
+    .tab-content .form-table td {
+        padding-top: 0;
+        padding-bottom: 20px;
+    }
+    
+    .view-archive-btn {
+        margin-left: 0;
+        margin-top: 10px;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .url-structure-info,
+    .import-export-section {
+        padding: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .parfume-settings-tabs .nav-tab {
+        font-size: 11px;
+        padding: 6px 8px;
+    }
+    
+    .tab-content {
+        padding: 15px 0;
+    }
+    
+    .wp-list-table {
+        font-size: 13px;
+    }
+    
+    .wp-list-table th,
+    .wp-list-table td {
+        padding: 8px 5px;
+    }
+}
+
+/* Loading States */
+.settings-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Success/Error Messages */
+.notice {
+    margin: 20px 0;
+    border-left: 4px solid #0073aa;
+}
+
+.notice.notice-success {
+    border-left-color: #4caf50;
+}
+
+.notice.notice-error {
+    border-left-color: #f44336;
+}
+
+/* Accessibility */
+.nav-tab:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+}
+
+.view-archive-btn:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .url-structure-info,
+    .import-export-section {
+        background: #2c3338;
+        border-color: #50575e;
+    }
+    
+    .url-structure-info h3,
+    .import-export-section h3 {
+        color: #f0f0f0;
+        border-color: #50575e;
+    }
+    
+    .url-structure-info li {
+        background: #1e1e1e;
+        color: #f0f0f0;
+    }
+}

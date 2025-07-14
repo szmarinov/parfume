@@ -1,0 +1,1360 @@
+/* ==========================================================================
+   Single Parfume Page - НОВ STORES SIDEBAR ДИЗАЙН
+   ДВУКОЛОНЕН LAYOUT С ФИКСИРАН STORES SIDEBAR
+   ========================================================================== */
+
+/* Main Container */
+.single-parfume-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    
+    .variants-row {
+        justify-content: center;
+    }
+    
+    .action-buttons-row {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .store-button.half-width,
+    .promo-button.half-width {
+        flex: none;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .single-parfume-container {
+        padding: 10px;
+    }
+    
+    .parfume-header {
+        padding: 20px 15px;
+    }
+    
+    .parfume-title {
+        font-size: 1.6em;
+    }
+    
+    .parfume-brand {
+        font-size: 1.2em;
+    }
+    
+    .parfume-content section {
+        padding: 20px 15px;
+    }
+    
+    .parfume-content h2 {
+        font-size: 1.5em;
+    }
+    
+    .notes-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .parfume-gallery {
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+    
+    .related-parfumes-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-content {
+        max-width: 95%;
+        max-height: 70%;
+    }
+    
+    .close-modal {
+        top: 10px;
+        right: 15px;
+        font-size: 30px;
+    }
+    
+    /* Mobile store adjustments */
+    .store-header {
+        padding: 15px;
+    }
+    
+    .store-name-text {
+        font-size: 1.1em;
+    }
+    
+    .current-price {
+        font-size: 1.4em;
+    }
+    
+    .store-info-row {
+        padding: 12px 15px;
+    }
+    
+    .variants-row {
+        padding: 12px 15px;
+        gap: 8px;
+    }
+    
+    .variant-button {
+        padding: 10px 12px;
+        min-width: 70px;
+    }
+    
+    .action-buttons-row {
+        padding: 15px;
+        gap: 12px;
+    }
+    
+    .store-button {
+        padding: 12px 16px;
+        font-size: 0.9em;
+    }
+}
+
+/* ==========================================================================
+   Animations for Mobile Stores
+   ========================================================================== */
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+    .image-modal,
+    .store-button,
+    .promo-button,
+    .mobile-controls,
+    .mobile-show-stores,
+    .close-modal {
+        display: none !important;
+    }
+    
+    .single-parfume-container {
+        box-shadow: none;
+        padding: 0;
+    }
+    
+    .parfume-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .parfume-stores-sidebar {
+        position: static !important;
+        box-shadow: none;
+        border: 1px solid #ccc;
+        page-break-inside: avoid;
+    }
+    
+    .parfume-header {
+        background: none !important;
+        color: black !important;
+    }
+    
+    .parfume-content section {
+        page-break-inside: avoid;
+        border-bottom: 1px solid #ccc;
+    }
+    
+    .related-parfumes-section {
+        display: none;
+    }
+    
+    .store-header {
+        background: none !important;
+        color: black !important;
+        border-bottom: 1px solid #ccc;
+    }
+}
+
+/* ==========================================================================
+   Accessibility Improvements
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    .parfume-image,
+    .gallery-item,
+    .store-item,
+    .related-parfume-item,
+    .note-item,
+    .variant-button,
+    .store-button,
+    .promo-button {
+        transition: none;
+    }
+    
+    .image-modal {
+        animation: none;
+    }
+    
+    .stores-toggle .dashicons,
+    .copy-icon {
+        transition: none;
+    }
+}
+
+/* Focus styles for better accessibility */
+.note-item:focus,
+.variant-button:focus,
+.store-button:focus,
+.promo-button:focus,
+.gallery-item:focus,
+.stores-toggle:focus,
+.stores-close:focus,
+.show-stores-btn:focus {
+    outline: 3px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* High contrast support */
+@media (prefers-contrast: high) {
+    .store-header {
+        background: #000 !important;
+        color: #fff !important;
+    }
+    
+    .availability-badge {
+        background: #000 !important;
+        color: #fff !important;
+        border: 2px solid #fff;
+    }
+    
+    .variant-button {
+        border-color: #000 !important;
+    }
+    
+    .store-button {
+        background: #000 !important;
+        border: 2px solid #fff;
+    }
+}
+
+/* Dark mode support (if theme supports it) */
+@media (prefers-color-scheme: dark) {
+    .single-parfume-container {
+        background: #1a1a1a;
+        color: #e0e0e0;
+    }
+    
+    .parfume-article,
+    .parfume-stores-sidebar {
+        background: #2d2d2d;
+        border-color: #404040;
+    }
+    
+    .parfume-content section {
+        border-color: #404040;
+    }
+    
+    .store-item {
+        border-color: #404040;
+    }
+    
+    .store-item:hover {
+        background: #3a3a3a;
+    }
+    
+    .variant-button {
+        background: #3a3a3a;
+        border-color: #555;
+        color: #e0e0e0;
+    }
+    
+    .variant-button:hover {
+        background: #454545;
+        border-color: #667eea;
+    }
+}
+
+/* ==========================================================================
+   Layout Structure: Column 1 (Content) + Column 2 (Stores Sidebar)
+   ========================================================================== */
+
+.parfume-layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 40px;
+    align-items: flex-start;
+}
+
+.parfume-main-content {
+    min-width: 0; /* Prevents overflow */
+}
+
+.parfume-stores-sidebar {
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e9ecef;
+}
+
+/* ==========================================================================
+   Article Container (Column 1)
+   ========================================================================== */
+
+.parfume-article {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Header Section */
+.parfume-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px;
+}
+
+.header-content {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 40px;
+    align-items: flex-start;
+}
+
+.parfume-image {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.parfume-image:hover {
+    transform: scale(1.02);
+}
+
+.parfume-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.placeholder-image {
+    background: rgba(255, 255, 255, 0.2);
+    aspect-ratio: 3/4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4em;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.parfume-details {
+    padding: 20px 0;
+}
+
+.parfume-title {
+    font-size: 2.5em;
+    font-weight: 700;
+    margin: 0 0 15px 0;
+    line-height: 1.1;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.parfume-brand {
+    font-size: 1.4em;
+    margin-bottom: 25px;
+    opacity: 0.9;
+}
+
+.parfume-brand a {
+    color: inherit;
+    text-decoration: none;
+    transition: opacity 0.3s ease;
+}
+
+.parfume-brand a:hover {
+    opacity: 0.8;
+}
+
+/* Rating Section */
+.parfume-rating {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 30px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.stars {
+    font-size: 1.8em;
+    color: #ffc107;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.star {
+    margin-right: 2px;
+}
+
+.star.filled {
+    color: #ffc107;
+}
+
+.star:not(.filled) {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.rating-value {
+    font-size: 1.2em;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Parfume Info Grid */
+.parfume-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.info-item {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 15px;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.info-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9em;
+    opacity: 0.8;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    display: block;
+    font-size: 1.1em;
+    font-weight: 500;
+}
+
+.info-value a {
+    color: inherit;
+    text-decoration: none;
+    transition: opacity 0.3s ease;
+}
+
+.info-value a:hover {
+    opacity: 0.8;
+}
+
+/* ==========================================================================
+   Content Sections (Column 1)
+   ========================================================================== */
+
+.parfume-content {
+    padding: 0;
+}
+
+.parfume-content section {
+    padding: 40px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.parfume-content section:last-child {
+    border-bottom: none;
+}
+
+.parfume-content h2 {
+    font-size: 2.2em;
+    font-weight: 700;
+    margin: 0 0 25px 0;
+    color: #333;
+    position: relative;
+    padding-bottom: 15px;
+}
+
+.parfume-content h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 2px;
+}
+
+/* Description Section */
+.description-section {
+    background: #f8f9fa;
+}
+
+.description-content {
+    font-size: 1.1em;
+    line-height: 1.8;
+    color: #555;
+}
+
+.description-content p {
+    margin-bottom: 20px;
+}
+
+/* Notes Section */
+.notes-section {
+    background: white;
+}
+
+.notes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.note-item {
+    background: #f8f9fa;
+    padding: 12px 16px;
+    border-radius: 25px;
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.note-item:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    text-decoration: none;
+}
+
+/* Perfumer Section */
+.perfumer-section {
+    background: #f8f9fa;
+}
+
+.perfumer-content h3 {
+    font-size: 1.6em;
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.perfumer-content h3 a {
+    color: #667eea;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.perfumer-content h3 a:hover {
+    color: #764ba2;
+}
+
+.perfumer-info p {
+    font-size: 1.1em;
+    line-height: 1.6;
+    color: #666;
+    margin: 0;
+}
+
+/* Aroma Chart Section */
+.aroma-chart-section {
+    background: white;
+}
+
+.aroma-chart-content {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+}
+
+/* Pros and Cons Section */
+.pros-cons-section {
+    background: #f8f9fa;
+}
+
+.pros-cons-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.pros-section,
+.cons-section {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pros-section h3 {
+    color: #28a745;
+    font-size: 1.4em;
+    margin: 0 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pros-section h3::before {
+    content: '✓';
+    background: #28a745;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.cons-section h3 {
+    color: #dc3545;
+    font-size: 1.4em;
+    margin: 0 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cons-section h3::before {
+    content: '✗';
+    background: #dc3545;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.pros-list,
+.cons-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.pros-list li,
+.cons-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+    position: relative;
+    padding-left: 25px;
+}
+
+.pros-list li:last-child,
+.cons-list li:last-child {
+    border-bottom: none;
+}
+
+.pros-list li::before {
+    content: '•';
+    color: #28a745;
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+}
+
+.cons-list li::before {
+    content: '•';
+    color: #dc3545;
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+}
+
+/* Gallery Section */
+.gallery-section {
+    background: white;
+}
+
+.parfume-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.gallery-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.gallery-item:hover {
+    transform: scale(1.05);
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+}
+
+/* Related Parfumes Section */
+.related-parfumes-section {
+    background: #f8f9fa;
+}
+
+.related-parfumes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+    margin-top: 20px;
+}
+
+.related-parfume-item {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.related-parfume-item:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.related-parfume-item a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.related-parfume-image {
+    position: relative;
+    overflow: hidden;
+}
+
+.related-parfume-image img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.related-parfume-item:hover .related-parfume-image img {
+    transform: scale(1.1);
+}
+
+.related-parfume-info {
+    padding: 20px;
+}
+
+.related-parfume-info h4 {
+    font-size: 1.2em;
+    margin: 0 0 8px 0;
+    color: #333;
+    font-weight: 600;
+}
+
+.related-brand {
+    color: #667eea;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   STORES SIDEBAR (Column 2) - НОВИЯТ ДИЗАЙН
+   ========================================================================== */
+
+.parfume-stores-sidebar {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Mobile Controls */
+.mobile-controls {
+    display: none; /* Hidden on desktop */
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.stores-toggle,
+.stores-close {
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.stores-toggle:hover,
+.stores-close:hover {
+    background: #5a6fd8;
+    transform: scale(1.1);
+}
+
+.stores-toggle .dashicons,
+.stores-close .dashicons {
+    transition: transform 0.3s ease;
+}
+
+/* Stores List */
+.stores-list {
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+}
+
+.store-item {
+    border-bottom: 1px solid #e9ecef;
+    padding: 0;
+    transition: all 0.3s ease;
+}
+
+.store-item:last-child {
+    border-bottom: none;
+}
+
+.store-item:hover {
+    background: #f8f9fa;
+}
+
+/* Store Header */
+.store-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.store-logo img {
+    max-height: 40px;
+    max-width: 120px;
+    object-fit: contain;
+}
+
+.store-name-text {
+    font-size: 1.2em;
+    font-weight: 700;
+}
+
+.store-price-info {
+    text-align: right;
+    position: relative;
+}
+
+.price-display {
+    margin-bottom: 5px;
+}
+
+.original-price {
+    display: block;
+    font-size: 0.9em;
+    text-decoration: line-through;
+    opacity: 0.7;
+    margin-bottom: 2px;
+}
+
+.current-price {
+    display: block;
+    font-size: 1.6em;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.discount-text {
+    display: block;
+    font-size: 0.8em;
+    margin-top: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 10px;
+    backdrop-filter: blur(5px);
+}
+
+.price-info-icon {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: help;
+    backdrop-filter: blur(5px);
+}
+
+.price-info-icon .dashicons {
+    font-size: 12px;
+}
+
+/* Store Info Row */
+.store-info-row {
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    background: #f8f9fa;
+}
+
+.availability-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: #28a745;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.availability-badge .dashicons {
+    font-size: 14px;
+}
+
+.shipping-info {
+    font-size: 0.9em;
+    color: #666;
+    text-align: right;
+}
+
+/* Variants Row */
+.variants-row {
+    padding: 15px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.variant-button {
+    position: relative;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px 16px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.3s ease;
+    flex: 1;
+    min-width: 80px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.variant-button:hover {
+    border-color: #667eea;
+    background: #f8f9fa;
+    transform: translateY(-2px);
+    text-decoration: none;
+    color: #333;
+}
+
+.variant-button.has-promotion {
+    border-color: #ff6b35;
+    background: linear-gradient(135deg, #fff 0%, #fff5f3 100%);
+}
+
+.promotion-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ff6b35;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7em;
+    font-weight: bold;
+}
+
+.variant-size {
+    font-weight: 600;
+    font-size: 0.9em;
+    color: #667eea;
+}
+
+.variant-price {
+    font-weight: 700;
+    font-size: 1em;
+    color: #333;
+}
+
+/* Single Variant Info */
+.single-variant-info {
+    padding: 10px 20px;
+    text-align: center;
+    background: #f8f9fa;
+}
+
+.single-variant-info .variant-size {
+    font-weight: 600;
+    color: #667eea;
+}
+
+/* Action Buttons Row */
+.action-buttons-row {
+    padding: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.store-button {
+    background: #ff6b35;
+    color: white;
+    text-decoration: none;
+    padding: 15px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(255, 107, 53, 0.3);
+}
+
+.store-button:hover {
+    background: #e5522b;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+    text-decoration: none;
+}
+
+.store-button.half-width {
+    flex: 1;
+}
+
+.store-button.full-width {
+    width: 100%;
+}
+
+/* Promo Button */
+.promo-button {
+    border: 2px dashed #dc3545;
+    border-radius: 8px;
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.promo-button:hover {
+    background: #f8f9fa;
+    border-color: #c82333;
+    transform: translateY(-1px);
+}
+
+.promo-button.half-width {
+    flex: 1;
+}
+
+.promo-info {
+    font-size: 0.7em;
+    color: #666;
+    text-align: center;
+    margin-bottom: 3px;
+}
+
+.promo-code-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.promo-code {
+    font-family: monospace;
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #333;
+    letter-spacing: 1px;
+}
+
+.copy-icon {
+    color: #667eea;
+    font-size: 1.2em;
+    transition: transform 0.3s ease;
+}
+
+.promo-button:hover .copy-icon {
+    transform: scale(1.2);
+}
+
+/* ==========================================================================
+   Mobile Show Button (when sidebar is hidden)
+   ========================================================================== */
+
+.mobile-show-stores {
+    position: fixed;
+    bottom: var(--mobile-bottom-offset, 0px);
+    right: 20px;
+    z-index: calc(var(--mobile-z-index, 9999) - 1);
+}
+
+.show-stores-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+}
+
+.show-stores-btn:hover {
+    background: #5a6fd8;
+    transform: scale(1.1);
+}
+
+/* ==========================================================================
+   Image Modal
+   ========================================================================== */
+
+.image-modal {
+    display: none;
+    position: fixed;
+    z-index: 99999;
+    padding-top: 50px;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    margin: auto;
+    display: block;
+    max-width: 90%;
+    max-height: 80%;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.close-modal {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: white;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 100000;
+    transition: opacity 0.3s ease;
+}
+
+.close-modal:hover {
+    opacity: 0.7;
+}
+
+.modal-caption {
+    margin: auto;
+    display: block;
+    width: 80%;
+    max-width: 700px;
+    text-align: center;
+    color: white;
+    padding: 10px 0;
+    font-size: 1.1em;
+}
+
+/* ==========================================================================
+   Mobile Responsive Design
+   ========================================================================== */
+
+@media (max-width: 1200px) {
+    .parfume-layout {
+        grid-template-columns: 1fr 340px;
+        gap: 30px;
+    }
+    
+    .header-content {
+        grid-template-columns: 250px 1fr;
+        gap: 30px;
+    }
+    
+    .parfume-title {
+        font-size: 2.2em;
+    }
+}
+
+@media (max-width: 1024px) {
+    .parfume-layout {
+        grid-template-columns: 1fr 320px;
+        gap: 25px;
+    }
+    
+    .pros-cons-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .single-parfume-container {
+        padding: 15px;
+    }
+    
+    /* Switch to single column layout */
+    .parfume-layout {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    
+    /* Make sidebar mobile-fixed if enabled */
+    .parfume-stores-sidebar.mobile-fixed {
+        position: fixed;
+        bottom: var(--mobile-bottom-offset, 0px);
+        left: 0;
+        right: 0;
+        top: auto;
+        z-index: var(--mobile-z-index, 9999);
+        max-height: 70vh;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Show mobile controls */
+    .mobile-fixed .mobile-controls {
+        display: flex;
+    }
+    
+    /* Hide additional stores by default on mobile */
+    .mobile-fixed .additional-store {
+        display: none;
+    }
+    
+    .parfume-header {
+        padding: 30px 20px;
+    }
+    
+    .header-content {
+        grid-template-columns: 1fr;
+        gap: 25px;
+        text-align: center;
+    }
+    
+    .parfume-image {
+        max-width: 300px;
+        margin: 0 auto;
+    }
+    
+    .parfume-title {
+        font-size: 2em;
+    }
+    
+    .parfume-info-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .parfume-content section {
+        padding: 30px 20px;
+    }
+    
+    .parfume-content h2 {
+        font-size: 1.8em;
+    }
+    
+    .notes-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+    }
+    
+    .related-parfumes-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+    }
+    
+    /* Mobile store adjustments */
+    .store-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .store-price-info {
+        text-align: center;
+    }
+    
+    .store-info-row {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
