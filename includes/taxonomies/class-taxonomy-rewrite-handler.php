@@ -4,12 +4,20 @@ namespace Parfume_Reviews\Taxonomies;
 class Taxonomy_Rewrite_Handler {
     
     public function __construct() {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Taxonomy_Rewrite_Handler initialized');
+        }
+        
         add_action('init', array($this, 'add_custom_rewrite_rules'), 20);
         add_filter('query_vars', array($this, 'add_query_vars'));
         add_action('parse_request', array($this, 'parse_custom_requests'));
     }
     
     public function add_custom_rewrite_rules() {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('add_custom_rewrite_rules() called');
+        }
+        
         $settings = get_option('parfume_reviews_settings', array());
         $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
         
@@ -30,54 +38,45 @@ class Taxonomy_Rewrite_Handler {
         
         foreach ($taxonomies as $taxonomy => $slug) {
             // Individual term page with pagination
-            add_rewrite_rule(
-                '^' . $parfume_slug . '/' . $slug . '/([^/]+)/page/([0-9]+)/?$',
-                'index.php?' . $taxonomy . '=$matches[1]&paged=$matches[2]',
-                'top'
-            );
+            $term_pagination_rule = '^' . $parfume_slug . '/' . $slug . '/([^/]+)/page/([0-9]+)/?$';
+            $term_pagination_query = 'index.php?' . $taxonomy . '=$matches[1]&paged=$matches[2]';
+            add_rewrite_rule($term_pagination_rule, $term_pagination_query, 'top');
             
             // Individual term page
-            add_rewrite_rule(
-                '^' . $parfume_slug . '/' . $slug . '/([^/]+)/?$',
-                'index.php?' . $taxonomy . '=$matches[1]',
-                'top'
-            );
+            $term_rule = '^' . $parfume_slug . '/' . $slug . '/([^/]+)/?$';
+            $term_query = 'index.php?' . $taxonomy . '=$matches[1]';
+            add_rewrite_rule($term_rule, $term_query, 'top');
             
-            // Archive page with pagination
+            // Archive pages
             if ($taxonomy === 'perfumer') {
-                $rule = '^' . $parfume_slug . '/' . $slug . '/page/([0-9]+)/?$';
-                $query = 'index.php?perfumer_archive=1&paged=$matches[1]';
-                add_rewrite_rule($rule, $query, 'top');
+                // Perfumer archive with pagination
+                $perfumer_pagination_rule = '^' . $parfume_slug . '/' . $slug . '/page/([0-9]+)/?$';
+                $perfumer_pagination_query = 'index.php?perfumer_archive=1&paged=$matches[1]';
+                add_rewrite_rule($perfumer_pagination_rule, $perfumer_pagination_query, 'top');
+                
+                // Perfumer archive
+                $perfumer_archive_rule = '^' . $parfume_slug . '/' . $slug . '/?$';
+                $perfumer_archive_query = 'index.php?perfumer_archive=1';
+                add_rewrite_rule($perfumer_archive_rule, $perfumer_archive_query, 'top');
                 
                 if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("Added perfumer pagination rule: {$rule} -> {$query}");
+                    error_log("Added perfumer archive rule: {$perfumer_archive_rule} -> {$perfumer_archive_query}");
                 }
             } else {
-                $pagination_query = 'index.php?parfume_taxonomy_archive=' . $taxonomy . '&paged=$matches[1]';
-                add_rewrite_rule(
-                    '^' . $parfume_slug . '/' . $slug . '/page/([0-9]+)/?$',
-                    $pagination_query,
-                    'top'
-                );
-            }
-            
-            // Archive page rule
-            if ($taxonomy === 'perfumer') {
-                $rule = '^' . $parfume_slug . '/' . $slug . '/?$';
-                $query = 'index.php?perfumer_archive=1';
-                add_rewrite_rule($rule, $query, 'top');
+                // Other taxonomies - pagination
+                $other_pagination_rule = '^' . $parfume_slug . '/' . $slug . '/page/([0-9]+)/?$';
+                $other_pagination_query = 'index.php?parfume_taxonomy_archive=' . $taxonomy . '&paged=$matches[1]';
+                add_rewrite_rule($other_pagination_rule, $other_pagination_query, 'top');
                 
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("Added perfumer archive rule: {$rule} -> {$query}");
-                }
-            } else {
-                $archive_query = 'index.php?parfume_taxonomy_archive=' . $taxonomy;
-                add_rewrite_rule(
-                    '^' . $parfume_slug . '/' . $slug . '/?$',
-                    $archive_query,
-                    'top'
-                );
+                // Other taxonomies - archive
+                $other_archive_rule = '^' . $parfume_slug . '/' . $slug . '/?$';
+                $other_archive_query = 'index.php?parfume_taxonomy_archive=' . $taxonomy;
+                add_rewrite_rule($other_archive_rule, $other_archive_query, 'top');
             }
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            $this->debug_rewrite_rules();
         }
     }
     
