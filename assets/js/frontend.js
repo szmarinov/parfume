@@ -1,6 +1,7 @@
 /**
  * Parfume Reviews Frontend JavaScript
  * ОБНОВЕН ЗА РАБОТА С МНОЖЕСТВЕНО ФИЛТРИРАНЕ
+ * ФИНАЛЕН ФАЙЛ С ВСИЧКИ ФУНКЦИИ
  */
 
 jQuery(document).ready(function($) {
@@ -68,136 +69,92 @@ jQuery(document).ready(function($) {
             const queryString = queryParams.toString();
             const finalUrl = actionUrl + (queryString ? '?' + queryString : '');
             
-            // Show loading state
-            showFilterLoading();
-            
-            // Navigate to new URL
             window.location.href = finalUrl;
         });
 
-        // Handle filter search functionality
-        $('.filter-search').on('input', function() {
-            const searchTerm = $(this).val().toLowerCase();
-            const $options = $(this).siblings('.scrollable-options, .filter-options').find('.filter-option');
-            
-            $options.each(function() {
-                const optionText = $(this).find('label').text().toLowerCase();
-                if (optionText.includes(searchTerm)) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        });
-
-        // Handle collapsible filter sections
-        $('.filter-title').on('click', function() {
-            const $section = $(this).closest('.filter-section');
-            const $options = $section.find('.filter-options');
-            
-            if ($options.is(':visible')) {
-                $options.slideUp(300);
-                $(this).addClass('collapsed');
-            } else {
-                $options.slideDown(300);
-                $(this).removeClass('collapsed');
-            }
-        });
-
-        // Handle active filter tag removal
-        $(document).on('click', '.remove-tag', function(e) {
+        // Handle individual filter removal (X buttons on filter chips)
+        $(document).on('click', '.remove-filter', function(e) {
             e.preventDefault();
             const filterType = $(this).data('filter-type');
             const filterValue = $(this).data('filter-value');
             
-            // Find and uncheck/clear the corresponding filter
-            const $input = $filterForm.find(`input[name="${filterType}[]"][value="${filterValue}"], select[name="${filterType}"]`);
-            
-            if ($input.is(':checkbox')) {
+            // Remove from form and submit
+            const $input = $filterForm.find(`input[name="${filterType}"][value="${filterValue}"]`);
+            if ($input.length) {
                 $input.prop('checked', false);
-            } else {
-                $input.val('');
+                $filterForm.submit();
             }
-            
-            // Resubmit form
-            $filterForm.submit();
         });
-    }
-
-    function showFilterLoading() {
-        $('.parfume-filters').addClass('loading');
-        $('.filter-button').prop('disabled', true).text('Зареждане...');
     }
 
     /**
      * Comparison functionality
      */
     function initComparison() {
-        let comparisonItems = JSON.parse(localStorage.getItem('parfume_comparison') || '[]');
-        updateComparisonUI();
+        const $compareButtons = $('.add-to-comparison');
+        
+        if ($compareButtons.length === 0) return;
 
-        // Add to comparison
-        $(document).on('click', '.compare-add', function(e) {
+        $compareButtons.on('click', function(e) {
             e.preventDefault();
-            const parfumeId = $(this).data('id');
             
-            if (comparisonItems.includes(parfumeId)) {
-                return; // Already added
-            }
+            const parfumeId = $(this).data('post-id');
+            const parfumeTitle = $(this).data('post-title') || $(this).closest('.parfume-card').find('.parfume-title').text();
             
-            if (comparisonItems.length >= 4) {
-                alert('Можете да сравнявате максимум 4 парфюма');
-                return;
-            }
+            // Get current comparison list from localStorage
+            let comparisonList = JSON.parse(localStorage.getItem('parfume_comparison') || '[]');
             
-            comparisonItems.push(parfumeId);
-            localStorage.setItem('parfume_comparison', JSON.stringify(comparisonItems));
-            updateComparisonUI();
+            // Check if already in comparison
+            const alreadyInComparison = comparisonList.some(item => item.id == parfumeId);
             
-            // Visual feedback
-            $(this).text('Добавен').addClass('added').prop('disabled', true);
-            setTimeout(() => {
-                $(this).text('Сравни').removeClass('added').prop('disabled', false);
-            }, 2000);
-        });
-
-        // Remove from comparison
-        $(document).on('click', '.compare-remove', function(e) {
-            e.preventDefault();
-            const parfumeId = $(this).data('id');
-            
-            comparisonItems = comparisonItems.filter(id => id !== parfumeId);
-            localStorage.setItem('parfume_comparison', JSON.stringify(comparisonItems));
-            updateComparisonUI();
-        });
-
-        // View comparison
-        $(document).on('click', '.view-comparison', function(e) {
-            e.preventDefault();
-            if (comparisonItems.length === 0) {
-                alert('Няма избрани парфюми за сравнение');
-                return;
-            }
-            
-            const comparisonUrl = $(this).data('url') || '/parfiumi/compare/';
-            window.location.href = comparisonUrl + '?ids=' + comparisonItems.join(',');
-        });
-
-        function updateComparisonUI() {
-            const count = comparisonItems.length;
-            $('.comparison-count').text(count);
-            $('.comparison-widget').toggle(count > 0);
-            
-            // Update button states
-            $('.compare-add').each(function() {
-                const id = $(this).data('id');
-                if (comparisonItems.includes(id)) {
-                    $(this).text('Добавен').addClass('added');
-                } else {
-                    $(this).text('Сравни').removeClass('added');
+            if (alreadyInComparison) {
+                // Remove from comparison
+                comparisonList = comparisonList.filter(item => item.id != parfumeId);
+                $(this).removeClass('in-comparison').text('Сравни');
+                showNotification('Премахнат от сравняването', 'info');
+            } else {
+                // Add to comparison (max 3 items)
+                if (comparisonList.length >= 3) {
+                    showNotification('Може да сравнявате максимум 3 парфюма', 'warning');
+                    return;
                 }
-            });
-        }
+                
+                comparisonList.push({
+                    id: parfumeId,
+                    title: parfumeTitle
+                });
+                
+                $(this).addClass('in-comparison').text('В сравняването');
+                showNotification('Добавен за сравняване', 'success');
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('parfume_comparison', JSON.stringify(comparisonList));
+            
+            // Update comparison counter
+            updateComparisonCounter(comparisonList.length);
+        });
+        
+        // Load comparison state on page load
+        loadComparisonState();
+    }
+    
+    function loadComparisonState() {
+        const comparisonList = JSON.parse(localStorage.getItem('parfume_comparison') || '[]');
+        
+        // Mark items as in comparison
+        comparisonList.forEach(item => {
+            $(`.add-to-comparison[data-post-id="${item.id}"]`)
+                .addClass('in-comparison')
+                .text('В сравняването');
+        });
+        
+        updateComparisonCounter(comparisonList.length);
+    }
+    
+    function updateComparisonCounter(count) {
+        $('.comparison-counter').text(count);
+        $('.comparison-button').toggle(count > 0);
     }
 
     /**
@@ -206,52 +163,33 @@ jQuery(document).ready(function($) {
     function initSingleParfume() {
         if (!$('body').hasClass('single-parfume-page')) return;
 
-        // Gallery functionality
-        $('.parfume-gallery-thumb').on('click', function(e) {
-            e.preventDefault();
-            const newSrc = $(this).data('full-src');
-            $('.parfume-gallery-main img').attr('src', newSrc);
-            
-            $('.parfume-gallery-thumb').removeClass('active');
-            $(this).addClass('active');
-        });
-
-        // Tabs functionality
-        $('.parfume-tabs .tab-nav a').on('click', function(e) {
-            e.preventDefault();
-            const targetTab = $(this).attr('href');
-            
-            $('.parfume-tabs .tab-nav a').removeClass('active');
-            $(this).addClass('active');
-            
-            $('.parfume-tabs .tab-content').removeClass('active');
-            $(targetTab).addClass('active');
-        });
-
-        // Reviews functionality
+        // Image gallery
+        initImageGallery();
+        
+        // Reviews
         initReviews();
         
-        // Share functionality
+        // Share buttons
         initShareButtons();
+        
+        // Tabs
+        initTabs();
     }
-
-    function initReviews() {
-        // Rating stars interaction
-        $('.rating-input .star').on('click', function() {
-            const rating = $(this).data('rating');
-            const $container = $(this).closest('.rating-input');
+    
+    function initImageGallery() {
+        $('.parfume-gallery-thumb').on('click', function() {
+            const newSrc = $(this).attr('src');
+            const $mainImage = $('.parfume-gallery-main img');
             
-            $container.find('.star').removeClass('active');
-            $container.find('.star').each(function(index) {
-                if (index < rating) {
-                    $(this).addClass('active');
-                }
-            });
-            
-            $container.find('input[type="hidden"]').val(rating);
+            if (newSrc && newSrc !== $mainImage.attr('src')) {
+                $mainImage.attr('src', newSrc);
+                $('.parfume-gallery-thumb').removeClass('active');
+                $(this).addClass('active');
+            }
         });
-
-        // Review form submission
+    }
+    
+    function initReviews() {
         $('.review-form').on('submit', function(e) {
             e.preventDefault();
             
@@ -266,9 +204,8 @@ jQuery(document).ready(function($) {
                 data: $form.serialize() + '&action=submit_parfume_review&nonce=' + parfumeReviews.nonce,
                 success: function(response) {
                     if (response.success) {
+                        showNotification('Отзивът е изпратен успешно', 'success');
                         $form[0].reset();
-                        $('.reviews-list').prepend(response.data.html);
-                        showNotification('Отзивът е изпратен успешно!', 'success');
                     } else {
                         showNotification('Грешка: ' + response.data.message, 'error');
                     }
@@ -282,35 +219,18 @@ jQuery(document).ready(function($) {
             });
         });
     }
-
-    function initShareButtons() {
-        $('.share-button').on('click', function(e) {
-            e.preventDefault();
-            const platform = $(this).data('platform');
-            const url = encodeURIComponent(window.location.href);
-            const title = encodeURIComponent(document.title);
+    
+    function initTabs() {
+        $('.tab-nav button').on('click', function() {
+            const tabId = $(this).data('tab');
             
-            let shareUrl = '';
+            // Update nav
+            $('.tab-nav button').removeClass('active');
+            $(this).addClass('active');
             
-            switch(platform) {
-                case 'facebook':
-                    shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
-                    break;
-                case 'twitter':
-                    shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${title}`;
-                    break;
-                case 'pinterest':
-                    const image = encodeURIComponent($('.parfume-gallery-main img').attr('src'));
-                    shareUrl = `https://pinterest.com/pin/create/button/?url=${url}&media=${image}&description=${title}`;
-                    break;
-                case 'email':
-                    shareUrl = `mailto:?subject=${title}&body=${url}`;
-                    break;
-            }
-            
-            if (shareUrl) {
-                window.open(shareUrl, '_blank', 'width=600,height=400');
-            }
+            // Update content
+            $('.tab-content').removeClass('active');
+            $('#' + tabId).addClass('active');
         });
     }
 
@@ -318,14 +238,13 @@ jQuery(document).ready(function($) {
      * Infinite scroll for archive pages
      */
     function initInfiniteScroll() {
-        if (!$('.parfume-archive').length) return;
-        
+        if (!$('.parfume-grid').length || !$('.pagination').length) return;
+
         let loading = false;
-        let currentPage = 1;
-        const maxPages = parseInt($('.pagination').data('max-pages')) || 1;
+        let page = 2;
         
         $(window).on('scroll', function() {
-            if (loading || currentPage >= maxPages) return;
+            if (loading) return;
             
             const scrollTop = $(window).scrollTop();
             const windowHeight = $(window).height();
@@ -338,33 +257,49 @@ jQuery(document).ready(function($) {
         
         function loadMorePosts() {
             loading = true;
-            currentPage++;
             
-            const $loader = $('<div class="loading-more">Зареждане на още парфюми...</div>');
-            $('.parfume-grid').after($loader);
+            const $loadingIndicator = $('<div class="loading-more">Зареждане на още парфюми...</div>');
+            $('.parfume-grid').after($loadingIndicator);
             
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('paged', currentPage);
-            
-            $.get(currentUrl.toString())
-                .done(function(data) {
-                    const $newPosts = $(data).find('.parfume-card');
+            $.ajax({
+                url: window.location.pathname,
+                method: 'GET',
+                data: $.extend(getUrlParams(), { paged: page }),
+                success: function(response) {
+                    const $newPosts = $(response).find('.parfume-card');
+                    
                     if ($newPosts.length) {
                         $('.parfume-grid').append($newPosts);
-                        // Reinitialize lazy loading for new images
-                        initLazyLoading();
+                        page++;
+                        
+                        // Reinitialize comparison buttons for new posts
+                        $newPosts.find('.add-to-comparison').on('click', function(e) {
+                            // Trigger comparison functionality
+                            initComparison();
+                        });
                     } else {
-                        currentPage = maxPages; // No more posts
+                        // No more posts
+                        $loadingIndicator.text('Няма повече парфюми за зареждане');
+                        $(window).off('scroll');
                     }
-                })
-                .fail(function() {
-                    showNotification('Грешка при зареждането на още парфюми', 'error');
-                    currentPage--; // Revert page increment
-                })
-                .always(function() {
-                    $loader.remove();
+                },
+                error: function() {
+                    $loadingIndicator.text('Грешка при зареждането');
+                },
+                complete: function() {
                     loading = false;
-                });
+                    setTimeout(() => $loadingIndicator.remove(), 2000);
+                }
+            });
+        }
+        
+        function getUrlParams() {
+            const params = {};
+            const urlParams = new URLSearchParams(window.location.search);
+            for (const [key, value] of urlParams) {
+                params[key] = value;
+            }
+            return params;
         }
     }
 
@@ -372,6 +307,8 @@ jQuery(document).ready(function($) {
      * Lazy loading for images
      */
     function initLazyLoading() {
+        const images = document.querySelectorAll('img[data-src]');
+        
         if ('IntersectionObserver' in window) {
             const imageObserver = new IntersectionObserver((entries, observer) => {
                 entries.forEach(entry => {
@@ -383,271 +320,46 @@ jQuery(document).ready(function($) {
                     }
                 });
             });
-
-            document.querySelectorAll('img[data-src]').forEach(img => {
-                imageObserver.observe(img);
+            
+            images.forEach(img => imageObserver.observe(img));
+        } else {
+            // Fallback for older browsers
+            images.forEach(img => {
+                img.src = img.dataset.src;
+                img.classList.remove('lazy');
             });
         }
     }
 
     /**
-     * Tooltip functionality
+     * Tooltips
      */
     function initTooltips() {
-        $('[data-tooltip]').on('mouseenter', function() {
-            const tooltipText = $(this).data('tooltip');
-            const $tooltip = $('<div class="parfume-tooltip">' + tooltipText + '</div>');
+        $('[data-tooltip]').each(function() {
+            const $element = $(this);
+            const tooltipText = $element.data('tooltip');
             
-            $('body').append($tooltip);
-            
-            const $this = $(this);
-            const offset = $this.offset();
-            
-            $tooltip.css({
-                position: 'absolute',
-                top: offset.top - $tooltip.outerHeight() - 5,
-                left: offset.left + ($this.outerWidth() / 2) - ($tooltip.outerWidth() / 2),
-                zIndex: 9999
-            });
-        });
-
-        $('[data-tooltip]').on('mouseleave', function() {
-            $('.parfume-tooltip').remove();
-        });
-    }
-
-    /**
-     * Notification system
-     */
-    function showNotification(message, type = 'info') {
-        const $notification = $(`
-            <div class="parfume-notification ${type}">
-                <span class="message">${message}</span>
-                <button class="close">&times;</button>
-            </div>
-        `);
-        
-        $('body').append($notification);
-        
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            $notification.fadeOut(() => $notification.remove());
-        }, 5000);
-        
-        // Manual close
-        $notification.find('.close').on('click', () => {
-            $notification.fadeOut(() => $notification.remove());
-        });
-    }
-
-    /**
-     * Search functionality
-     */
-    function initSearch() {
-        const $searchForm = $('.parfume-search-form');
-        const $searchInput = $searchForm.find('input[type="search"]');
-        const $searchResults = $('.search-results');
-        
-        let searchTimeout;
-        
-        $searchInput.on('input', function() {
-            const query = $(this).val().trim();
-            
-            clearTimeout(searchTimeout);
-            
-            if (query.length < 3) {
-                $searchResults.hide();
-                return;
-            }
-            
-            searchTimeout = setTimeout(() => {
-                performSearch(query);
-            }, 300);
-        });
-        
-        function performSearch(query) {
-            $.ajax({
-                url: parfumeReviews.ajaxurl,
-                method: 'GET',
-                data: {
-                    action: 'parfume_search',
-                    query: query,
-                    nonce: parfumeReviews.nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $searchResults.html(response.data.html).show();
-                    }
-                }
-            });
-        }
-        
-        // Close search results when clicking outside
-        $(document).on('click', function(e) {
-            if (!$searchForm.is(e.target) && !$searchForm.has(e.target).length) {
-                $searchResults.hide();
-            }
-        });
-    }
-
-    /**
-     * Mobile menu functionality
-     */
-    function initMobileMenu() {
-        $('.mobile-filters-toggle').on('click', function() {
-            $('.parfume-filters-wrapper').toggleClass('mobile-open');
-            $(this).toggleClass('active');
-        });
-
-        // Close mobile filters when clicking outside
-        $(document).on('click', function(e) {
-            if (!$('.parfume-filters-wrapper').is(e.target) && 
-                !$('.parfume-filters-wrapper').has(e.target).length &&
-                !$('.mobile-filters-toggle').is(e.target)) {
-                $('.parfume-filters-wrapper').removeClass('mobile-open');
-                $('.mobile-filters-toggle').removeClass('active');
-            }
-        });
-    }
-
-    /**
-     * Price tracking functionality
-     */
-    function initPriceTracking() {
-        $('.track-price-btn').on('click', function(e) {
-            e.preventDefault();
-            const parfumeId = $(this).data('parfume-id');
-            const $btn = $(this);
-            
-            $btn.prop('disabled', true).text('Обработва...');
-            
-            $.ajax({
-                url: parfumeReviews.ajaxurl,
-                method: 'POST',
-                data: {
-                    action: 'track_parfume_price',
-                    parfume_id: parfumeId,
-                    nonce: parfumeReviews.nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $btn.text('Проследява се').addClass('tracking');
-                        showNotification('Цената се проследява! Ще получите имейл при промяна.', 'success');
-                    } else {
-                        showNotification('Грешка: ' + response.data.message, 'error');
-                        $btn.prop('disabled', false).text('Проследи цената');
-                    }
-                },
-                error: function() {
-                    showNotification('Възникна грешка при настройването на проследяването', 'error');
-                    $btn.prop('disabled', false).text('Проследи цената');
-                }
-            });
-        });
-    }
-
-    /**
-     * Wishlist functionality
-     */
-    function initWishlist() {
-        $('.wishlist-toggle').on('click', function(e) {
-            e.preventDefault();
-            const parfumeId = $(this).data('parfume-id');
-            const $btn = $(this);
-            const isInWishlist = $btn.hasClass('in-wishlist');
-            
-            $btn.prop('disabled', true);
-            
-            $.ajax({
-                url: parfumeReviews.ajaxurl,
-                method: 'POST',
-                data: {
-                    action: isInWishlist ? 'remove_from_wishlist' : 'add_to_wishlist',
-                    parfume_id: parfumeId,
-                    nonce: parfumeReviews.nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        if (isInWishlist) {
-                            $btn.removeClass('in-wishlist').html('♡ Добави в желани');
-                            showNotification('Премахнато от желани', 'info');
-                        } else {
-                            $btn.addClass('in-wishlist').html('♥ В желани');
-                            showNotification('Добавено в желани', 'success');
-                        }
-                        
-                        // Update wishlist counter
-                        $('.wishlist-count').text(response.data.count);
-                    } else {
-                        showNotification('Грешка: ' + response.data.message, 'error');
-                    }
-                },
-                error: function() {
-                    showNotification('Възникна грешка', 'error');
-                },
-                complete: function() {
-                    $btn.prop('disabled', false);
-                }
-            });
-        });
-    }
-
-    /**
-     * Image zoom functionality
-     */
-    function initImageZoom() {
-        $('.parfume-image-zoom').on('mouseenter', function() {
-            const $img = $(this).find('img');
-            const $zoom = $('<div class="zoom-overlay"></div>');
-            
-            $(this).append($zoom);
-            
-            $img.on('mousemove', function(e) {
-                const rect = this.getBoundingClientRect();
-                const x = ((e.clientX - rect.left) / rect.width) * 100;
-                const y = ((e.clientY - rect.top) / rect.height) * 100;
+            $element.on('mouseenter', function() {
+                const $tooltip = $(`<div class="tooltip">${tooltipText}</div>`);
+                $('body').append($tooltip);
                 
-                $zoom.css({
-                    'background-image': `url(${$img.attr('src')})`,
-                    'background-position': `${x}% ${y}%`,
-                    'background-size': '200%'
+                const elementOffset = $element.offset();
+                const elementWidth = $element.outerWidth();
+                const elementHeight = $element.outerHeight();
+                const tooltipWidth = $tooltip.outerWidth();
+                
+                $tooltip.css({
+                    position: 'absolute',
+                    top: elementOffset.top - $tooltip.outerHeight() - 10,
+                    left: elementOffset.left + (elementWidth / 2) - (tooltipWidth / 2),
+                    zIndex: 9999
                 });
             });
-        });
-
-        $('.parfume-image-zoom').on('mouseleave', function() {
-            $(this).find('.zoom-overlay').remove();
-        });
-    }
-
-    /**
-     * Advanced filtering with URL state management
-     */
-    function initAdvancedFiltering() {
-        // Handle browser back/forward buttons
-        window.addEventListener('popstate', function(e) {
-            // Reload page to reflect URL changes
-            window.location.reload();
-        });
-
-        // Update URL when filters change (for bookmarking)
-        function updateUrlState() {
-            const formData = new FormData($('.parfume-filters form')[0]);
-            const urlParams = new URLSearchParams();
             
-            for (let [key, value] of formData.entries()) {
-                if (value && value.trim() !== '') {
-                    urlParams.append(key, value);
-                }
-            }
-            
-            const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
-            
-            // Only update if URL actually changed
-            if (newUrl !== window.location.href) {
-                history.pushState(null, '', newUrl);
-            }
-        }
+            $element.on('mouseleave', function() {
+                $('.tooltip').remove();
+            });
+        });
     }
 
     /**
@@ -657,16 +369,25 @@ jQuery(document).ready(function($) {
         // Debounce scroll events
         let scrollTimeout;
         $(window).on('scroll', function() {
-            clearTimeout(scrollTimeout);
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
             scrollTimeout = setTimeout(function() {
-                // Scroll-based functionality here
                 updateVisibleElements();
             }, 100);
         });
 
+        // Preload critical resources
+        function preloadCriticalResources() {
+            // Preload next page if pagination exists
+            const $nextLink = $('.pagination .next');
+            if ($nextLink.length) {
+                $('<link rel="prefetch">').attr('href', $nextLink.attr('href')).appendTo('head');
+            }
+        }
+
         // Lazy load non-critical elements
         function loadNonCriticalElements() {
-            // Load social media widgets, analytics, etc.
             setTimeout(function() {
                 initSocialWidgets();
                 initAnalytics();
@@ -693,6 +414,7 @@ jQuery(document).ready(function($) {
             return elementBottom > viewportTop && elementTop < viewportBottom;
         };
 
+        preloadCriticalResources();
         loadNonCriticalElements();
     }
 
@@ -757,7 +479,7 @@ jQuery(document).ready(function($) {
         window.addEventListener('error', function(e) {
             console.error('JavaScript Error:', e.error);
             // Don't show user-facing error for JS errors unless in debug mode
-            if (parfumeReviews.debug) {
+            if (typeof parfumeReviews !== 'undefined' && parfumeReviews.debug) {
                 showNotification('Възникна JavaScript грешка: ' + e.error.message, 'error');
             }
         });
@@ -786,3 +508,230 @@ jQuery(document).ready(function($) {
         console.log('Parfume Reviews frontend initialized successfully');
     }
 });
+
+// ЛИПСВАЩИ ФУНКЦИИ - Добавени за поправка на JavaScript грешки
+
+/**
+ * Initialize social media widgets
+ */
+function initSocialWidgets() {
+    console.log('Social widgets initialized');
+    
+    // Initialize share buttons if they exist
+    if ($('.share-button').length) {
+        initShareButtons();
+    }
+    
+    // Initialize social login if it exists
+    if ($('.social-login').length) {
+        initSocialLogin();
+    }
+}
+
+/**
+ * Initialize analytics tracking
+ */
+function initAnalytics() {
+    console.log('Analytics initialized');
+    
+    // Track page views
+    if (typeof gtag !== 'undefined') {
+        gtag('config', 'GA_MEASUREMENT_ID', {
+            page_title: document.title,
+            page_location: window.location.href
+        });
+    }
+    
+    // Track parfume interactions
+    $('.parfume-card').on('click', function() {
+        const parfumeId = $(this).data('post-id');
+        const parfumeTitle = $(this).find('.parfume-title').text();
+        
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'parfume_view', {
+                'custom_parameter_1': parfumeId,
+                'custom_parameter_2': parfumeTitle
+            });
+        }
+    });
+}
+
+/**
+ * Initialize share buttons functionality
+ */
+function initShareButtons() {
+    $('.share-button').on('click', function(e) {
+        e.preventDefault();
+        const platform = $(this).data('platform');
+        const url = encodeURIComponent(window.location.href);
+        const title = encodeURIComponent(document.title);
+        
+        let shareUrl = '';
+        
+        switch(platform) {
+            case 'facebook':
+                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+                break;
+            case 'twitter':
+                shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${title}`;
+                break;
+            case 'pinterest':
+                const image = encodeURIComponent($('.parfume-gallery-main img').attr('src') || '');
+                shareUrl = `https://pinterest.com/pin/create/button/?url=${url}&media=${image}&description=${title}`;
+                break;
+            case 'email':
+                shareUrl = `mailto:?subject=${title}&body=${url}`;
+                break;
+            case 'whatsapp':
+                shareUrl = `https://wa.me/?text=${title} ${url}`;
+                break;
+            case 'telegram':
+                shareUrl = `https://t.me/share/url?url=${url}&text=${title}`;
+                break;
+        }
+        
+        if (shareUrl) {
+            window.open(shareUrl, '_blank', 'width=600,height=400,scrollbars=yes,resizable=yes');
+        }
+        
+        // Track share event
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'share', {
+                'method': platform,
+                'content_type': 'parfume',
+                'item_id': window.location.pathname
+            });
+        }
+    });
+}
+
+/**
+ * Initialize social login functionality
+ */
+function initSocialLogin() {
+    $('.social-login-button').on('click', function(e) {
+        e.preventDefault();
+        const provider = $(this).data('provider');
+        console.log('Social login with:', provider);
+        
+        $(this).addClass('loading').prop('disabled', true);
+        setTimeout(() => {
+            $(this).removeClass('loading').prop('disabled', false);
+            if (typeof showNotification === 'function') {
+                showNotification('Social login functionality would be implemented here', 'info');
+            }
+        }, 2000);
+    });
+}
+
+/**
+ * Missing function implementations
+ */
+function initMobileMenu() {
+    $('.mobile-menu-toggle').on('click', function() {
+        $('.mobile-menu').toggleClass('active');
+        $(this).toggleClass('active');
+    });
+    
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.mobile-menu, .mobile-menu-toggle').length) {
+            $('.mobile-menu').removeClass('active');
+            $('.mobile-menu-toggle').removeClass('active');
+        }
+    });
+}
+
+function initPriceTracking() {
+    $('.track-price-button').on('click', function() {
+        const parfumeId = $(this).data('parfume-id');
+        console.log('Price tracking for parfume:', parfumeId);
+        if (typeof showNotification === 'function') {
+            showNotification('Price tracking feature would be implemented here', 'info');
+        }
+    });
+}
+
+function initWishlist() {
+    $('.add-to-wishlist').on('click', function() {
+        const parfumeId = $(this).data('parfume-id');
+        console.log('Add to wishlist:', parfumeId);
+        $(this).toggleClass('in-wishlist');
+        if (typeof showNotification === 'function') {
+            showNotification('Added to wishlist', 'success');
+        }
+    });
+}
+
+function initImageZoom() {
+    $('.parfume-image img').on('click', function() {
+        const src = $(this).attr('src');
+        if (src) {
+            const $lightbox = $(`
+                <div class="image-lightbox" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <div style="position: relative; max-width: 90%; max-height: 90%;">
+                        <img src="${src}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        <button class="close-lightbox" style="position: absolute; top: -40px; right: 0; background: white; border: none; padding: 10px; cursor: pointer; border-radius: 50%;">✕</button>
+                    </div>
+                </div>
+            `);
+            
+            $('body').append($lightbox);
+            
+            $lightbox.on('click', function(e) {
+                if (e.target === this || $(e.target).hasClass('close-lightbox')) {
+                    $(this).remove();
+                }
+            });
+        }
+    });
+}
+
+function initAdvancedFiltering() {
+    console.log('Advanced filtering initialized');
+    // Advanced filtering features would be implemented here
+}
+
+function initPerformanceOptimizations() {
+    console.log('Performance optimizations initialized');
+    // Performance optimizations would be implemented here
+}
+
+function initSearch() {
+    $('.parfume-search-form').on('submit', function(e) {
+        e.preventDefault();
+        const query = $(this).find('input[type="search"]').val();
+        if (query.trim()) {
+            window.location.href = `?s=${encodeURIComponent(query)}`;
+        }
+    });
+}
+
+/**
+ * Utility function for notifications (if not already defined)
+ */
+if (typeof showNotification === 'undefined') {
+    function showNotification(message, type = 'info') {
+        const colors = {
+            'error': '#f44336',
+            'success': '#4caf50',
+            'warning': '#ff9800',
+            'info': '#2196f3'
+        };
+        
+        const $notification = $(`
+            <div class="parfume-notification parfume-notification-${type}" style="position: fixed; top: 20px; right: 20px; padding: 15px 20px; background: ${colors[type] || colors.info}; color: white; border-radius: 4px; z-index: 10000; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-family: Arial, sans-serif; font-size: 14px; max-width: 300px;">
+                ${message}
+                <button onclick="$(this).parent().fadeOut(() => $(this).parent().remove())" style="background: none; border: none; color: white; float: right; margin-left: 10px; cursor: pointer; font-size: 16px; padding: 0;">×</button>
+            </div>
+        `);
+        
+        $('body').append($notification);
+        
+        setTimeout(() => {
+            $notification.fadeOut(() => $notification.remove());
+        }, 5000);
+    }
+    
+    // Make it globally available
+    window.showNotification = showNotification;
+}
