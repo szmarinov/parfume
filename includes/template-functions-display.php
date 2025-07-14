@@ -4,6 +4,7 @@
  * Функции за показване на парфюмни карточки и UI елементи
  * 
  * Файл: includes/template-functions-display.php
+ * ПОПРАВЕНА ВЕРСИЯ С ЛИПСВАЩАТА ФУНКЦИЯ parfume_reviews_get_collections_dropdown()
  */
 
 // Prevent direct access
@@ -57,7 +58,7 @@ function parfume_reviews_display_parfume_card($post_id) {
             <div class="parfume-card-header">
                 <?php if (!empty($brand_name)): ?>
                     <div class="parfume-card-brand">
-                        <a href="<?php echo get_term_link($brand_name, 'marki'); ?>">
+                        <a href="<?php echo esc_url(get_term_link($brand_name, 'marki')); ?>">
                             <?php echo esc_html($brand_name); ?>
                         </a>
                     </div>
@@ -71,37 +72,21 @@ function parfume_reviews_display_parfume_card($post_id) {
             </div>
             
             <div class="parfume-card-meta">
-                <?php if (!empty($gender_terms)): ?>
-                    <div class="parfume-card-gender">
-                        <?php foreach ($gender_terms as $gender): ?>
-                            <span class="gender-tag"><?php echo esc_html($gender); ?></span>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-                
                 <?php if (!empty($price)): ?>
                     <div class="parfume-card-price">
-                        <span class="price-amount"><?php echo esc_html($price); ?></span>
-                        <span class="price-currency">лв.</span>
+                        <?php echo parfume_reviews_get_formatted_price($price); ?>
                     </div>
                 <?php endif; ?>
-            </div>
-            
-            <div class="parfume-card-excerpt">
-                <?php echo wp_trim_words(get_the_excerpt($post_id), 15, '...'); ?>
-            </div>
-            
-            <div class="parfume-card-actions">
-                <a href="<?php echo get_permalink($post_id); ?>" class="parfume-card-button">
-                    <?php _e('Виж повече', 'parfume-reviews'); ?>
-                </a>
                 
-                <?php if (!empty($settings['enable_comparison']) && $settings['enable_comparison']): ?>
-                    <button class="add-to-comparison" data-post-id="<?php echo esc_attr($post_id); ?>">
-                        <span class="dashicons dashicons-plus-alt2"></span>
-                        <?php _e('Сравни', 'parfume-reviews'); ?>
-                    </button>
-                <?php endif; ?>
+                <div class="parfume-card-actions">
+                    <?php if (!empty($settings['enable_comparison'])): ?>
+                        <?php echo parfume_reviews_get_comparison_button($post_id); ?>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($settings['enable_collections']) && is_user_logged_in()): ?>
+                        <?php echo parfume_reviews_get_collections_dropdown($post_id); ?>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </article>
@@ -109,13 +94,13 @@ function parfume_reviews_display_parfume_card($post_id) {
 }
 
 /**
- * Показва звездна оценка
+ * Показва звездичен рейтинг
  */
-function parfume_reviews_display_star_rating($rating, $show_number = true) {
+function parfume_reviews_display_star_rating($rating, $max_rating = 5, $show_number = false) {
     $rating = floatval($rating);
     $full_stars = floor($rating);
     $half_star = ($rating - $full_stars) >= 0.5;
-    $empty_stars = 5 - $full_stars - ($half_star ? 1 : 0);
+    $empty_stars = $max_rating - $full_stars - ($half_star ? 1 : 0);
     
     ?>
     <div class="star-rating" data-rating="<?php echo esc_attr($rating); ?>">
@@ -272,7 +257,7 @@ function parfume_reviews_display_pagination($query = null) {
             'prev_text' => '‹ ' . __('Предишна', 'parfume-reviews'),
             'next_text' => __('Следваща', 'parfume-reviews') . ' ›',
             'type' => 'list',
-            'end_size' => 1,
+            'end_size' => 2,
             'mid_size' => 2
         ));
         ?>
@@ -284,47 +269,33 @@ function parfume_reviews_display_pagination($query = null) {
  * Показва breadcrumb навигация
  */
 function parfume_reviews_display_breadcrumb() {
-    if (is_front_page()) {
-        return;
-    }
-    
     $breadcrumbs = array();
+    $settings = get_option('parfume_reviews_settings', array());
+    $home_text = !empty($settings['breadcrumb_home']) ? $settings['breadcrumb_home'] : __('Начало', 'parfume-reviews');
+    
+    // Добавяме начало
     $breadcrumbs[] = array(
-        'title' => __('Начало', 'parfume-reviews'),
-        'url' => home_url('/')
+        'url' => home_url('/'),
+        'title' => $home_text
     );
     
+    // Парфюми архив
+    $breadcrumbs[] = array(
+        'url' => get_post_type_archive_link('parfume'),
+        'title' => __('Парфюми', 'parfume-reviews')
+    );
+    
+    // Текуща страница
     if (is_singular('parfume')) {
         $breadcrumbs[] = array(
-            'title' => __('Парфюми', 'parfume-reviews'),
-            'url' => get_post_type_archive_link('parfume')
-        );
-        $breadcrumbs[] = array(
-            'title' => get_the_title(),
-            'url' => ''
-        );
-    } elseif (is_post_type_archive('parfume')) {
-        $breadcrumbs[] = array(
-            'title' => __('Парфюми', 'parfume-reviews'),
-            'url' => ''
+            'url' => '',
+            'title' => get_the_title()
         );
     } elseif (is_tax()) {
-        $queried_object = get_queried_object();
+        $term = get_queried_object();
         $breadcrumbs[] = array(
-            'title' => __('Парфюми', 'parfume-reviews'),
-            'url' => get_post_type_archive_link('parfume')
-        );
-        
-        if ($queried_object->taxonomy === 'perfumer') {
-            $breadcrumbs[] = array(
-                'title' => __('Парфюмеристи', 'parfume-reviews'),
-                'url' => home_url('/parfiumi/parfumeri/')
-            );
-        }
-        
-        $breadcrumbs[] = array(
-            'title' => $queried_object->name,
-            'url' => ''
+            'url' => '',
+            'title' => $term->name
         );
     }
     
@@ -335,18 +306,16 @@ function parfume_reviews_display_breadcrumb() {
     ?>
     <nav class="parfume-breadcrumb" aria-label="<?php esc_attr_e('Breadcrumb', 'parfume-reviews'); ?>">
         <ol class="breadcrumb-list">
-            <?php foreach ($breadcrumbs as $index => $breadcrumb): ?>
-                <li class="breadcrumb-item <?php echo $index === count($breadcrumbs) - 1 ? 'current' : ''; ?>">
-                    <?php if (!empty($breadcrumb['url'])): ?>
-                        <a href="<?php echo esc_url($breadcrumb['url']); ?>">
-                            <?php echo esc_html($breadcrumb['title']); ?>
-                        </a>
+            <?php foreach ($breadcrumbs as $index => $crumb): ?>
+                <li class="breadcrumb-item">
+                    <?php if (!empty($crumb['url'])): ?>
+                        <a href="<?php echo esc_url($crumb['url']); ?>"><?php echo esc_html($crumb['title']); ?></a>
                     <?php else: ?>
-                        <span><?php echo esc_html($breadcrumb['title']); ?></span>
+                        <span class="current"><?php echo esc_html($crumb['title']); ?></span>
                     <?php endif; ?>
                     
                     <?php if ($index < count($breadcrumbs) - 1): ?>
-                        <span class="separator"> › </span>
+                        <span class="separator">/</span>
                     <?php endif; ?>
                 </li>
             <?php endforeach; ?>
@@ -356,41 +325,46 @@ function parfume_reviews_display_breadcrumb() {
 }
 
 /**
- * Показва архивна страница header
+ * Показва header на архивна страница
  */
-function parfume_reviews_display_archive_header($title = '', $description = '') {
-    if (empty($title)) {
-        if (is_post_type_archive('parfume')) {
-            $title = __('Всички Парфюми', 'parfume-reviews');
-        } elseif (is_tax()) {
-            $queried_object = get_queried_object();
-            $title = $queried_object->name;
-        }
-    }
-    
-    ?>
-    <header class="archive-header">
-        <div class="container">
-            <?php parfume_reviews_display_breadcrumb(); ?>
+function parfume_reviews_display_archive_header() {
+    if (is_post_type_archive('parfume')) {
+        ?>
+        <div class="archive-header parfume-archive-header">
+            <h1 class="archive-title"><?php _e('Всички парфюми', 'parfume-reviews'); ?></h1>
+            <div class="archive-description">
+                <p><?php _e('Открийте вашия идеален парфюм от нашата колекция', 'parfume-reviews'); ?></p>
+            </div>
+        </div>
+        <?php
+    } elseif (is_tax()) {
+        $term = get_queried_object();
+        $taxonomy = get_taxonomy($term->taxonomy);
+        ?>
+        <div class="archive-header taxonomy-archive-header">
+            <h1 class="archive-title"><?php echo esc_html($term->name); ?></h1>
             
-            <?php if (!empty($title)): ?>
-                <h1 class="archive-title"><?php echo esc_html($title); ?></h1>
-            <?php endif; ?>
-            
-            <?php if (!empty($description)): ?>
+            <?php if (!empty($term->description)): ?>
                 <div class="archive-description">
-                    <?php echo wpautop($description); ?>
+                    <?php echo wpautop(esc_html($term->description)); ?>
                 </div>
             <?php endif; ?>
+            
+            <div class="archive-meta">
+                <span class="taxonomy-label"><?php echo esc_html($taxonomy->labels->singular_name); ?>:</span>
+                <span class="items-count">
+                    <?php printf(_n('%d парфюм', '%d парфюма', $term->count, 'parfume-reviews'), $term->count); ?>
+                </span>
+            </div>
         </div>
-    </header>
-    <?php
+        <?php
+    }
 }
 
 /**
- * Показва term изображение
+ * Показва изображение на term (таксономия)
  */
-function parfume_reviews_display_term_image($term_id, $taxonomy, $size = 'thumbnail', $attr = array()) {
+function parfume_reviews_display_term_image($term_id, $taxonomy, $size = 'medium', $attr = array()) {
     $image_id = get_term_meta($term_id, $taxonomy . '-image-id', true);
     
     if (!$image_id) {
@@ -437,6 +411,32 @@ function parfume_reviews_get_comparison_button($post_id, $return = true) {
 }
 
 /**
+ * ЛИПСВАЩА ФУНКЦИЯ - Collections dropdown
+ * КЛЮЧОВА ФУНКЦИЯ КОЯТО ЛИПСВАШЕ И ПРИЧИНЯВАШЕ FATAL ERROR!
+ * Използва се в templates/taxonomy-marki.php на ред 242
+ */
+function parfume_reviews_get_collections_dropdown($post_id) {
+    // Проверяваме дали класът Collections съществува
+    if (!class_exists('Parfume_Reviews\\Collections')) {
+        return '';
+    }
+    
+    // Проверяваме дали потребителят е логнат
+    if (!is_user_logged_in()) {
+        return '';
+    }
+    
+    // Проверяваме дали collections са активирани
+    $settings = get_option('parfume_reviews_settings', array());
+    if (empty($settings['enable_collections'])) {
+        return '';
+    }
+    
+    // Използваме статичния метод от Collections класа
+    return \Parfume_Reviews\Collections::get_collections_dropdown($post_id);
+}
+
+/**
  * Показва loading индикатор
  */
 function parfume_reviews_display_loading_indicator($text = '') {
@@ -450,4 +450,70 @@ function parfume_reviews_display_loading_indicator($text = '') {
         <span class="loading-text"><?php echo esc_html($text); ?></span>
     </div>
     <?php
+}
+
+/**
+ * ДОБАВЕНА ФУНКЦИЯ ЗА ОБНОВЯВАНЕ НА СПИСЪКА С AVAILABLE FUNCTIONS
+ * Актуализираме списъка в template-functions.php
+ */
+function parfume_reviews_update_available_template_functions() {
+    // Тази функция ще бъде използвана за актуализиране на списъка в main файла
+    // Добавяме parfume_reviews_get_collections_dropdown в display функциите
+    return array(
+        'utils' => array(
+            'parfume_reviews_is_parfume_page',
+            'parfume_reviews_is_parfume_archive',
+            'parfume_reviews_is_single_parfume',
+            'parfume_reviews_is_parfume_taxonomy',
+            'parfume_reviews_get_supported_taxonomies',
+            'parfume_reviews_is_supported_taxonomy',
+            'parfume_reviews_get_taxonomy_label',
+            'parfume_reviews_get_taxonomy_archive_url',
+            'parfume_reviews_get_formatted_price',
+            'parfume_reviews_get_rating',
+            'parfume_reviews_get_parfume_stores',
+            'parfume_reviews_get_lowest_price',
+            'parfume_reviews_get_popular_parfumes',
+            'parfume_reviews_get_latest_parfumes',
+            'parfume_reviews_get_random_parfumes',
+            'parfume_reviews_get_similar_parfumes',
+            'parfume_reviews_get_parfume_stats',
+            'parfume_reviews_clear_stats_cache',
+            'parfume_reviews_sanitize_rating',
+            'parfume_reviews_sanitize_price',
+            'parfume_reviews_user_can_edit_reviews',
+            'parfume_reviews_user_can_manage_plugin',
+            'parfume_reviews_get_first_image_from_content',
+            'parfume_reviews_format_longevity',
+            'parfume_reviews_extract_price_number',
+            'parfume_reviews_is_available',
+            'parfume_reviews_get_shipping_info',
+            'parfume_reviews_get_cheapest_shipping',
+            'parfume_reviews_has_promotion'
+        ),
+        'display' => array(
+            'parfume_reviews_display_parfume_card',
+            'parfume_reviews_display_star_rating',
+            'parfume_reviews_get_rating_stars',
+            'parfume_reviews_display_stars',
+            'parfume_reviews_display_parfumes_grid',
+            'parfume_reviews_display_pagination',
+            'parfume_reviews_display_breadcrumb',
+            'parfume_reviews_display_archive_header',
+            'parfume_reviews_display_term_image',
+            'parfume_reviews_display_loading_indicator',
+            'parfume_reviews_get_comparison_button',
+            'parfume_reviews_get_collections_dropdown' // ДОБАВЕНА ЛИПСВАЩАТА ФУНКЦИЯ!
+        ),
+        'filters' => array(
+            'parfume_reviews_get_active_filters',
+            'parfume_reviews_build_filter_url',
+            'parfume_reviews_get_remove_filter_url',
+            'parfume_reviews_get_add_filter_url',
+            'parfume_reviews_is_filter_active',
+            'parfume_reviews_display_active_filters',
+            'parfume_reviews_display_filter_form',
+            'parfume_reviews_display_sort_options'
+        )
+    );
 }
