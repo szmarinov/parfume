@@ -1,6 +1,13 @@
 <?php
 /**
- * Template for individual Brand pages (e.g., /parfiumi/marki/dior/)
+ * Template for Brand Taxonomy pages
+ * 
+ * Този файл обработва:
+ * - Archive страница с всички марки (/parfiumi/marki/)
+ * - Single страница на конкретна марка (/parfiumi/marki/dior/) - пренасочва към single-marki.php
+ * 
+ * Файл: templates/taxonomy-marki.php
+ * АКТУАЛИЗИРАНА ВЕРСИЯ
  */
 
 if (!defined('ABSPATH')) {
@@ -10,616 +17,805 @@ if (!defined('ABSPATH')) {
 get_header(); 
 
 $current_term = get_queried_object();
-$brand_image_id = get_term_meta($current_term->term_id, 'marki-image-id', true);
+$is_single_brand = $current_term && isset($current_term->name) && !empty($current_term->name);
+
+// Ако е конкретна марка, използваме single-marki.php template
+if ($is_single_brand) {
+    // Проверяваме дали single-marki.php съществува
+    $single_brand_template = PARFUME_REVIEWS_PLUGIN_DIR . 'templates/single-marki.php';
+    if (file_exists($single_brand_template)) {
+        include $single_brand_template;
+        get_footer();
+        return;
+    }
+    // Ако single-marki.php не съществува, продължаваме с този template
+}
+
+// Archive page - показваме всички марки
 ?>
 
-<div class="parfume-archive brand-single-archive">
+<div class="brands-archive-page marki-taxonomy-page">
+    <!-- Breadcrumb navigation -->
+    <div class="container">
+        <nav class="breadcrumb">
+            <a href="<?php echo home_url(); ?>"><?php _e('Начало', 'parfume-reviews'); ?></a>
+            <span class="separator"> › </span>
+            <a href="<?php echo home_url('/parfiumi/'); ?>"><?php _e('Парфюми', 'parfume-reviews'); ?></a>
+            <span class="separator"> › </span>
+            <span class="current"><?php _e('Марки', 'parfume-reviews'); ?></span>
+        </nav>
+    </div>
+
+    <!-- Archive Header -->
     <div class="archive-header">
-        <div class="brand-header-content">
-            <?php if ($brand_image_id): ?>
-                <div class="brand-logo-large">
-                    <?php echo wp_get_attachment_image($brand_image_id, 'medium', false, array('alt' => $current_term->name)); ?>
-                </div>
-            <?php endif; ?>
-            
-            <div class="brand-header-text">
-                <h1 class="archive-title"><?php echo esc_html($current_term->name); ?></h1>
-                
-                <?php if ($current_term->description): ?>
-                    <div class="archive-description">
-                        <?php echo wpautop(esc_html($current_term->description)); ?>
-                    </div>
-                <?php endif; ?>
-                
-                <div class="archive-meta">
-                    <span class="perfume-count">
-                        <?php printf(_n('%d парфюм', '%d парфюма', $current_term->count, 'parfume-reviews'), $current_term->count); ?>
-                    </span>
-                    
-                    <?php
-                    // Calculate average rating for this brand
-                    $brand_perfumes = get_posts(array(
-                        'post_type' => 'parfume',
-                        'posts_per_page' => -1,
-                        'fields' => 'ids',
-                        'tax_query' => array(
-                            array(
-                                'taxonomy' => 'marki',
-                                'field' => 'term_id',
-                                'terms' => $current_term->term_id,
-                            ),
-                        ),
-                    ));
-                    
-                    if (!empty($brand_perfumes)) {
-                        $total_rating = 0;
-                        $rated_count = 0;
-                        
-                        foreach ($brand_perfumes as $perfume_id) {
-                            $rating = get_post_meta($perfume_id, '_parfume_rating', true);
-                            if (!empty($rating) && is_numeric($rating)) {
-                                $total_rating += floatval($rating);
-                                $rated_count++;
-                            }
-                        }
-                        
-                        if ($rated_count > 0) {
-                            $average_rating = $total_rating / $rated_count;
-                            ?>
-                            <span class="average-rating">
-                                <span class="rating-label"><?php _e('Average Rating:', 'parfume-reviews'); ?></span>
-                                <span class="rating-stars">
-                                    <?php echo parfume_reviews_get_rating_stars($average_rating); ?>
-                                </span>
-                                <span class="rating-number"><?php echo number_format($average_rating, 1); ?>/5</span>
-                                <span class="rating-count">(<?php printf(_n('%d rating', '%d ratings', $rated_count, 'parfume-reviews'), $rated_count); ?>)</span>
-                            </span>
-                            <?php
-                        }
-                    }
-                    ?>
-                </div>
+        <div class="container">
+            <h1 class="archive-title"><?php _e('Всички Марки', 'parfume-reviews'); ?></h1>
+            <div class="archive-description">
+                <p><?php _e('Открийте парфюми по техните марки. Всяка марка носи своя уникална история и стил.', 'parfume-reviews'); ?></p>
             </div>
         </div>
     </div>
 
-    <?php if (have_posts()): ?>
-        <!-- Brand Statistics -->
-        <div class="brand-stats">
-            <div class="stats-container">
-                <div class="stat-item">
-                    <span class="stat-number"><?php echo $current_term->count; ?></span>
-                    <span class="stat-label"><?php _e('Total Perfumes', 'parfume-reviews'); ?></span>
+    <!-- Archive Content -->
+    <div class="archive-content">
+        <div class="container">
+            
+            <!-- Search and Filter Section -->
+            <div class="brands-controls">
+                <div class="brands-search">
+                    <input type="text" id="brands-search" placeholder="<?php _e('Търсене в марките...', 'parfume-reviews'); ?>">
+                    <button type="button" class="search-button">
+                        <span class="dashicons dashicons-search"></span>
+                    </button>
                 </div>
                 
-                <?php
-                // Get most popular notes for this brand
-                $brand_notes = array();
-                while (have_posts()): the_post();
-                    $notes = wp_get_post_terms(get_the_ID(), 'notes', array('fields' => 'names'));
-                    if (!empty($notes) && !is_wp_error($notes)) {
-                        foreach ($notes as $note) {
-                            if (!isset($brand_notes[$note])) {
-                                $brand_notes[$note] = 0;
-                            }
-                            $brand_notes[$note]++;
-                        }
-                    }
-                endwhile;
-                wp_reset_postdata();
+                <div class="brands-sort">
+                    <label for="brands-sort-select"><?php _e('Сортиране:', 'parfume-reviews'); ?></label>
+                    <select id="brands-sort-select">
+                        <option value="name"><?php _e('По име', 'parfume-reviews'); ?></option>
+                        <option value="count"><?php _e('По брой парфюми', 'parfume-reviews'); ?></option>
+                        <option value="popular"><?php _e('По популярност', 'parfume-reviews'); ?></option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Brands Grid -->
+            <?php
+            // Query за всички марки
+            $brands = get_terms(array(
+                'taxonomy' => 'marki',
+                'hide_empty' => true,
+                'orderby' => 'name',
+                'order' => 'ASC'
+            ));
+            
+            if (!empty($brands) && !is_wp_error($brands)): ?>
                 
-                // Sort by popularity and get top 3
-                arsort($brand_notes);
-                $top_notes = array_slice(array_keys($brand_notes), 0, 3);
-                ?>
-                
-                <?php if (!empty($top_notes)): ?>
+                <div class="brands-stats">
                     <div class="stat-item">
-                        <span class="stat-number"><?php echo count($brand_notes); ?></span>
-                        <span class="stat-label"><?php _e('Different Notes', 'parfume-reviews'); ?></span>
+                        <span class="stat-number"><?php echo count($brands); ?></span>
+                        <span class="stat-label"><?php _e('марки', 'parfume-reviews'); ?></span>
                     </div>
                     
+                    <?php
+                    // Изчисляваме общо парфюми
+                    $total_perfumes = 0;
+                    foreach ($brands as $brand) {
+                        $total_perfumes += $brand->count;
+                    }
+                    ?>
                     <div class="stat-item">
-                        <span class="stat-notes"><?php echo implode(', ', array_slice($top_notes, 0, 2)); ?></span>
-                        <span class="stat-label"><?php _e('Popular Notes', 'parfume-reviews'); ?></span>
+                        <span class="stat-number"><?php echo $total_perfumes; ?></span>
+                        <span class="stat-label"><?php _e('парфюма общо', 'parfume-reviews'); ?></span>
                     </div>
-                <?php endif; ?>
-                
-                <?php
-                // Get newest perfume year
-                $newest_year = '';
-                $args = array(
-                    'post_type' => 'parfume',
-                    'posts_per_page' => 1,
-                    'meta_key' => '_parfume_release_year',
-                    'orderby' => 'meta_value_num',
-                    'order' => 'DESC',
-                    'tax_query' => array(
-                        array(
-                            'taxonomy' => 'marki',
-                            'field' => 'term_id',
-                            'terms' => $current_term->term_id,
-                        ),
-                    ),
-                );
-                
-                $newest = new WP_Query($args);
-                if ($newest->have_posts()) {
-                    $newest->the_post();
-                    $newest_year = get_post_meta(get_the_ID(), '_parfume_release_year', true);
-                    wp_reset_postdata();
-                }
-                
-                if ($newest_year):
-                ?>
-                    <div class="stat-item">
-                        <span class="stat-number"><?php echo esc_html($newest_year); ?></span>
-                        <span class="stat-label"><?php _e('Latest Release', 'parfume-reviews'); ?></span>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
+                </div>
 
-        <div class="archive-content">
-            <div class="archive-sidebar">
-                <?php echo do_shortcode('[parfume_filters show_brand="false"]'); ?>
-                
-                <!-- Popular notes for this brand -->
-                <?php if (!empty($top_notes)): ?>
-                    <div class="brand-popular-notes">
-                        <h3><?php _e('Popular Notes in', 'parfume-reviews'); ?> <?php echo esc_html($current_term->name); ?></h3>
-                        <div class="notes-list">
-                            <?php foreach ($top_notes as $note_name): ?>
-                                <?php 
-                                $note_term = get_term_by('name', $note_name, 'notes');
-                                if ($note_term):
-                                ?>
-                                    <a href="<?php echo get_term_link($note_term); ?>" class="note-tag">
-                                        <?php echo esc_html($note_name); ?>
-                                        <span class="note-count"><?php echo $brand_notes[$note_name]; ?></span>
-                                    </a>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <div class="archive-main">
-                <div class="parfume-grid">
-                    <?php while (have_posts()): the_post(); ?>
-                        <div class="parfume-card">
-                            <div class="parfume-thumbnail">
-                                <a href="<?php the_permalink(); ?>">
-                                    <?php if (has_post_thumbnail()): ?>
-                                        <?php the_post_thumbnail('medium'); ?>
+                <div class="brands-grid" id="brands-grid">
+                    <?php foreach ($brands as $brand): ?>
+                        <div class="brand-card" data-brand-name="<?php echo esc_attr(strtolower($brand->name)); ?>" data-brand-count="<?php echo esc_attr($brand->count); ?>">
+                            <div class="brand-card-inner">
+                                
+                                <!-- Brand Logo -->
+                                <div class="brand-logo">
+                                    <?php
+                                    $brand_logo_id = get_term_meta($brand->term_id, 'marki-image-id', true);
+                                    if ($brand_logo_id):
+                                    ?>
+                                        <a href="<?php echo get_term_link($brand); ?>">
+                                            <?php echo wp_get_attachment_image($brand_logo_id, 'medium', false, array('alt' => $brand->name)); ?>
+                                        </a>
                                     <?php else: ?>
-                                        <div class="no-image">
-                                            <span><?php _e('No Image', 'parfume-reviews'); ?></span>
+                                        <a href="<?php echo get_term_link($brand); ?>" class="brand-logo-placeholder">
+                                            <span class="brand-initial"><?php echo esc_html(mb_substr($brand->name, 0, 1)); ?></span>
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+
+                                <!-- Brand Info -->
+                                <div class="brand-info">
+                                    <h3 class="brand-name">
+                                        <a href="<?php echo get_term_link($brand); ?>">
+                                            <?php echo esc_html($brand->name); ?>
+                                        </a>
+                                    </h3>
+                                    
+                                    <div class="brand-meta">
+                                        <span class="brand-count">
+                                            <?php printf(_n('%d парфюм', '%d парфюма', $brand->count, 'parfume-reviews'), $brand->count); ?>
+                                        </span>
+                                        
+                                        <?php
+                                        // Изчисляваме средния рейтинг за тази марка
+                                        $brand_perfumes = get_posts(array(
+                                            'post_type' => 'parfume',
+                                            'posts_per_page' => -1,
+                                            'fields' => 'ids',
+                                            'tax_query' => array(
+                                                array(
+                                                    'taxonomy' => 'marki',
+                                                    'field' => 'term_id',
+                                                    'terms' => $brand->term_id,
+                                                ),
+                                            ),
+                                        ));
+                                        
+                                        if (!empty($brand_perfumes)) {
+                                            $total_rating = 0;
+                                            $rated_count = 0;
+                                            
+                                            foreach ($brand_perfumes as $perfume_id) {
+                                                $rating = get_post_meta($perfume_id, '_parfume_rating', true);
+                                                if (!empty($rating) && is_numeric($rating)) {
+                                                    $total_rating += floatval($rating);
+                                                    $rated_count++;
+                                                }
+                                            }
+                                            
+                                            if ($rated_count > 0) {
+                                                $average_rating = $total_rating / $rated_count;
+                                                ?>
+                                                <div class="brand-rating">
+                                                    <?php parfume_reviews_display_star_rating($average_rating, 5, false); ?>
+                                                    <span class="rating-text"><?php echo number_format($average_rating, 1); ?></span>
+                                                </div>
+                                                <?php
+                                            }
+                                        }
+                                        ?>
+                                    </div>
+                                    
+                                    <?php if (!empty($brand->description)): ?>
+                                        <div class="brand-excerpt">
+                                            <?php echo wp_trim_words($brand->description, 15, '...'); ?>
                                         </div>
                                     <?php endif; ?>
-                                </a>
-                            </div>
+                                </div>
 
-                            <div class="parfume-content">
-                                <h3 class="parfume-title">
-                                    <a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
-                                </h3>
-
-                                <?php 
-                                $release_year = get_post_meta(get_the_ID(), '_parfume_release_year', true);
-                                if ($release_year): 
-                                ?>
-                                    <div class="parfume-year"><?php echo esc_html($release_year); ?></div>
-                                <?php endif; ?>
-
-                                <?php 
-                                $rating = get_post_meta(get_the_ID(), '_parfume_rating', true);
-                                if (!empty($rating) && is_numeric($rating)): 
-                                ?>
-                                    <div class="parfume-rating">
-                                        <div class="rating-stars">
-                                            <?php echo parfume_reviews_get_rating_stars($rating); ?>
-                                        </div>
-                                        <span class="rating-number"><?php echo number_format(floatval($rating), 1); ?>/5</span>
-                                    </div>
-                                <?php endif; ?>
-
-                                <?php
-                                // Show top 3 notes for this perfume
-                                $perfume_notes = wp_get_post_terms(get_the_ID(), 'notes', array('fields' => 'names', 'number' => 3));
-                                if (!empty($perfume_notes) && !is_wp_error($perfume_notes)):
-                                ?>
-                                    <div class="parfume-notes">
-                                        <?php foreach ($perfume_notes as $note): ?>
-                                            <span class="note-tag"><?php echo esc_html($note); ?></span>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php endif; ?>
-
-                                <div class="parfume-actions">
-                                    <?php echo parfume_reviews_get_comparison_button(get_the_ID()); ?>
-                                    <?php echo parfume_reviews_get_collections_dropdown(get_the_ID()); ?>
+                                <!-- Brand Actions -->
+                                <div class="brand-actions">
+                                    <a href="<?php echo get_term_link($brand); ?>" class="brand-link-primary">
+                                        <?php _e('Разгледай парфюмите', 'parfume-reviews'); ?>
+                                        <span class="dashicons dashicons-arrow-right-alt2"></span>
+                                    </a>
                                 </div>
                             </div>
                         </div>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                 </div>
 
-                <?php
-                // Pagination
-                the_posts_pagination(array(
-                    'mid_size' => 2,
-                    'prev_text' => __('&laquo; Previous', 'parfume-reviews'),
-                    'next_text' => __('Next &raquo;', 'parfume-reviews'),
-                ));
-                ?>
-            </div>
-        </div>
+            <?php else: ?>
+                <div class="no-brands-message">
+                    <div class="no-results-content">
+                        <h3><?php _e('Няма намерени марки', 'parfume-reviews'); ?></h3>
+                        <p><?php _e('Все още няма добавени марки в базата данни.', 'parfume-reviews'); ?></p>
+                        <a href="<?php echo home_url('/parfiumi/'); ?>" class="button">
+                            <?php _e('Разгледайте всички парфюми', 'parfume-reviews'); ?>
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
 
-    <?php else: ?>
-        <div class="no-perfumes">
-            <p><?php printf(__('No perfumes found for %s.', 'parfume-reviews'), esc_html($current_term->name)); ?></p>
+            <!-- Popular Brands Section -->
+            <?php if (!empty($brands)): ?>
+                <div class="popular-brands-section">
+                    <h2><?php _e('Най-популярни марки', 'parfume-reviews'); ?></h2>
+                    
+                    <?php
+                    // Сортираме марките по брой парфюми
+                    usort($brands, function($a, $b) {
+                        return $b->count - $a->count;
+                    });
+                    
+                    $popular_brands = array_slice($brands, 0, 6);
+                    ?>
+                    
+                    <div class="popular-brands-grid">
+                        <?php foreach ($popular_brands as $brand): ?>
+                            <div class="popular-brand-item">
+                                <div class="popular-brand-logo">
+                                    <?php
+                                    $brand_logo_id = get_term_meta($brand->term_id, 'marki-image-id', true);
+                                    if ($brand_logo_id):
+                                    ?>
+                                        <a href="<?php echo get_term_link($brand); ?>">
+                                            <?php echo wp_get_attachment_image($brand_logo_id, 'thumbnail', false, array('alt' => $brand->name)); ?>
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="<?php echo get_term_link($brand); ?>" class="popular-brand-placeholder">
+                                            <span><?php echo esc_html(mb_substr($brand->name, 0, 2)); ?></span>
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                                
+                                <div class="popular-brand-info">
+                                    <h4 class="popular-brand-name">
+                                        <a href="<?php echo get_term_link($brand); ?>">
+                                            <?php echo esc_html($brand->name); ?>
+                                        </a>
+                                    </h4>
+                                    <span class="popular-brand-count">
+                                        <?php printf(_n('%d парфюм', '%d парфюма', $brand->count, 'parfume-reviews'), $brand->count); ?>
+                                    </span>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
         </div>
-    <?php endif; ?>
+    </div>
 </div>
 
 <style>
-.brand-header-content {
-    display: flex;
-    align-items: center;
-    gap: 30px;
-    margin-bottom: 30px;
+/* Brands Archive Page Styles */
+.brands-archive-page {
+    background: #f8f9fa;
 }
 
-.brand-logo-large {
-    flex: 0 0 120px;
-}
-
-.brand-logo-large img {
-    max-width: 120px;
-    max-height: 120px;
-    object-fit: contain;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.brand-header-text {
-    flex: 1;
+.archive-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 60px 0;
+    text-align: center;
 }
 
 .archive-title {
-    font-size: 2.5em;
-    margin-bottom: 15px;
-    color: #333;
+    font-size: 3rem;
+    margin-bottom: 20px;
+    font-weight: 700;
 }
 
 .archive-description {
-    font-size: 1.1em;
-    line-height: 1.6;
-    color: #666;
-    margin-bottom: 20px;
+    font-size: 1.2rem;
+    opacity: 0.9;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
-.archive-meta {
+.archive-content {
+    padding: 60px 0;
+}
+
+.brands-controls {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+    padding: 30px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
     flex-wrap: wrap;
     gap: 20px;
-    align-items: center;
 }
 
-.perfume-count {
-    background: #0073aa;
-    color: white;
-    padding: 8px 15px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 0.9em;
-}
-
-.average-rating {
+.brands-search {
     display: flex;
     align-items: center;
-    gap: 8px;
-    background: #f8f9fa;
-    padding: 8px 15px;
-    border-radius: 20px;
+    position: relative;
+    flex: 1;
+    min-width: 300px;
 }
 
-.rating-label {
-    font-weight: bold;
-    color: #333;
+.brands-search input {
+    width: 100%;
+    padding: 12px 50px 12px 20px;
+    border: 2px solid #e9ecef;
+    border-radius: 25px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
 }
 
-.rating-stars {
-    color: #ffc107;
+.brands-search input:focus {
+    outline: none;
+    border-color: #0073aa;
+    box-shadow: 0 0 0 3px rgba(0, 115, 170, 0.1);
 }
 
-.rating-number {
-    font-weight: bold;
-    color: #333;
-}
-
-.rating-count {
-    color: #666;
-    font-size: 0.9em;
-}
-
-/* Brand Statistics */
-.brand-stats {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 15px;
-    padding: 30px;
-    margin: 30px 0;
+.search-button {
+    position: absolute;
+    right: 5px;
+    background: #0073aa;
     color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
-.stats-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 30px;
-    text-align: center;
+.search-button:hover {
+    background: #005a87;
+    transform: scale(1.1);
+}
+
+.brands-sort {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.brands-sort label {
+    font-weight: 600;
+    color: #333;
+}
+
+.brands-sort select {
+    padding: 10px 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    background: white;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.brands-stats {
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+    margin-bottom: 50px;
+    flex-wrap: wrap;
 }
 
 .stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    text-align: center;
+    background: white;
+    padding: 25px 35px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border-top: 4px solid #0073aa;
 }
 
 .stat-number {
-    font-size: 2.5em;
+    display: block;
+    font-size: 2.5rem;
     font-weight: bold;
-    margin-bottom: 5px;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-.stat-notes {
-    font-size: 1.1em;
-    font-weight: bold;
-    margin-bottom: 5px;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    color: #0073aa;
+    line-height: 1;
 }
 
 .stat-label {
-    font-size: 1em;
-    opacity: 0.9;
+    display: block;
+    font-size: 1rem;
+    color: #666;
+    margin-top: 8px;
+    font-weight: 500;
 }
 
-/* Archive content */
-.archive-content {
-    display: flex;
-    gap: 30px;
-    margin-top: 30px;
-}
-
-.archive-sidebar {
-    flex: 0 0 250px;
-}
-
-.archive-main {
-    flex: 1;
-}
-
-/* Popular notes sidebar */
-.brand-popular-notes {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 20px;
-    margin-top: 20px;
-}
-
-.brand-popular-notes h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: #333;
-    font-size: 1.1em;
-}
-
-.notes-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.note-tag {
-    display: inline-flex;
-    align-items: center;
-    justify-content: space-between;
-    background: white;
-    color: #333;
-    padding: 8px 12px;
-    border-radius: 15px;
-    text-decoration: none;
-    font-size: 0.9em;
-    border: 1px solid #dee2e6;
-    transition: all 0.3s ease;
-}
-
-.note-tag:hover {
-    background: #0073aa;
-    color: white;
-    border-color: #0073aa;
-}
-
-.note-count {
-    background: #0073aa;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-size: 0.8em;
-    margin-left: 8px;
-}
-
-.note-tag:hover .note-count {
-    background: white;
-    color: #0073aa;
-}
-
-/* Perfume cards */
-.parfume-grid {
+.brands-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 25px;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 30px;
+    margin-bottom: 70px;
 }
 
-.parfume-card {
+.brand-card {
     background: white;
-    border: 1px solid #dee2e6;
-    border-radius: 12px;
+    border-radius: 20px;
     overflow: hidden;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    border: 1px solid #eee;
 }
 
-.parfume-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+.brand-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
     border-color: #0073aa;
 }
 
-.parfume-thumbnail {
-    height: 200px;
-    overflow: hidden;
+.brand-card-inner {
+    padding: 30px;
+    text-align: center;
 }
 
-.parfume-thumbnail img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.no-image {
-    height: 100%;
+.brand-logo {
+    margin-bottom: 25px;
+    height: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8f9fa;
-    color: #666;
 }
 
-.parfume-content {
-    padding: 20px;
+.brand-logo img {
+    max-width: 120px;
+    max-height: 80px;
+    object-fit: contain;
+    transition: all 0.3s ease;
 }
 
-.parfume-title {
-    margin: 0 0 10px;
-    font-size: 1.1em;
+.brand-logo a:hover img {
+    transform: scale(1.05);
 }
 
-.parfume-title a {
+.brand-logo-placeholder,
+.popular-brand-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    font-size: 1.8rem;
+    font-weight: bold;
     text-decoration: none;
-    color: #333;
+    transition: all 0.3s ease;
+    margin: 0 auto;
 }
 
-.parfume-title a:hover {
+.brand-logo-placeholder:hover,
+.popular-brand-placeholder:hover {
+    transform: scale(1.1);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.brand-info {
+    margin-bottom: 25px;
+}
+
+.brand-name {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+.brand-name a {
+    color: #333;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.brand-name a:hover {
     color: #0073aa;
 }
 
-.parfume-year {
-    color: #666;
-    font-size: 0.9em;
-    margin-bottom: 10px;
-}
-
-.parfume-rating {
+.brand-meta {
     display: flex;
+    justify-content: center;
     align-items: center;
-    gap: 8px;
+    gap: 20px;
     margin-bottom: 15px;
-}
-
-.parfume-notes {
-    margin-bottom: 15px;
-}
-
-.parfume-notes .note-tag {
-    display: inline-block;
-    background: #e3f2fd;
-    color: #1976d2;
-    padding: 4px 8px;
-    border-radius: 10px;
-    font-size: 0.8em;
-    margin-right: 5px;
-    margin-bottom: 5px;
-    text-decoration: none;
-    border: 1px solid #bbdefb;
-}
-
-.parfume-notes .note-tag:hover {
-    background: #1976d2;
-    color: white;
-    border-color: #1976d2;
-}
-
-.parfume-actions {
-    display: flex;
-    gap: 10px;
     flex-wrap: wrap;
 }
 
-/* No perfumes */
-.no-perfumes {
-    text-align: center;
-    padding: 60px 20px;
-    color: #666;
-    font-size: 1.2em;
+.brand-count {
+    background: #e9f4ff;
+    color: #0073aa;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
 }
 
-/* Responsive */
+.brand-rating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rating-text {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.brand-excerpt {
+    color: #666;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-top: 15px;
+}
+
+.brand-actions {
+    margin-top: 20px;
+}
+
+.brand-link-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #0073aa 0%, #005a87 100%);
+    color: white;
+    padding: 12px 25px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 115, 170, 0.3);
+}
+
+.brand-link-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 115, 170, 0.4);
+    background: linear-gradient(135deg, #005a87 0%, #004066 100%);
+}
+
+.popular-brands-section {
+    background: white;
+    border-radius: 20px;
+    padding: 50px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.popular-brands-section h2 {
+    text-align: center;
+    font-size: 2.2rem;
+    margin-bottom: 40px;
+    color: #333;
+}
+
+.popular-brands-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 25px;
+}
+
+.popular-brand-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    border: 1px solid #eee;
+}
+
+.popular-brand-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    border-color: #0073aa;
+    background: white;
+}
+
+.popular-brand-logo {
+    flex-shrink: 0;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.popular-brand-logo img {
+    max-width: 50px;
+    max-height: 50px;
+    object-fit: contain;
+}
+
+.popular-brand-placeholder {
+    width: 50px;
+    height: 50px;
+    font-size: 1.2rem;
+}
+
+.popular-brand-info {
+    flex: 1;
+}
+
+.popular-brand-name {
+    margin: 0 0 5px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.popular-brand-name a {
+    color: #333;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.popular-brand-name a:hover {
+    color: #0073aa;
+}
+
+.popular-brand-count {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.no-brands-message {
+    text-align: center;
+    padding: 80px 20px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.no-results-content h3 {
+    color: #666;
+    margin-bottom: 15px;
+    font-size: 1.8rem;
+}
+
+.no-results-content p {
+    color: #888;
+    margin-bottom: 30px;
+    font-size: 1.1rem;
+}
+
+.breadcrumb {
+    margin-bottom: 0;
+    padding: 20px 0;
+    font-size: 0.95rem;
+}
+
+.breadcrumb a {
+    color: #0073aa;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.breadcrumb a:hover {
+    color: #005a87;
+    text-decoration: underline;
+}
+
+.breadcrumb .separator {
+    color: #999;
+    margin: 0 10px;
+}
+
+.breadcrumb .current {
+    color: #666;
+    font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .brands-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 25px;
+    }
+    
+    .brands-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .brands-search {
+        min-width: 100%;
+    }
+}
+
 @media (max-width: 768px) {
-    .brand-header-content {
-        flex-direction: column;
-        text-align: center;
+    .archive-title {
+        font-size: 2.2rem;
     }
     
-    .brand-logo-large {
-        flex: 0 0 auto;
-    }
-    
-    .archive-content {
-        flex-direction: column;
-    }
-    
-    .archive-sidebar {
-        flex: 0 0 auto;
-    }
-    
-    .stats-container {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    .brands-grid {
+        grid-template-columns: 1fr;
         gap: 20px;
     }
     
-    .stat-number {
-        font-size: 2em;
-    }
-    
-    .parfume-grid {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    .brands-stats {
         gap: 20px;
     }
     
-    .archive-meta {
-        justify-content: center;
-        flex-direction: column;
-        gap: 10px;
+    .stat-item {
+        padding: 20px 25px;
+    }
+    
+    .brand-card-inner {
+        padding: 25px 20px;
+    }
+    
+    .popular-brands-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .popular-brand-item {
+        padding: 15px;
+    }
+    
+    .popular-brands-section {
+        padding: 30px 20px;
     }
 }
 
 @media (max-width: 480px) {
-    .parfume-grid {
-        grid-template-columns: 1fr;
+    .archive-header {
+        padding: 40px 0;
     }
     
-    .stats-container {
-        grid-template-columns: 1fr;
-        gap: 15px;
+    .archive-title {
+        font-size: 1.8rem;
     }
     
-    .brand-stats {
+    .brands-controls {
         padding: 20px;
     }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+}
+
+/* JavaScript Enhancement Styles */
+.brand-card.hidden {
+    display: none;
+}
+
+.brands-grid.sorting {
+    opacity: 0.7;
+    pointer-events: none;
 }
 </style>
+
+<script>
+// JavaScript for brands filtering and sorting
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('brands-search');
+    const sortSelect = document.getElementById('brands-sort-select');
+    const brandsGrid = document.getElementById('brands-grid');
+    const brandCards = brandsGrid ? brandsGrid.querySelectorAll('.brand-card') : [];
+
+    // Search functionality
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            brandCards.forEach(card => {
+                const brandName = card.dataset.brandName || '';
+                const shouldShow = brandName.includes(searchTerm);
+                card.classList.toggle('hidden', !shouldShow);
+            });
+        });
+    }
+
+    // Sort functionality
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function() {
+            const sortBy = this.value;
+            const cardsArray = Array.from(brandCards);
+            
+            brandsGrid.classList.add('sorting');
+            
+            cardsArray.sort((a, b) => {
+                switch (sortBy) {
+                    case 'name':
+                        return a.dataset.brandName.localeCompare(b.dataset.brandName);
+                    case 'count':
+                        return parseInt(b.dataset.brandCount) - parseInt(a.dataset.brandCount);
+                    case 'popular':
+                        return parseInt(b.dataset.brandCount) - parseInt(a.dataset.brandCount);
+                    default:
+                        return 0;
+                }
+            });
+            
+            // Re-append sorted cards
+            cardsArray.forEach(card => brandsGrid.appendChild(card));
+            
+            setTimeout(() => {
+                brandsGrid.classList.remove('sorting');
+            }, 300);
+        });
+    }
+});
+</script>
 
 <?php get_footer(); ?>
