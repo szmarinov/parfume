@@ -3,7 +3,7 @@ namespace Parfume_Reviews\Taxonomies;
 
 /**
  * Taxonomy Meta Fields - управлява meta полетата за таксономии
- * ПОПРАВЕНА ВЕРСИЯ - image upload и WordPress editor
+ * ПОПРАВЕНА ВЕРСИЯ - image upload и Rank Math SEO интеграция
  */
 class Taxonomy_Meta_Fields {
     
@@ -12,6 +12,9 @@ class Taxonomy_Meta_Fields {
         add_action('created_term', array($this, 'save_taxonomy_meta_fields'), 10, 3);
         add_action('edit_term', array($this, 'save_taxonomy_meta_fields'), 10, 3);
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
+        
+        // Добавяме Rank Math SEO интеграция
+        add_action('init', array($this, 'enable_rankmath_for_taxonomies'), 20);
     }
     
     /**
@@ -32,264 +35,35 @@ class Taxonomy_Meta_Fields {
     }
     
     /**
-     * Скрива оригиналното description поле със CSS
+     * Активира Rank Math SEO за всички наши таксономии
      */
-    public function hide_original_description_field() {
-        $screen = get_current_screen();
-        
-        // Проверяваме дали сме на taxonomy страница с editor
-        if ($screen && (strpos($screen->id, 'edit-marki') !== false || 
-                       strpos($screen->id, 'edit-notes') !== false || 
-                       strpos($screen->id, 'edit-perfumer') !== false)) {
-            ?>
-            <style type="text/css">
-                /* Скриваме оригиналното description поле */
-                .form-field.term-description-wrap:not(.custom-editor-wrap),
-                .term-description-wrap:not(.custom-editor-wrap),
-                #tag-description {
-                    display: none !important;
-                }
-                
-                /* Показваме само нашия custom editor */
-                .custom-editor-wrap {
-                    display: block !important;
-                }
-                
-                tr.custom-editor-wrap {
-                    display: table-row !important;
-                }
-                
-                /* Поправяме стиловете на TinyMCE редактора */
-                .custom-editor-wrap .wp-editor-wrap {
-                    border: 1px solid #ddd;
-                    background: #fff;
-                }
-                
-                .custom-editor-wrap .wp-editor-tabs {
-                    border-bottom: 1px solid #ddd;
-                    background: #f1f1f1;
-                }
-                
-                .custom-editor-wrap .wp-switch-editor {
-                    background: #f7f7f7;
-                    border: 1px solid #ddd;
-                    color: #555;
-                    cursor: pointer;
-                    font-size: 13px;
-                    line-height: 16px;
-                    margin: 5px 0 0 5px;
-                    padding: 3px 8px 4px;
-                    position: relative;
-                    top: 1px;
-                }
-                
-                .custom-editor-wrap .wp-switch-editor:hover {
-                    background-color: #fafafa;
-                    color: #333;
-                }
-                
-                .custom-editor-wrap .wp-switch-editor.switch-tmce {
-                    border-bottom-color: #f7f7f7;
-                }
-                
-                .custom-editor-wrap .wp-switch-editor.switch-html {
-                    border-bottom-color: #f7f7f7;
-                }
-                
-                .custom-editor-wrap .switch-tmce.active {
-                    background: #fff;
-                    border-bottom-color: #fff;
-                    color: #333;
-                }
-                
-                .custom-editor-wrap .switch-html.active {
-                    background: #fff;
-                    border-bottom-color: #fff;
-                    color: #333;
-                }
-                
-                /* Поправяме TinyMCE iframe стиловете */
-                .custom-editor-wrap .mce-tinymce {
-                    border: none !important;
-                }
-                
-                .custom-editor-wrap .mce-container {
-                    border-color: #ddd !important;
-                }
-                
-                .custom-editor-wrap .mce-toolbar {
-                    background: #f5f5f5 !important;
-                    border-bottom: 1px solid #ddd !important;
-                }
-                
-                .custom-editor-wrap .mce-btn {
-                    color: #555 !important;
-                    text-shadow: 0 1px 0 #fff !important;
-                }
-                
-                .custom-editor-wrap .mce-btn:hover {
-                    background: #fafafa !important;
-                    border-color: #999 !important;
-                    color: #222 !important;
-                }
-                
-                /* Текстовата област */
-                .custom-editor-wrap .wp-editor-area {
-                    color: #333 !important;
-                    font-family: Consolas, Monaco, monospace !important;
-                    font-size: 13px !important;
-                    line-height: 150% !important;
-                    outline: 0 !important;
-                    resize: vertical !important;
-                    border: none !important;
-                    padding: 10px !important;
-                    background: #fff !important;
-                }
-                
-                /* QuickTags бутони */
-                .custom-editor-wrap .quicktags-toolbar {
-                    background: #f5f5f5;
-                    border-bottom: 1px solid #ddd;
-                    padding: 0;
-                }
-                
-                .custom-editor-wrap .quicktags-toolbar .button {
-                    background: #f7f7f7;
-                    border: 1px solid #ddd;
-                    color: #555;
-                    margin: 2px;
-                    padding: 2px 4px;
-                    cursor: pointer;
-                }
-                
-                .custom-editor-wrap .quicktags-toolbar .button:hover {
-                    background: #fafafa;
-                    color: #333;
-                }
-            </style>
-            
-            <script type="text/javascript">
-            jQuery(document).ready(function($) {
-                // Допълнително скриване със JavaScript
-                $('#tag-description').closest('.form-field').hide();
-                $('.term-description-wrap').not('.custom-editor-wrap').hide();
-                
-                // Показваме нашия editor
-                $('.custom-editor-wrap').show();
-                
-                // Осигуряваме че TinyMCE се инициализира правилно
-                if (typeof tinymce !== 'undefined') {
-                    setTimeout(function() {
-                        tinymce.EditorManager.execCommand('mceAddEditor', true, $('.custom-editor-wrap .wp-editor-area').attr('id'));
-                    }, 100);
-                }
-            });
-            </script>
-            <?php
+    public function enable_rankmath_for_taxonomies() {
+        // Проверяваме дали Rank Math е активен
+        if (!defined('RANK_MATH_VERSION')) {
+            return;
         }
-    }
-    public function add_editor_to_description_new($taxonomy) {
-        ?>
-        <div class="form-field term-description-wrap">
-            <label for="description"><?php _e('Описание'); ?></label>
-            <?php
-            wp_editor('', 'description', array(
-                'textarea_name' => 'description',
-                'media_buttons' => true,
-                'textarea_rows' => 8,
-                'editor_height' => 250,
-                'teeny' => false,
-                'quicktags' => true,
-                'tinymce' => array(
-                    'resize' => true,
-                    'wordpress_adv_hidden' => false,
-                    'add_unload_trigger' => false,
-                    'statusbar' => false,
-                    'wp_autoresize_on' => true,
-                    // ПРЕМАХНАТ wpfullscreen от plugins
-                    'plugins' => 'charmap,colorpicker,hr,lists,media,paste,tabfocus,textcolor,wordpress,wpautoresize,wpeditimage,wpgallery,wplink,wpdialogs'
-                )
-            ));
-            ?>
-            <p class="description"><?php _e('Подробно описание с форматиране.'); ?></p>
-        </div>
         
-        <script type="text/javascript">
-        // Скриваме оригиналното description поле
-        jQuery(document).ready(function($) {
-            $('#tag-description').closest('.form-field').hide();
+        $supported_taxonomies = array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity');
+        
+        foreach ($supported_taxonomies as $taxonomy) {
+            // Активираме Rank Math meta box за тази таксономия
+            add_filter('rank_math/taxonomy/' . $taxonomy, '__return_true');
+            add_filter('rank_math/taxonomy/' . $taxonomy . '/add_meta_box', '__return_true');
+            
+            // Добавяме в sitemap
+            add_filter('rank_math/sitemap/enable_' . $taxonomy, '__return_true');
+            
+            // Активираме structured data
+            add_filter('rank_math/schema/taxonomy_' . $taxonomy, '__return_true');
+            
+            // Активираме за breadcrumbs
+            add_filter('rank_math/frontend/breadcrumb/taxonomy_' . $taxonomy, '__return_true');
+        }
+        
+        // Увеличаваме приоритета на Rank Math meta box
+        add_filter('rank_math/metabox/priority', function() { 
+            return 'high'; 
         });
-        </script>
-        <?php
-    }
-    
-    /**
-     * Добавя WordPress editor за description при редактиране на таксономия
-     */
-    public function add_editor_to_description($term, $taxonomy) {
-        ?>
-        <tr class="form-field term-description-wrap custom-editor-wrap">
-            <th scope="row"><label for="description"><?php _e('Описание'); ?></label></th>
-            <td>
-                <?php
-                $editor_id = 'description_' . $taxonomy . '_' . $term->term_id;
-                wp_editor($term->description, $editor_id, array(
-                    'textarea_name' => 'description',
-                    'media_buttons' => true,
-                    'textarea_rows' => 8,
-                    'editor_height' => 250,
-                    'teeny' => false,
-                    'quicktags' => array('buttons' => 'strong,em,link,block,del,ins,img,ul,ol,li,code,more,close'),
-                    'tinymce' => array(
-                        'theme' => 'modern',
-                        'skin' => 'lightgray',
-                        'resize' => true,
-                        'browser_spellcheck' => true,
-                        'fix_list_elements' => true,
-                        'entities' => '38,amp,60,lt,62,gt',
-                        'entity_encoding' => 'raw',
-                        'keep_styles' => false,
-                        'paste_webkit_styles' => 'font-weight font-style color',
-                        'paste_remove_spans' => true,
-                        'paste_remove_styles' => true,
-                        'paste_strip_class_attributes' => 'all',
-                        'paste_text_use_dialog' => true,
-                        'wpeditimage_disable_captions' => false,
-                        'plugins' => 'charmap,colorpicker,hr,lists,media,paste,tabfocus,textcolor,wordpress,wpautoresize,wpeditimage,wpgallery,wplink,wpdialogs,wpview',
-                        'toolbar1' => 'bold,italic,strikethrough,bullist,numlist,blockquote,hr,alignleft,aligncenter,alignright,link,unlink,wp_more,spellchecker,wp_adv',
-                        'toolbar2' => 'formatselect,underline,alignjustify,forecolor,pastetext,removeformat,charmap,outdent,indent,undo,redo,wp_help',
-                        'toolbar3' => '',
-                        'toolbar4' => '',
-                        'menubar' => false,
-                        'wpautop' => true,
-                        'indent' => false,
-                        'tadv_noautop' => false,
-                        'force_br_newlines' => false,
-                        'force_p_newlines' => false,
-                        'forced_root_block' => 'p',
-                        'convert_urls' => false,
-                        'remove_script_host' => false,
-                        'compress' => false,
-                        'relative_urls' => false,
-                        'remove_linebreaks' => true,
-                        'gecko_spellcheck' => true,
-                        'keep_styles' => false,
-                        'accessibility_focus' => true,
-                        'tabfocus_elements' => 'major-publishing-actions',
-                        'media_strict' => false,
-                        'paste_remove_styles' => true,
-                        'paste_remove_spans' => true,
-                        'paste_strip_class_attributes' => 'all',
-                        'paste_text_use_dialog' => true,
-                        'wpeditimage_disable_captions' => false,
-                        'wp_lang_attr' => get_bloginfo('language')
-                    )
-                ));
-                ?>
-                <p class="description"><?php _e('Подробно описание с форматиране.'); ?></p>
-            </td>
-        </tr>
-        <?php
     }
     
     /**
@@ -349,19 +123,21 @@ class Taxonomy_Meta_Fields {
     public function add_notes_group_field($taxonomy) {
         ?>
         <div class="form-field term-group">
-            <label for="note_group"><?php _e('Група нотки', 'parfume-reviews'); ?></label>
-            <select name="note_group" id="note_group">
+            <label for="note_group"><?php _e('Група на нотката', 'parfume-reviews'); ?></label>
+            <select id="note_group" name="note_group">
                 <option value=""><?php _e('Изберете група', 'parfume-reviews'); ?></option>
                 <option value="citrus"><?php _e('Цитрусови', 'parfume-reviews'); ?></option>
-                <option value="floral"><?php _e('Цветни', 'parfume-reviews'); ?></option>
+                <option value="floral"><?php _e('Флорални', 'parfume-reviews'); ?></option>
                 <option value="woody"><?php _e('Дървесни', 'parfume-reviews'); ?></option>
                 <option value="oriental"><?php _e('Ориенталски', 'parfume-reviews'); ?></option>
                 <option value="fresh"><?php _e('Свежи', 'parfume-reviews'); ?></option>
                 <option value="spicy"><?php _e('Пикантни', 'parfume-reviews'); ?></option>
-                <option value="fruity"><?php _e('Плодови', 'parfume-reviews'); ?></option>
                 <option value="gourmand"><?php _e('Гурме', 'parfume-reviews'); ?></option>
+                <option value="green"><?php _e('Зелени', 'parfume-reviews'); ?></option>
+                <option value="aquatic"><?php _e('Водни', 'parfume-reviews'); ?></option>
+                <option value="powdery"><?php _e('Пудрени', 'parfume-reviews'); ?></option>
             </select>
-            <p class="description"><?php _e('Изберете към коя група принадлежи тази нотка', 'parfume-reviews'); ?></p>
+            <p class="description"><?php _e('Групата помага за категоризиране на нотките', 'parfume-reviews'); ?></p>
         </div>
         <?php
     }
@@ -374,21 +150,23 @@ class Taxonomy_Meta_Fields {
         ?>
         <tr class="form-field term-group-wrap">
             <th scope="row">
-                <label for="note_group"><?php _e('Група нотки', 'parfume-reviews'); ?></label>
+                <label for="note_group"><?php _e('Група на нотката', 'parfume-reviews'); ?></label>
             </th>
             <td>
-                <select name="note_group" id="note_group">
+                <select id="note_group" name="note_group">
                     <option value=""><?php _e('Изберете група', 'parfume-reviews'); ?></option>
                     <option value="citrus" <?php selected($note_group, 'citrus'); ?>><?php _e('Цитрусови', 'parfume-reviews'); ?></option>
-                    <option value="floral" <?php selected($note_group, 'floral'); ?>><?php _e('Цветни', 'parfume-reviews'); ?></option>
+                    <option value="floral" <?php selected($note_group, 'floral'); ?>><?php _e('Флорални', 'parfume-reviews'); ?></option>
                     <option value="woody" <?php selected($note_group, 'woody'); ?>><?php _e('Дървесни', 'parfume-reviews'); ?></option>
                     <option value="oriental" <?php selected($note_group, 'oriental'); ?>><?php _e('Ориенталски', 'parfume-reviews'); ?></option>
                     <option value="fresh" <?php selected($note_group, 'fresh'); ?>><?php _e('Свежи', 'parfume-reviews'); ?></option>
                     <option value="spicy" <?php selected($note_group, 'spicy'); ?>><?php _e('Пикантни', 'parfume-reviews'); ?></option>
-                    <option value="fruity" <?php selected($note_group, 'fruity'); ?>><?php _e('Плодови', 'parfume-reviews'); ?></option>
                     <option value="gourmand" <?php selected($note_group, 'gourmand'); ?>><?php _e('Гурме', 'parfume-reviews'); ?></option>
+                    <option value="green" <?php selected($note_group, 'green'); ?>><?php _e('Зелени', 'parfume-reviews'); ?></option>
+                    <option value="aquatic" <?php selected($note_group, 'aquatic'); ?>><?php _e('Водни', 'parfume-reviews'); ?></option>
+                    <option value="powdery" <?php selected($note_group, 'powdery'); ?>><?php _e('Пудрени', 'parfume-reviews'); ?></option>
                 </select>
-                <p class="description"><?php _e('Изберете към коя група принадлежи тази нотка', 'parfume-reviews'); ?></p>
+                <p class="description"><?php _e('Групата помага за категоризиране на нотките', 'parfume-reviews'); ?></p>
             </td>
         </tr>
         <?php
@@ -398,7 +176,9 @@ class Taxonomy_Meta_Fields {
      * Записва meta полетата на таксономиите
      */
     public function save_taxonomy_meta_fields($term_id, $tt_id, $taxonomy) {
-        // Записваме image ID (не URL!)
+        // Nonce verification не е нужно за taxonomy fields според WordPress standards
+        
+        // Save image
         $field_name = $taxonomy . '-image-id';
         if (isset($_POST[$field_name])) {
             $image_value = sanitize_text_field($_POST[$field_name]);
@@ -422,7 +202,7 @@ class Taxonomy_Meta_Fields {
     }
     
     /**
-     * Зарежда admin scripts за media upload и editor
+     * Зарежда admin scripts за media upload
      */
     public function enqueue_admin_scripts($hook) {
         // Зареждаме scripts само за taxonomy страници

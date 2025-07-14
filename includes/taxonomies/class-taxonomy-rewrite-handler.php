@@ -3,6 +3,7 @@ namespace Parfume_Reviews\Taxonomies;
 
 /**
  * Taxonomy Rewrite Handler - управлява URL rewrite rules за таксономии
+ * ВЪЗСТАНОВЕНА ВЕРСИЯ - с поправена archive логика
  */
 class Taxonomy_Rewrite_Handler {
     
@@ -14,6 +15,7 @@ class Taxonomy_Rewrite_Handler {
     
     /**
      * Добавя custom rewrite rules
+     * ВЪЗСТАНОВЕНА ОРИГИНАЛНА ВЕРСИЯ
      */
     public function add_custom_rewrite_rules() {
         $settings = get_option('parfume_reviews_settings', array());
@@ -73,11 +75,27 @@ class Taxonomy_Rewrite_Handler {
     
     /**
      * Обработва custom requests
+     * ПОПРАВЕНА ВЕРСИЯ - специално за perfumer archive
      */
     public function parse_custom_requests($wp) {
         if (isset($wp->query_vars['parfume_taxonomy_archive'])) {
             $taxonomy = $wp->query_vars['parfume_taxonomy_archive'];
             
+            // СПЕЦИАЛНО ОБРАБОТВАНЕ ЗА PERFUMER ARCHIVE
+            if ($taxonomy === 'perfumer') {
+                // За perfumer archive НЕ query-ваме парфюм постове
+                // Вместо това set-ваме flag че е perfumer archive
+                $wp->query_vars['is_perfumer_archive'] = true;
+                
+                // Махаме parfume_taxonomy_archive за да не се третира като post query
+                unset($wp->query_vars['parfume_taxonomy_archive']);
+                
+                // Не set-ваме post_type, tax_query или друго
+                // Оставяме WordPress да handle-ва като taxonomy archive
+                return;
+            }
+            
+            // За ОСТАНАЛИТЕ таксономии (marki, notes, etc.) - ОРИГИНАЛНА ЛОГИКА
             // Set the main query to show all posts from this taxonomy
             $wp->query_vars['post_type'] = 'parfume';
             $wp->query_vars['posts_per_page'] = 12;
@@ -135,6 +153,10 @@ class Taxonomy_Rewrite_Handler {
      * Получава URL за архив на таксономия
      */
     public function get_taxonomy_archive_url($taxonomy) {
+        if (!in_array($taxonomy, $this->get_supported_taxonomies())) {
+            return false;
+        }
+        
         $settings = get_option('parfume_reviews_settings', array());
         $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
         $taxonomy_slug = $this->get_taxonomy_slug($taxonomy);
@@ -143,19 +165,51 @@ class Taxonomy_Rewrite_Handler {
     }
     
     /**
-     * Проверява дали текущата страница е архив на таксономия
+     * Получава базовия URL за парфюм архива
      */
-    public function is_taxonomy_archive($taxonomy = null) {
-        global $wp_query;
+    public function get_parfume_base_url() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
         
-        if (!isset($wp_query->query_vars['is_parfume_taxonomy_archive'])) {
-            return false;
+        return home_url('/' . $parfume_slug . '/');
+    }
+    
+    /**
+     * Проверява дали URL-а е за архивна страница на таксономия
+     */
+    public function is_taxonomy_archive_url($url) {
+        $taxonomies = $this->get_supported_taxonomies();
+        
+        foreach ($taxonomies as $taxonomy) {
+            $archive_url = $this->get_taxonomy_archive_url($taxonomy);
+            if ($archive_url && strpos($url, $archive_url) === 0) {
+                return $taxonomy;
+            }
         }
         
-        if ($taxonomy === null) {
-            return true;
+        return false;
+    }
+    
+    /**
+     * Debug функция за проверка на rewrite rules
+     */
+    public function debug_rewrite_rules() {
+        if (!current_user_can('manage_options') || !defined('WP_DEBUG') || !WP_DEBUG) {
+            return;
         }
         
-        return $wp_query->query_vars['is_parfume_taxonomy_archive'] === $taxonomy;
+        $rules = get_option('rewrite_rules');
+        error_log('Parfume Taxonomy Rewrite Rules:');
+        
+        if ($rules) {
+            foreach ($rules as $rule => $rewrite) {
+                if (strpos($rule, 'parfiumi') !== false || 
+                    strpos($rewrite, 'marki') !== false || 
+                    strpos($rewrite, 'perfumer') !== false ||
+                    strpos($rewrite, 'notes') !== false) {
+                    error_log("  {$rule} -> {$rewrite}");
+                }
+            }
+        }
     }
 }
