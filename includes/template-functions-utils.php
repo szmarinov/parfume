@@ -4,7 +4,7 @@
  * Помощни функции за проверки, валидации и utilities
  * 
  * Файл: includes/template-functions-utils.php
- * ПОПРАВЕНА ВЕРСИЯ - БЕЗ ДУБЛИРАНИ ФУНКЦИИ
+ * РЕВИЗИРАНА ВЕРСИЯ - ПЪЛЕН НАБОР ОТ UTILITY ФУНКЦИИ
  */
 
 // Prevent direct access
@@ -13,7 +13,12 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * РАЗДЕЛ 1: ФУНКЦИИ ЗА ПРОВЕРКА НА СТРАНИЦИ
+ */
+
+/**
  * Проверява дали сме на парфюмна страница
+ * ВАЖНО: Използва се в много места в кода
  */
 function parfume_reviews_is_parfume_page() {
     return is_singular('parfume') || 
@@ -50,7 +55,12 @@ function parfume_reviews_is_parfume_taxonomy($taxonomy = null) {
 }
 
 /**
+ * РАЗДЕЛ 2: ФУНКЦИИ ЗА РАБОТА С ТАКСОНОМИИ
+ */
+
+/**
  * Получава всички поддържани таксономии
+ * ВАЖНО: Централно място за дефиниране на таксономии
  */
 function parfume_reviews_get_supported_taxonomies() {
     return array('gender', 'aroma_type', 'marki', 'season', 'intensity', 'notes', 'perfumer');
@@ -91,133 +101,141 @@ function parfume_reviews_get_taxonomy_archive_url($taxonomy) {
     $settings = get_option('parfume_reviews_settings', array());
     $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
     
-    $taxonomy_slugs = array(
-        'gender' => 'gender',
-        'aroma_type' => 'aroma-type',
-        'marki' => 'marki',
-        'season' => 'season',
-        'intensity' => 'intensity',
-        'notes' => 'notes',
-        'perfumer' => 'parfumeri'
-    );
+    // За специални таксономии като marki, notes, perfumer
+    if (in_array($taxonomy, array('marki', 'notes', 'perfumer'))) {
+        return home_url("/{$parfume_slug}/{$taxonomy}/");
+    }
     
-    $taxonomy_slug = $taxonomy_slugs[$taxonomy] ?? $taxonomy;
-    
-    return home_url('/' . $parfume_slug . '/' . $taxonomy_slug . '/');
+    return false;
 }
 
 /**
- * Получава цената на парфюм като форматиран string
+ * РАЗДЕЛ 3: ФУНКЦИИ ЗА РАБОТА С ЦЕНИ
  */
-function parfume_reviews_get_formatted_price($post_id, $include_currency = true) {
-    $price = get_post_meta($post_id, '_price', true);
-    
-    if (empty($price)) {
+
+/**
+ * Форматира цена за показване
+ * ВАЖНО: Централна функция за форматиране на цени
+ */
+function parfume_reviews_get_formatted_price($price, $currency = 'лв.') {
+    if (empty($price) || !is_numeric($price)) {
         return '';
     }
     
-    $formatted_price = number_format(floatval($price), 2, ',', ' ');
-    
-    if ($include_currency) {
-        $formatted_price .= ' лв.';
+    $price = floatval($price);
+    if ($price <= 0) {
+        return '';
     }
     
-    return $formatted_price;
+    return number_format($price, 2, '.', '') . ' ' . $currency;
 }
 
 /**
- * Получава рейтинга на парфюм като число
+ * Извлича числова стойност от цена
+ */
+function parfume_reviews_extract_price_number($price) {
+    if (is_numeric($price)) {
+        return floatval($price);
+    }
+    
+    // Премахва всички символи освен числа, точки и запетаи
+    $price = preg_replace('/[^\d.,]/', '', $price);
+    
+    return floatval($price);
+}
+
+/**
+ * РАЗДЕЛ 4: ФУНКЦИИ ЗА РАБОТА С РЕЙТИНГИ
+ */
+
+/**
+ * Получава рейтинг на парфюм
+ * ВАЖНО: Централна функция за получаване на рейтинг
  */
 function parfume_reviews_get_rating($post_id) {
-    $rating = get_post_meta($post_id, '_rating', true);
+    $rating = get_post_meta($post_id, '_parfume_rating', true);
     return !empty($rating) ? floatval($rating) : 0;
 }
 
 /**
- * Получава всички stores за парфюм
+ * Валидира рейтинг
+ */
+function parfume_reviews_sanitize_rating($rating) {
+    $rating = floatval($rating);
+    
+    if ($rating < 0) {
+        return 0;
+    }
+    
+    if ($rating > 5) {
+        return 5;
+    }
+    
+    return round($rating, 1);
+}
+
+/**
+ * РАЗДЕЛ 5: ФУНКЦИИ ЗА РАБОТА СЪС STORES
+ */
+
+/**
+ * Получава магазините за даден парфюм
+ * ВАЖНО: Връща форматирани данни за магазини
  */
 function parfume_reviews_get_parfume_stores($post_id) {
-    $stores = get_post_meta($post_id, '_stores', true);
+    $stores = get_post_meta($post_id, '_parfume_stores', true);
     
     if (empty($stores) || !is_array($stores)) {
         return array();
     }
     
-    return $stores;
+    // Валидираме всеки магазин
+    $validated_stores = array();
+    foreach ($stores as $store) {
+        if (is_array($store) && !empty($store['name']) && !empty($store['url'])) {
+            $validated_stores[] = array(
+                'name' => sanitize_text_field($store['name']),
+                'url' => esc_url_raw($store['url']),
+                'price' => !empty($store['price']) ? parfume_reviews_extract_price_number($store['price']) : 0,
+                'currency' => !empty($store['currency']) ? sanitize_text_field($store['currency']) : 'лв.',
+                'availability' => !empty($store['availability']) ? sanitize_text_field($store['availability']) : 'available',
+                'shipping' => !empty($store['shipping']) ? parfume_reviews_extract_price_number($store['shipping']) : 0
+            );
+        }
+    }
+    
+    return $validated_stores;
 }
 
 /**
- * Получава най-ниската цена от всички stores
+ * Получава най-ниската цена за парфюм
  */
 function parfume_reviews_get_lowest_price($post_id) {
     $stores = parfume_reviews_get_parfume_stores($post_id);
     
     if (empty($stores)) {
-        return null;
+        return 0;
     }
     
-    $lowest_store = null;
-    $lowest_price_value = null;
-    
+    $lowest_price = PHP_FLOAT_MAX;
     foreach ($stores as $store) {
-        if (!empty($store['variants']) && is_array($store['variants'])) {
-            foreach ($store['variants'] as $variant) {
-                if (!empty($variant['price'])) {
-                    $price = parfume_reviews_extract_price_number($variant['price']);
-                    if ($price > 0 && ($lowest_price_value === null || $price < $lowest_price_value)) {
-                        $lowest_price_value = $price;
-                        $lowest_store = array(
-                            'name' => isset($store['name']) ? $store['name'] : '',
-                            'price' => $variant['price'],
-                            'size' => isset($variant['size']) ? $variant['size'] : '',
-                            'url' => isset($variant['affiliate_url']) ? $variant['affiliate_url'] : (isset($store['url']) ? $store['url'] : ''),
-                        );
-                    }
-                }
-            }
-        } elseif (!empty($store['price'])) {
-            $price = parfume_reviews_extract_price_number($store['price']);
-            if ($price > 0 && ($lowest_price_value === null || $price < $lowest_price_value)) {
-                $lowest_price_value = $price;
-                $lowest_store = array(
-                    'name' => isset($store['name']) ? $store['name'] : '',
-                    'price' => $store['price'],
-                    'size' => isset($store['size']) ? $store['size'] : '',
-                    'url' => isset($store['affiliate_url']) ? $store['affiliate_url'] : (isset($store['url']) ? $store['url'] : ''),
-                );
-            }
+        if (!empty($store['price']) && $store['price'] > 0 && $store['price'] < $lowest_price) {
+            $lowest_price = $store['price'];
         }
     }
     
-    return $lowest_store;
+    return $lowest_price === PHP_FLOAT_MAX ? 0 : $lowest_price;
 }
 
 /**
- * Извлича числовата стойност от цена стринг
- */
-function parfume_reviews_extract_price_number($price_string) {
-    // Remove currency symbols and extract number
-    $price = preg_replace('/[^\d.,]/', '', $price_string);
-    $price = str_replace(',', '.', $price);
-    return floatval($price);
-}
-
-/**
- * Проверява дали парфюм е наличен
+ * Проверява дали парфюмът е наличен
  */
 function parfume_reviews_is_available($post_id) {
-    $stores = get_post_meta($post_id, '_parfume_stores', true);
-    
-    if (empty($stores) || !is_array($stores)) {
-        return false;
-    }
+    $stores = parfume_reviews_get_parfume_stores($post_id);
     
     foreach ($stores as $store) {
-        if (!empty($store['availability'])) {
-            $availability = strtolower($store['availability']);
-            if (in_array($availability, array('в наличност', 'available', 'наличен', 'в склад'))) {
-                return true;
-            }
+        if ($store['availability'] === 'available') {
+            return true;
         }
     }
     
@@ -228,146 +246,89 @@ function parfume_reviews_is_available($post_id) {
  * Получава информация за доставка
  */
 function parfume_reviews_get_shipping_info($post_id) {
-    $stores = get_post_meta($post_id, '_parfume_stores', true);
+    $stores = parfume_reviews_get_parfume_stores($post_id);
+    $shipping_info = array(
+        'min_shipping' => 0,
+        'max_shipping' => 0,
+        'free_shipping_available' => false,
+        'stores_with_shipping' => 0
+    );
     
-    if (empty($stores) || !is_array($stores)) {
-        return '';
-    }
+    $shipping_costs = array();
     
     foreach ($stores as $store) {
-        if (!empty($store['shipping_info'])) {
-            return $store['shipping_info'];
+        if (isset($store['shipping'])) {
+            $shipping_costs[] = $store['shipping'];
+            $shipping_info['stores_with_shipping']++;
+            
+            if ($store['shipping'] == 0) {
+                $shipping_info['free_shipping_available'] = true;
+            }
         }
     }
     
-    return '';
+    if (!empty($shipping_costs)) {
+        $shipping_info['min_shipping'] = min($shipping_costs);
+        $shipping_info['max_shipping'] = max($shipping_costs);
+    }
+    
+    return $shipping_info;
 }
 
 /**
- * Получава най-евтината доставка за парфюм
+ * Получава най-евтината доставка
  */
 function parfume_reviews_get_cheapest_shipping($post_id) {
-    $stores = get_post_meta($post_id, '_parfume_stores', true);
-    
-    if (empty($stores) || !is_array($stores)) {
-        return '';
-    }
-    
-    $shipping_options = array();
-    
-    foreach ($stores as $store) {
-        if (!empty($store['shipping_info'])) {
-            // Извличаме цена от shipping информацията
-            $shipping_text = $store['shipping_info'];
-            
-            // Търсим цени в shipping текста
-            if (preg_match('/(\d+[\.,]?\d*)\s*(лв|bgn|eur|€)/i', $shipping_text, $matches)) {
-                $price = floatval(str_replace(',', '.', $matches[1]));
-                $shipping_options[] = array(
-                    'text' => $shipping_text,
-                    'price' => $price,
-                    'store' => isset($store['name']) ? $store['name'] : ''
-                );
-            } else {
-                // Просто добавяме текста без цена
-                $shipping_options[] = array(
-                    'text' => $shipping_text,
-                    'price' => 999999, // Висока цена за несортирани опции
-                    'store' => isset($store['name']) ? $store['name'] : ''
-                );
-            }
-        }
-    }
-    
-    // Сортираме по цена
-    if (!empty($shipping_options)) {
-        usort($shipping_options, function($a, $b) {
-            return $a['price'] <=> $b['price'];
-        });
-        
-        return $shipping_options[0]['text'];
-    }
-    
-    return '';
+    $shipping_info = parfume_reviews_get_shipping_info($post_id);
+    return $shipping_info['min_shipping'];
 }
 
 /**
- * Проверява дали има промоция за парфюм
+ * Проверява дали има промоция
  */
 function parfume_reviews_has_promotion($post_id) {
-    $stores = get_post_meta($post_id, '_parfume_stores', true);
-    
-    if (empty($stores) || !is_array($stores)) {
-        return false;
-    }
-    
-    foreach ($stores as $store) {
-        // Check for discount flag
-        if (!empty($store['has_discount']) || !empty($store['has_promotion'])) {
-            return true;
-        }
-        
-        // Check for original vs current price
-        if (!empty($store['original_price']) && !empty($store['price'])) {
-            $original = parfume_reviews_extract_price_number($store['original_price']);
-            $current = parfume_reviews_extract_price_number($store['price']);
-            if ($original > $current) {
-                return true;
-            }
-        }
-        
-        // Check for variant promotions
-        if (!empty($store['variants']) && is_array($store['variants'])) {
-            foreach ($store['variants'] as $variant) {
-                if (!empty($variant['has_discount']) || !empty($variant['has_promotion'])) {
-                    return true;
-                }
-            }
-        }
-    }
-    
-    return false;
+    $promotion = get_post_meta($post_id, '_parfume_promotion', true);
+    return !empty($promotion);
 }
 
 /**
- * Получава най-популярните парфюми
+ * РАЗДЕЛ 6: ФУНКЦИИ ЗА ПОПУЛЯРНИ И ПОСЛЕДНИ ПАРФЮМИ
  */
-function parfume_reviews_get_popular_parfumes($limit = 10, $exclude = array()) {
+
+/**
+ * Получава популярни парфюми
+ */
+function parfume_reviews_get_popular_parfumes($limit = 10) {
     $args = array(
         'post_type' => 'parfume',
+        'post_status' => 'publish',
         'posts_per_page' => $limit,
-        'orderby' => 'comment_count',
+        'meta_key' => '_parfume_rating',
+        'orderby' => 'meta_value_num',
         'order' => 'DESC',
         'meta_query' => array(
             array(
-                'key' => '_rating',
-                'value' => 3,
-                'compare' => '>='
+                'key' => '_parfume_rating',
+                'value' => 0,
+                'compare' => '>'
             )
         )
     );
-    
-    if (!empty($exclude)) {
-        $args['post__not_in'] = $exclude;
-    }
     
     return get_posts($args);
 }
 
 /**
- * Получава последните парфюми
+ * Получава последни парфюми
  */
-function parfume_reviews_get_latest_parfumes($limit = 10, $exclude = array()) {
+function parfume_reviews_get_latest_parfumes($limit = 10) {
     $args = array(
         'post_type' => 'parfume',
+        'post_status' => 'publish',
         'posts_per_page' => $limit,
         'orderby' => 'date',
         'order' => 'DESC'
     );
-    
-    if (!empty($exclude)) {
-        $args['post__not_in'] = $exclude;
-    }
     
     return get_posts($args);
 }
@@ -375,31 +336,28 @@ function parfume_reviews_get_latest_parfumes($limit = 10, $exclude = array()) {
 /**
  * Получава случайни парфюми
  */
-function parfume_reviews_get_random_parfumes($limit = 10, $exclude = array()) {
+function parfume_reviews_get_random_parfumes($limit = 10) {
     $args = array(
         'post_type' => 'parfume',
+        'post_status' => 'publish',
         'posts_per_page' => $limit,
         'orderby' => 'rand'
     );
-    
-    if (!empty($exclude)) {
-        $args['post__not_in'] = $exclude;
-    }
     
     return get_posts($args);
 }
 
 /**
- * Получава сходни парфюми
+ * Получава подобни парфюми
  */
-function parfume_reviews_get_similar_parfumes($post_id, $limit = 6) {
+function parfume_reviews_get_similar_parfumes($post_id, $limit = 5) {
     // Получаваме таксономиите на текущия парфюм
     $current_terms = array();
-    $taxonomies = parfume_reviews_get_supported_taxonomies();
+    $taxonomies = array('gender', 'aroma_type', 'marki', 'notes');
     
     foreach ($taxonomies as $taxonomy) {
         $terms = wp_get_post_terms($post_id, $taxonomy, array('fields' => 'ids'));
-        if (!empty($terms) && !is_wp_error($terms)) {
+        if (!empty($terms)) {
             $current_terms[$taxonomy] = $terms;
         }
     }
@@ -408,101 +366,104 @@ function parfume_reviews_get_similar_parfumes($post_id, $limit = 6) {
         return array();
     }
     
-    // Създаваме tax_query за намиране на сходни парфюми
-    $tax_query = array('relation' => 'OR');
+    $args = array(
+        'post_type' => 'parfume',
+        'post_status' => 'publish',
+        'posts_per_page' => $limit,
+        'post__not_in' => array($post_id),
+        'orderby' => 'rand',
+        'tax_query' => array(
+            'relation' => 'OR'
+        )
+    );
     
     foreach ($current_terms as $taxonomy => $term_ids) {
-        $tax_query[] = array(
+        $args['tax_query'][] = array(
             'taxonomy' => $taxonomy,
             'field' => 'term_id',
             'terms' => $term_ids
         );
     }
     
-    $args = array(
-        'post_type' => 'parfume',
-        'posts_per_page' => $limit + 1, // +1 защото ще изключим текущия
-        'post__not_in' => array($post_id),
-        'tax_query' => $tax_query,
-        'orderby' => 'rand'
-    );
-    
     return get_posts($args);
 }
+
+/**
+ * РАЗДЕЛ 7: СТАТИСТИЧЕСКИ ФУНКЦИИ
+ */
 
 /**
  * Получава статистики за парфюми
  */
 function parfume_reviews_get_parfume_stats() {
-    $stats = wp_cache_get('parfume_reviews_stats', 'parfume_reviews');
+    $cache_key = 'parfume_reviews_stats';
+    $stats = get_transient($cache_key);
     
     if (false === $stats) {
-        $stats = array();
+        global $wpdb;
         
-        // Общо парфюми
+        $stats = array(
+            'total_parfumes' => 0,
+            'total_brands' => 0,
+            'average_rating' => 0,
+            'total_reviews' => 0
+        );
+        
+        // Общ брой парфюми
         $stats['total_parfumes'] = wp_count_posts('parfume')->publish;
         
-        // Средна оценка
-        global $wpdb;
-        $avg_rating = $wpdb->get_var("
-            SELECT AVG(CAST(meta_value AS DECIMAL(3,2))) 
-            FROM {$wpdb->postmeta} 
-            WHERE meta_key = '_rating' 
-            AND meta_value != ''
-        ");
-        $stats['average_rating'] = $avg_rating ? round($avg_rating, 2) : 0;
-        
-        // Най-популярни марки
-        $popular_brands = get_terms(array(
+        // Общ брой марки
+        $brands = get_terms(array(
             'taxonomy' => 'marki',
-            'orderby' => 'count',
-            'order' => 'DESC',
-            'number' => 5,
-            'hide_empty' => true
+            'hide_empty' => true,
+            'fields' => 'count'
         ));
-        $stats['popular_brands'] = $popular_brands;
+        $stats['total_brands'] = is_array($brands) ? count($brands) : 0;
+        
+        // Средна оценка
+        $avg_rating = $wpdb->get_var(
+            "SELECT AVG(CAST(meta_value AS DECIMAL(3,2))) 
+             FROM {$wpdb->postmeta} 
+             WHERE meta_key = '_parfume_rating' 
+             AND meta_value != '' 
+             AND meta_value != '0'"
+        );
+        $stats['average_rating'] = $avg_rating ? round($avg_rating, 1) : 0;
         
         // Кеширане за 1 час
-        wp_cache_set('parfume_reviews_stats', $stats, 'parfume_reviews', HOUR_IN_SECONDS);
+        set_transient($cache_key, $stats, HOUR_IN_SECONDS);
     }
     
     return $stats;
 }
 
 /**
- * Почиства кеша за статистики
+ * Изчиства кеша на статистиките
  */
 function parfume_reviews_clear_stats_cache() {
-    wp_cache_delete('parfume_reviews_stats', 'parfume_reviews');
+    delete_transient('parfume_reviews_stats');
 }
 
 /**
- * Sanitize и валидира рейтинг
+ * РАЗДЕЛ 8: ВАЛИДАЦИОННИ ФУНКЦИИ
  */
-function parfume_reviews_sanitize_rating($rating) {
-    $rating = floatval($rating);
-    
-    if ($rating < 0) {
-        return 0;
-    } elseif ($rating > 5) {
-        return 5;
-    }
-    
-    return round($rating, 1);
-}
 
 /**
- * Sanitize и валидира цена
+ * Валидира цена
  */
 function parfume_reviews_sanitize_price($price) {
-    // Премахваме всички символи освен цифри, точка и запетая
-    $price = preg_replace('/[^0-9.,]/', '', $price);
+    $price = parfume_reviews_extract_price_number($price);
     
-    // Заменяме запетая с точка
-    $price = str_replace(',', '.', $price);
+    if ($price < 0) {
+        return 0;
+    }
     
-    return floatval($price);
+    return round($price, 2);
 }
+
+/**
+ * РАЗДЕЛ 9: PERMISSION ФУНКЦИИ
+ */
 
 /**
  * Проверява дали потребителят може да редактира парфюм ревюта
@@ -517,6 +478,10 @@ function parfume_reviews_user_can_edit_reviews() {
 function parfume_reviews_user_can_manage_plugin() {
     return current_user_can('manage_options');
 }
+
+/**
+ * РАЗДЕЛ 10: ПОМОЩНИ ФУНКЦИИ ЗА СЪДЪРЖАНИЕ
+ */
 
 /**
  * Получава URL на първото изображение от content
@@ -557,3 +522,5 @@ function parfume_reviews_format_longevity($hours) {
         }
     }
 }
+
+// End of file

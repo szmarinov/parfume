@@ -4,7 +4,7 @@
  * Зарежда всички template function подфайлове
  * 
  * Файл: includes/template-functions.php
- * ЗАМЕСТИТЕЛ ЗА СТАРИЯ ФАЙЛ - БЕЗ ДУБЛИРАНИ ФУНКЦИИ
+ * РЕВИЗИРАНА ВЕРСИЯ - ЦЕНТРАЛИЗИРАН LOADER БЕЗ ДУБЛИРАНИ ФУНКЦИИ
  */
 
 // Prevent direct access
@@ -13,8 +13,8 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * ВАЖНО: Този файл е заместен с модулна структура
- * Всички функции сега се зареждат от подфайлове
+ * ВАЖНО: Този файл е главният loader за всички template функции
+ * Използва модулна структура за по-добра организация на кода
  */
 
 /**
@@ -33,13 +33,13 @@ function parfume_reviews_load_template_functions() {
         if (file_exists($file_path)) {
             require_once $file_path;
             
-            // Debug лог ако е включен - използваме функцията от основния файл
-            if (function_exists('parfume_reviews_debug_log') && defined('WP_DEBUG') && WP_DEBUG) {
+            // Debug лог ако е включен
+            if (function_exists('parfume_reviews_debug_log')) {
                 parfume_reviews_debug_log("Template function file loaded: {$file}");
             }
         } else {
             // Логираме грешка ако файлът липсва
-            if (function_exists('parfume_reviews_debug_log') && defined('WP_DEBUG') && WP_DEBUG) {
+            if (function_exists('parfume_reviews_debug_log')) {
                 parfume_reviews_debug_log("Missing template function file: {$file}", 'error');
             }
         }
@@ -96,11 +96,12 @@ if (!function_exists('is_parfume_page')) {
 }
 
 /**
- * НОВИ ПОМОЩНИ ФУНКЦИИ ЗА ЦЕНТРАЛИЗИРАНО УПРАВЛЕНИЕ
+ * ЦЕНТРАЛИЗИРАНИ ПОМОЩНИ ФУНКЦИИ ЗА УПРАВЛЕНИЕ
  */
 
 /**
  * Получава списък с всички налични template функции
+ * ВАЖНО: Тази функция трябва да бъде синхронизирана с всички подфайлове
  */
 function parfume_reviews_get_available_template_functions() {
     return array(
@@ -146,7 +147,8 @@ function parfume_reviews_get_available_template_functions() {
             'parfume_reviews_display_archive_header',
             'parfume_reviews_display_term_image',
             'parfume_reviews_display_loading_indicator',
-            'parfume_reviews_get_comparison_button'
+            'parfume_reviews_get_comparison_button',
+            'parfume_reviews_get_collections_dropdown' // ДОБАВЕНА ЛИПСВАЩАТА ФУНКЦИЯ!
         ),
         'filters' => array(
             'parfume_reviews_get_active_filters',
@@ -163,6 +165,7 @@ function parfume_reviews_get_available_template_functions() {
 
 /**
  * Проверява дали всички template функции са заредени правилно
+ * ВАЖНО: Валидира наличието на всички критични функции
  */
 function parfume_reviews_validate_template_functions() {
     $issues = array();
@@ -186,6 +189,7 @@ function parfume_reviews_validate_template_functions() {
 
 /**
  * Показва информация за template функциите (за debug)
+ * ВАЖНО: Помага при диагностика на проблеми с функциите
  */
 function parfume_reviews_debug_template_functions() {
     if (!current_user_can('manage_options')) {
@@ -214,15 +218,13 @@ function parfume_reviews_debug_template_functions() {
     }
 }
 
-// Hook за debug информация
-add_action('admin_notices', 'parfume_reviews_debug_template_functions');
-
 /**
  * ENQUEUE ФУНКЦИИ ЗА FRONTEND СТИЛОВЕ И СКРИПТОВЕ
  */
 
 /**
  * Зарежда CSS и JS файлове за template функциите
+ * ВАЖНО: Зарежда asset файлове само когато е необходимо
  */
 function parfume_reviews_enqueue_template_assets() {
     // Само на парфюмни страници
@@ -252,89 +254,93 @@ function parfume_reviews_enqueue_template_assets() {
             true
         );
         
-        // Локализация за JS
-        wp_localize_script('parfume-reviews-templates', 'parfumeReviewsTemplates', array(
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('parfume_reviews_template_nonce'),
-            'strings' => array(
-                'loading' => __('Зареждане...', 'parfume-reviews'),
-                'error' => __('Възникна грешка', 'parfume-reviews'),
-                'addedToComparison' => __('Добавен за сравняване', 'parfume-reviews'),
-                'removedFromComparison' => __('Премахнат от сравняването', 'parfume-reviews')
-            )
+        // Localize script за AJAX
+        wp_localize_script('parfume-reviews-templates', 'parfume_reviews_ajax', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('parfume_reviews_nonce'),
+            'loading_text' => __('Зареждане...', 'parfume-reviews'),
+            'error_text' => __('Възникна грешка. Моля опитайте отново.', 'parfume-reviews')
         ));
     }
 }
 
-add_action('wp_enqueue_scripts', 'parfume_reviews_enqueue_template_assets');
+/**
+ * Получава статистики за template функциите
+ * ВАЖНО: Помага при оптимизация и анализ
+ */
+function parfume_reviews_get_template_function_stats() {
+    $functions = parfume_reviews_get_available_template_functions();
+    $stats = array(
+        'total_functions' => 0,
+        'categories' => array(),
+        'loaded_functions' => 0,
+        'missing_functions' => 0
+    );
+    
+    foreach ($functions as $category => $function_list) {
+        $category_stats = array(
+            'total' => count($function_list),
+            'loaded' => 0,
+            'missing' => 0
+        );
+        
+        foreach ($function_list as $function_name) {
+            if (function_exists($function_name)) {
+                $category_stats['loaded']++;
+                $stats['loaded_functions']++;
+            } else {
+                $category_stats['missing']++;
+                $stats['missing_functions']++;
+            }
+        }
+        
+        $stats['categories'][$category] = $category_stats;
+        $stats['total_functions'] += $category_stats['total'];
+    }
+    
+    return $stats;
+}
 
 /**
- * Добавя body classes за template страници
+ * Проверява за конфликти в имената на функциите
+ * ВАЖНО: Предотвратява дублирани дефиниции
  */
-function parfume_reviews_add_template_body_classes($classes) {
-    if (function_exists('parfume_reviews_is_parfume_page') && parfume_reviews_is_parfume_page()) {
-        $classes[] = 'parfume-reviews-page';
-        
-        if (function_exists('parfume_reviews_is_single_parfume') && parfume_reviews_is_single_parfume()) {
-            $classes[] = 'single-parfume';
-        } elseif (function_exists('parfume_reviews_is_parfume_archive') && parfume_reviews_is_parfume_archive()) {
-            $classes[] = 'parfume-archive';
-            
-            if (is_tax()) {
-                $queried_object = get_queried_object();
-                if ($queried_object && isset($queried_object->taxonomy)) {
-                    $classes[] = 'parfume-taxonomy-' . $queried_object->taxonomy;
-                }
-            }
+function parfume_reviews_check_function_conflicts() {
+    $conflicts = array();
+    $functions = parfume_reviews_get_available_template_functions();
+    
+    // Проверяваме за конфликти с други плъгини
+    $potential_conflicts = array(
+        'show_parfume_card',
+        'get_parfume_active_filters', 
+        'build_parfume_filter_url',
+        'is_parfume_page'
+    );
+    
+    foreach ($potential_conflicts as $function_name) {
+        if (function_exists($function_name)) {
+            $conflicts[] = $function_name;
         }
     }
     
-    return $classes;
-}
-
-add_filter('body_class', 'parfume_reviews_add_template_body_classes');
-
-/**
- * CLEANUP ФУНКЦИИ
- */
-
-/**
- * Почиства кешове свързани с template функциите
- */
-function parfume_reviews_clear_template_caches() {
-    if (function_exists('parfume_reviews_clear_stats_cache')) {
-        parfume_reviews_clear_stats_cache();
+    if (!empty($conflicts) && function_exists('parfume_reviews_debug_log')) {
+        parfume_reviews_debug_log("Function conflicts detected: " . implode(', ', $conflicts), 'error');
     }
     
-    // Изчистваме object cache
-    wp_cache_flush_group('parfume_reviews');
-    
-    if (function_exists('parfume_reviews_debug_log')) {
-        parfume_reviews_debug_log('Template caches cleared');
-    }
+    return $conflicts;
 }
 
-/**
- * Hook за изчистване на кешове при запазване на парфюм
- */
-add_action('save_post_parfume', 'parfume_reviews_clear_template_caches');
+// Hook за debug информация
+add_action('admin_notices', 'parfume_reviews_debug_template_functions');
 
-/**
- * Hook за изчистване на кешове при промяна на term
- */
-add_action('edit_term', function($term_id, $tt_id, $taxonomy) {
-    if (function_exists('parfume_reviews_is_supported_taxonomy') && parfume_reviews_is_supported_taxonomy($taxonomy)) {
-        parfume_reviews_clear_template_caches();
-    }
-}, 10, 3);
+// Hook за enqueue на assets
+add_action('wp_enqueue_scripts', 'parfume_reviews_enqueue_template_assets');
 
-/**
- * RUNTIME ПРОВЕРКИ
- */
-
-// Валидираме template функциите при зареждане
-add_action('init', function() {
+// Проверка за конфликти при admin_init
+add_action('admin_init', function() {
     if (defined('WP_DEBUG') && WP_DEBUG) {
-        parfume_reviews_validate_template_functions();
+        parfume_reviews_check_function_conflicts();
     }
-}, 99);
+});
+
+// End of file

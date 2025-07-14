@@ -1,17 +1,365 @@
 <?php
 namespace Parfume_Reviews;
 
+/**
+ * Shortcodes class - управлява всички shortcodes на плъгина
+ * 
+ * Файл: includes/class-shortcodes.php
+ * РЕВИЗИРАНА ВЕРСИЯ - ПЪЛЕН НАБОР ОТ SHORTCODES С ПОДОБРЕНА ФУНКЦИОНАЛНОСТ
+ */
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Shortcodes класа
+ * ВАЖНО: Управлява всички shortcodes на плъгина за показване на парфюми и свързани данни
+ */
 class Shortcodes {
+    
+    /**
+     * Constructor
+     * ВАЖНО: Регистрира всички shortcodes на плъгина
+     */
     public function __construct() {
+        $this->register_shortcodes();
+        $this->init_hooks();
+    }
+    
+    /**
+     * Регистрира всички shortcodes
+     * ВАЖНО: Централно място за регистрация на всички shortcodes
+     */
+    private function register_shortcodes() {
+        // Основни shortcodes за парфюми
+        add_shortcode('parfume_grid', array($this, 'parfume_grid_shortcode'));
+        add_shortcode('parfume_list', array($this, 'parfume_list_shortcode'));
+        add_shortcode('latest_parfumes', array($this, 'latest_parfumes_shortcode'));
+        add_shortcode('featured_parfumes', array($this, 'featured_parfumes_shortcode'));
+        add_shortcode('top_rated_parfumes', array($this, 'top_rated_parfumes_shortcode'));
+        add_shortcode('random_parfumes', array($this, 'random_parfumes_shortcode'));
+        
+        // Shortcodes за детайли на парфюм
         add_shortcode('parfume_rating', array($this, 'rating_shortcode'));
         add_shortcode('parfume_details', array($this, 'details_shortcode'));
         add_shortcode('parfume_stores', array($this, 'stores_shortcode'));
-        add_shortcode('parfume_filters', array($this, 'filters_shortcode'));
+        add_shortcode('parfume_notes', array($this, 'notes_shortcode'));
         add_shortcode('parfume_similar', array($this, 'similar_shortcode'));
-        add_shortcode('parfume_brand_products', array($this, 'brand_products_shortcode'));
+        
+        // Shortcodes за таксономии
+        add_shortcode('all_brands_archive', array($this, 'all_brands_archive_shortcode'));
+        add_shortcode('all_notes_archive', array($this, 'all_notes_archive_shortcode'));
+        add_shortcode('all_perfumers_archive', array($this, 'all_perfumers_archive_shortcode'));
+        add_shortcode('brand_parfumes', array($this, 'brand_parfumes_shortcode'));
+        
+        // Shortcodes за филтри и функционалност
+        add_shortcode('parfume_filters', array($this, 'filters_shortcode'));
+        add_shortcode('parfume_search', array($this, 'search_shortcode'));
+        add_shortcode('parfume_comparison', array($this, 'comparison_shortcode'));
+        
+        // Shortcodes за статистики
+        add_shortcode('parfume_stats', array($this, 'stats_shortcode'));
+        add_shortcode('popular_brands', array($this, 'popular_brands_shortcode'));
+        add_shortcode('popular_notes', array($this, 'popular_notes_shortcode'));
+        
+        // Legacy shortcodes за backward compatibility
+        add_shortcode('parfume_brand_products', array($this, 'brand_parfumes_shortcode')); // псевдоним
         add_shortcode('parfume_recently_viewed', array($this, 'recently_viewed_shortcode'));
     }
     
+    /**
+     * Инициализира hook-ове
+     */
+    private function init_hooks() {
+        // Enqueue styles за shortcodes
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_shortcode_styles'));
+        
+        // Add shortcode support to widgets
+        add_filter('widget_text', 'do_shortcode');
+    }
+    
+    /**
+     * РАЗДЕЛ 1: ОСНОВНИ PARFUME SHORTCODES
+     */
+    
+    /**
+     * [parfume_grid] - Показва парфюми в grid формат
+     * ВАЖНО: Основен shortcode за показване на парфюми
+     */
+    public function parfume_grid_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'posts_per_page' => 12,
+            'columns' => 3,
+            'orderby' => 'date',
+            'order' => 'DESC',
+            'meta_key' => '',
+            'meta_value' => '',
+            'brand' => '',
+            'gender' => '',
+            'aroma_type' => '',
+            'season' => '',
+            'intensity' => '',
+            'notes' => '',
+            'perfumer' => '',
+            'show_rating' => true,
+            'show_price' => true,
+            'show_excerpt' => false,
+            'show_filters' => false,
+            'featured_only' => false,
+            'min_rating' => '',
+            'class' => '',
+            'title' => ''
+        ), $atts, 'parfume_grid');
+        
+        // Build WP_Query arguments
+        $args = array(
+            'post_type' => 'parfume',
+            'posts_per_page' => intval($atts['posts_per_page']),
+            'orderby' => sanitize_text_field($atts['orderby']),
+            'order' => sanitize_text_field($atts['order']),
+            'post_status' => 'publish',
+        );
+        
+        // Meta query
+        $meta_query = array();
+        
+        if (!empty($atts['meta_key']) && !empty($atts['meta_value'])) {
+            $meta_query[] = array(
+                'key' => sanitize_text_field($atts['meta_key']),
+                'value' => sanitize_text_field($atts['meta_value']),
+                'compare' => '='
+            );
+        }
+        
+        if ($atts['featured_only'] === 'true' || $atts['featured_only'] === true) {
+            $meta_query[] = array(
+                'key' => '_parfume_featured',
+                'value' => '1',
+                'compare' => '='
+            );
+        }
+        
+        if (!empty($atts['min_rating'])) {
+            $meta_query[] = array(
+                'key' => '_parfume_rating',
+                'value' => floatval($atts['min_rating']),
+                'type' => 'DECIMAL',
+                'compare' => '>='
+            );
+        }
+        
+        if (!empty($meta_query)) {
+            $args['meta_query'] = $meta_query;
+        }
+        
+        // Tax query
+        $tax_query = array();
+        $taxonomies = array(
+            'brand' => 'marki', 
+            'gender' => 'gender', 
+            'aroma_type' => 'aroma_type', 
+            'season' => 'season', 
+            'intensity' => 'intensity',
+            'notes' => 'notes',
+            'perfumer' => 'perfumer'
+        );
+        
+        foreach ($taxonomies as $att_key => $taxonomy) {
+            if (!empty($atts[$att_key])) {
+                $terms = explode(',', $atts[$att_key]);
+                $terms = array_map('trim', $terms);
+                $terms = array_map('sanitize_text_field', $terms);
+                
+                $tax_query[] = array(
+                    'taxonomy' => $taxonomy,
+                    'field' => 'slug',
+                    'terms' => $terms,
+                    'operator' => 'IN'
+                );
+            }
+        }
+        
+        if (!empty($tax_query)) {
+            $args['tax_query'] = $tax_query;
+        }
+        
+        // Execute query
+        $query = new \WP_Query($args);
+        
+        if (!$query->have_posts()) {
+            return '<div class="no-parfumes-found"><p>' . __('Няма намерени парфюми.', 'parfume-reviews') . '</p></div>';
+        }
+        
+        // Build output
+        ob_start();
+        
+        $container_class = 'parfume-grid-container';
+        if (!empty($atts['class'])) {
+            $container_class .= ' ' . sanitize_html_class($atts['class']);
+        }
+        
+        echo '<div class="' . esc_attr($container_class) . '">';
+        
+        // Title
+        if (!empty($atts['title'])) {
+            echo '<h2 class="parfume-grid-title">' . esc_html($atts['title']) . '</h2>';
+        }
+        
+        // Filters
+        if ($atts['show_filters'] === 'true' || $atts['show_filters'] === true) {
+            echo $this->render_inline_filters();
+        }
+        
+        // Grid
+        $grid_class = 'parfume-grid columns-' . intval($atts['columns']);
+        echo '<div class="' . esc_attr($grid_class) . '" data-columns="' . esc_attr($atts['columns']) . '">';
+        
+        while ($query->have_posts()) {
+            $query->the_post();
+            $this->render_parfume_card(get_the_ID(), $atts);
+        }
+        
+        echo '</div>';
+        
+        // Pagination за големи списъци
+        if ($query->max_num_pages > 1 && intval($atts['posts_per_page']) > 10) {
+            echo '<div class="parfume-grid-pagination">';
+            echo paginate_links(array(
+                'total' => $query->max_num_pages,
+                'current' => max(1, get_query_var('paged')),
+                'format' => '?paged=%#%',
+                'prev_text' => '‹ ' . __('Предишна', 'parfume-reviews'),
+                'next_text' => __('Следваща', 'parfume-reviews') . ' ›'
+            ));
+            echo '</div>';
+        }
+        
+        echo '</div>';
+        
+        wp_reset_postdata();
+        return ob_get_clean();
+    }
+    
+    /**
+     * [parfume_list] - Показва парфюми в list формат
+     */
+    public function parfume_list_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'posts_per_page' => 10,
+            'orderby' => 'date',
+            'order' => 'DESC',
+            'show_excerpt' => true,
+            'show_meta' => true,
+            'excerpt_length' => 100
+        ), $atts, 'parfume_list');
+        
+        // Използваме grid функцията с модифицирани атрибути
+        $atts['columns'] = 1;
+        $atts['show_excerpt'] = true;
+        $atts['class'] = 'parfume-list-style';
+        
+        return $this->parfume_grid_shortcode($atts);
+    }
+    
+    /**
+     * [latest_parfumes] - Показва най-новите парфюми
+     */
+    public function latest_parfumes_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'limit' => 6,
+            'columns' => 3,
+            'title' => __('Най-нови парфюми', 'parfume-reviews')
+        ), $atts, 'latest_parfumes');
+        
+        $modified_atts = array(
+            'posts_per_page' => intval($atts['limit']),
+            'columns' => intval($atts['columns']),
+            'orderby' => 'date',
+            'order' => 'DESC',
+            'title' => $atts['title'],
+            'class' => 'latest-parfumes'
+        );
+        
+        return $this->parfume_grid_shortcode($modified_atts);
+    }
+    
+    /**
+     * [featured_parfumes] - Показва препоръчани парфюми
+     */
+    public function featured_parfumes_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'limit' => 6,
+            'columns' => 3,
+            'title' => __('Препоръчани парфюми', 'parfume-reviews')
+        ), $atts, 'featured_parfumes');
+        
+        $modified_atts = array(
+            'posts_per_page' => intval($atts['limit']),
+            'columns' => intval($atts['columns']),
+            'featured_only' => true,
+            'title' => $atts['title'],
+            'class' => 'featured-parfumes'
+        );
+        
+        return $this->parfume_grid_shortcode($modified_atts);
+    }
+    
+    /**
+     * [top_rated_parfumes] - Показва най-високо оценените парфюми
+     */
+    public function top_rated_parfumes_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'limit' => 6,
+            'columns' => 3,
+            'min_rating' => 4.0,
+            'title' => __('Най-високо оценени', 'parfume-reviews')
+        ), $atts, 'top_rated_parfumes');
+        
+        $modified_atts = array(
+            'posts_per_page' => intval($atts['limit']),
+            'columns' => intval($atts['columns']),
+            'orderby' => 'meta_value_num',
+            'meta_key' => '_parfume_rating',
+            'order' => 'DESC',
+            'min_rating' => floatval($atts['min_rating']),
+            'title' => $atts['title'],
+            'class' => 'top-rated-parfumes'
+        );
+        
+        return $this->parfume_grid_shortcode($modified_atts);
+    }
+    
+    /**
+     * [random_parfumes] - Показва случайни парфюми
+     */
+    public function random_parfumes_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'limit' => 6,
+            'columns' => 3,
+            'title' => __('Открийте нещо ново', 'parfume-reviews')
+        ), $atts, 'random_parfumes');
+        
+        $modified_atts = array(
+            'posts_per_page' => intval($atts['limit']),
+            'columns' => intval($atts['columns']),
+            'orderby' => 'rand',
+            'title' => $atts['title'],
+            'class' => 'random-parfumes'
+        );
+        
+        return $this->parfume_grid_shortcode($modified_atts);
+    }
+    
+    /**
+     * РАЗДЕЛ 2: PARFUME DETAILS SHORTCODES
+     */
+    
+    /**
+     * [parfume_rating] - Показва рейтинг на парфюм
+     * ВАЖНО: Използва се в single templates
+     */
     public function rating_shortcode($atts) {
         global $post;
         
@@ -22,11 +370,13 @@ class Shortcodes {
         $atts = shortcode_atts(array(
             'show_empty' => true,
             'show_average' => true,
-        ), $atts);
+            'show_count' => false,
+            'size' => 'normal' // normal, large, small
+        ), $atts, 'parfume_rating');
         
-        // Convert string values to boolean
         $show_empty = filter_var($atts['show_empty'], FILTER_VALIDATE_BOOLEAN);
         $show_average = filter_var($atts['show_average'], FILTER_VALIDATE_BOOLEAN);
+        $show_count = filter_var($atts['show_count'], FILTER_VALIDATE_BOOLEAN);
         
         $rating = get_post_meta($post->ID, '_parfume_rating', true);
         $rating = !empty($rating) ? floatval($rating) : 0;
@@ -37,20 +387,33 @@ class Shortcodes {
         
         ob_start();
         ?>
-        <div class="parfume-rating">
+        <div class="parfume-rating rating-size-<?php echo esc_attr($atts['size']); ?>">
             <div class="rating-stars">
                 <?php for ($i = 1; $i <= 5; $i++): ?>
-                    <span class="star <?php echo $i <= round($rating) ? 'filled' : ''; ?>">★</span>
+                    <span class="star <?php echo $i <= round($rating) ? 'filled' : 'empty'; ?>">★</span>
                 <?php endfor; ?>
             </div>
+            
             <?php if ($show_average && $rating > 0): ?>
-                <div class="rating-average"><?php echo number_format($rating, 1); ?>/5</div>
+                <span class="rating-average"><?php echo number_format($rating, 1); ?>/5</span>
+            <?php endif; ?>
+            
+            <?php if ($show_count): ?>
+                <?php 
+                $review_count = get_post_meta($post->ID, '_parfume_review_count', true);
+                if (!empty($review_count)):
+                ?>
+                    <span class="rating-count">(<?php echo intval($review_count); ?> <?php _e('отзива', 'parfume-reviews'); ?>)</span>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
         <?php
         return ob_get_clean();
     }
     
+    /**
+     * [parfume_details] - Показва детайли на парфюм
+     */
     public function details_shortcode($atts) {
         global $post;
         
@@ -59,56 +422,66 @@ class Shortcodes {
         }
         
         $atts = shortcode_atts(array(
-            'show_empty' => true,
-        ), $atts);
+            'fields' => 'brand,year,concentration,longevity,sillage',
+            'layout' => 'table' // table, list, inline
+        ), $atts, 'parfume_details');
         
-        $show_empty = filter_var($atts['show_empty'], FILTER_VALIDATE_BOOLEAN);
+        $fields = explode(',', $atts['fields']);
+        $fields = array_map('trim', $fields);
         
-        $gender = get_post_meta($post->ID, '_parfume_gender', true);
-        $release_year = get_post_meta($post->ID, '_parfume_release_year', true);
-        $longevity = get_post_meta($post->ID, '_parfume_longevity', true);
-        $sillage = get_post_meta($post->ID, '_parfume_sillage', true);
-        $bottle_size = get_post_meta($post->ID, '_parfume_bottle_size', true);
-        
-        $has_details = !empty($gender) || !empty($release_year) || !empty($longevity) || !empty($sillage) || !empty($bottle_size);
-        
-        if (!$has_details && !$show_empty) {
-            return '';
-        }
+        $field_labels = array(
+            'brand' => __('Марка', 'parfume-reviews'),
+            'year' => __('Година', 'parfume-reviews'),
+            'concentration' => __('Концентрация', 'parfume-reviews'),
+            'longevity' => __('Дълготрайност', 'parfume-reviews'),
+            'sillage' => __('Прожекция', 'parfume-reviews'),
+            'bottle_size' => __('Размер на бутилката', 'parfume-reviews'),
+            'availability' => __('Наличност', 'parfume-reviews')
+        );
         
         ob_start();
-        ?>
-        <div class="parfume-details">
-            <?php if ($has_details): ?>
-                <ul>
-                    <?php if (!empty($gender)): ?>
-                        <li><strong><?php _e('Пол:', 'parfume-reviews'); ?></strong> <?php echo esc_html($gender); ?></li>
-                    <?php endif; ?>
-                    
-                    <?php if (!empty($release_year)): ?>
-                        <li><strong><?php _e('Година на издаване:', 'parfume-reviews'); ?></strong> <?php echo esc_html($release_year); ?></li>
-                    <?php endif; ?>
-                    
-                    <?php if (!empty($longevity)): ?>
-                        <li><strong><?php _e('Издръжливост:', 'parfume-reviews'); ?></strong> <?php echo esc_html($longevity); ?></li>
-                    <?php endif; ?>
-                    
-                    <?php if (!empty($sillage)): ?>
-                        <li><strong><?php _e('Силаж:', 'parfume-reviews'); ?></strong> <?php echo esc_html($sillage); ?></li>
-                    <?php endif; ?>
-                    
-                    <?php if (!empty($bottle_size)): ?>
-                        <li><strong><?php _e('Размер на шишето:', 'parfume-reviews'); ?></strong> <?php echo esc_html($bottle_size); ?></li>
-                    <?php endif; ?>
-                </ul>
-            <?php else: ?>
-                <p><?php _e('Няма налични детайли.', 'parfume-reviews'); ?></p>
-            <?php endif; ?>
-        </div>
-        <?php
+        
+        echo '<div class="parfume-details layout-' . esc_attr($atts['layout']) . '">';
+        
+        if ($atts['layout'] === 'table') {
+            echo '<table class="details-table">';
+        } elseif ($atts['layout'] === 'list') {
+            echo '<ul class="details-list">';
+        } else {
+            echo '<div class="details-inline">';
+        }
+        
+        foreach ($fields as $field) {
+            $value = $this->get_parfume_field_value($post->ID, $field);
+            if (empty($value)) continue;
+            
+            $label = $field_labels[$field] ?? ucfirst($field);
+            
+            if ($atts['layout'] === 'table') {
+                echo '<tr><td class="label">' . esc_html($label) . ':</td><td class="value">' . esc_html($value) . '</td></tr>';
+            } elseif ($atts['layout'] === 'list') {
+                echo '<li><strong>' . esc_html($label) . ':</strong> ' . esc_html($value) . '</li>';
+            } else {
+                echo '<span class="detail-item"><strong>' . esc_html($label) . ':</strong> ' . esc_html($value) . '</span>';
+            }
+        }
+        
+        if ($atts['layout'] === 'table') {
+            echo '</table>';
+        } elseif ($atts['layout'] === 'list') {
+            echo '</ul>';
+        } else {
+            echo '</div>';
+        }
+        
+        echo '</div>';
+        
         return ob_get_clean();
     }
     
+    /**
+     * [parfume_stores] - Показва магазини
+     */
     public function stores_shortcode($atts) {
         global $post;
         
@@ -118,9 +491,15 @@ class Shortcodes {
         
         $atts = shortcode_atts(array(
             'show_empty' => true,
-        ), $atts);
+            'limit' => 0,
+            'show_logos' => true,
+            'show_prices' => true,
+            'title' => __('Къде да купите', 'parfume-reviews')
+        ), $atts, 'parfume_stores');
         
         $show_empty = filter_var($atts['show_empty'], FILTER_VALIDATE_BOOLEAN);
+        $show_logos = filter_var($atts['show_logos'], FILTER_VALIDATE_BOOLEAN);
+        $show_prices = filter_var($atts['show_prices'], FILTER_VALIDATE_BOOLEAN);
         
         $stores = get_post_meta($post->ID, '_parfume_stores', true);
         $stores = !empty($stores) && is_array($stores) ? $stores : array();
@@ -129,117 +508,205 @@ class Shortcodes {
             return '';
         }
         
+        if ($atts['limit'] > 0) {
+            $stores = array_slice($stores, 0, intval($atts['limit']));
+        }
+        
         ob_start();
         ?>
         <div class="parfume-stores-sidebar">
-            <h3><?php _e('Къде да купите', 'parfume-reviews'); ?></h3>
+            <?php if (!empty($atts['title'])): ?>
+                <h3 class="stores-title"><?php echo esc_html($atts['title']); ?></h3>
+            <?php endif; ?>
             
             <?php if (!empty($stores)): ?>
                 <div class="store-list">
                     <?php foreach ($stores as $store): ?>
                         <?php if (empty($store['name'])) continue; ?>
-                        <div class="row py-0 py-md-3 px-0 px-md-2 program-parfium-bg">
-                            <div class="col-7">
-                                <?php if (!empty($store['logo'])): ?>
-                                    <a class="brand-logo" href="<?php echo esc_url($store['affiliate_url'] ?: $store['url']); ?>" target="_blank" rel="<?php echo esc_attr($store['affiliate_rel'] ?: 'sponsored'); ?>">
-                                        <img src="<?php echo esc_url($store['logo']); ?>" class="object-fit-contain" loading="lazy" width="140" height="40" alt="<?php echo esc_attr($store['name']); ?>">
-                                    </a>
-                                <?php else: ?>
-                                    <div class="brand-logo">
-                                        <strong><?php echo esc_html($store['name']); ?></strong>
+                        <div class="store-item">
+                            <div class="store-info">
+                                <?php if ($show_logos && !empty($store['logo'])): ?>
+                                    <div class="store-logo">
+                                        <img src="<?php echo esc_url($store['logo']); ?>" alt="<?php echo esc_attr($store['name']); ?>">
                                     </div>
                                 <?php endif; ?>
                                 
-                                <div class="more_info mt-2 flex-wrap" style="width: max-content;">
-                                    <?php if (!empty($store['availability'])): ?>
-                                        <div class="availability">
-                                            <img src="<?php echo PARFUME_REVIEWS_PLUGIN_URL; ?>assets/images/tick-icon.svg" width="16" height="16" alt="availability"> 
-                                            <?php echo esc_html($store['availability']); ?>
+                                <div class="store-details">
+                                    <div class="store-name">
+                                        <?php if (!empty($store['url'])): ?>
+                                            <a href="<?php echo esc_url($store['affiliate_url'] ?: $store['url']); ?>" 
+                                               target="_blank" 
+                                               rel="<?php echo esc_attr($store['affiliate_rel'] ?: 'nofollow'); ?>">
+                                                <?php echo esc_html($store['name']); ?>
+                                            </a>
+                                        <?php else: ?>
+                                            <?php echo esc_html($store['name']); ?>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <?php if ($show_prices && !empty($store['price'])): ?>
+                                        <div class="store-price">
+                                            <?php echo esc_html($store['price']); ?>
+                                            <?php if (!empty($store['size'])): ?>
+                                                <span class="price-size">(<?php echo esc_html($store['size']); ?>)</span>
+                                            <?php endif; ?>
                                         </div>
                                     <?php endif; ?>
                                     
-                                    <?php if (!empty($store['shipping_cost'])): ?>
-                                        <div class="free_shipping">
-                                            <img src="<?php echo PARFUME_REVIEWS_PLUGIN_URL; ?>assets/images/truck-icon.svg" width="16" height="16"> 
-                                            <?php echo esc_html($store['shipping_cost']); ?>
+                                    <?php if (!empty($store['availability'])): ?>
+                                        <div class="store-availability status-<?php echo esc_attr($store['availability']); ?>">
+                                            <?php echo esc_html($this->format_availability($store['availability'])); ?>
                                         </div>
                                     <?php endif; ?>
                                 </div>
-                            </div>
-                            
-                            <div class="col-5">
-                                <?php if (!empty($store['price'])): ?>
-                                    <a class="brand-price" href="<?php echo esc_url($store['affiliate_url'] ?: $store['url']); ?>" target="_blank" rel="<?php echo esc_attr($store['affiliate_rel'] ?: 'sponsored'); ?>">
-                                        <div class="price">
-                                            <?php echo esc_html($store['price']); ?>
-                                            <div class="disclosure">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" height="0.9em" width="24px" color="#ababab">
-                                                    <path fill="currentColor" d="M32,0A32,32,0,1,0,64,32,32,32,0,0,0,32,0Zm4,52H28V26h8ZM32,22.86a5,5,0,1,1,5-5A5,5,0,0,1,32,22.86Z"></path>
-                                                </svg>
-                                                <span class="tooltip-text"><?php _e('Цените ни се актуализират на всеки 12ч. Моля, извинете ни за евентуално несъответствие.', 'parfume-reviews'); ?></span>
-                                            </div>
-                                        </div>
-                                    </a>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <?php if (!empty($store['size'])): ?>
-                                <div class="col-12 d-flex overflow-auto gap-2 mt-3">
-                                    <?php 
-                                    $sizes = explode(',', $store['size']);
-                                    foreach ($sizes as $size): 
-                                        $size = trim($size);
-                                        if (empty($size)) continue;
-                                    ?>
-                                        <div class="variant-box position-relative p-1 rounded text-decoration-none d-flex flex-column align-items-start">
-                                            <a href="<?php echo esc_url($store['affiliate_url'] ?: $store['url']); ?>" target="_blank" rel="<?php echo esc_attr($store['affiliate_rel'] ?: 'sponsored'); ?>" class="text-decoration-none d-flex flex-column w-100">
-                                                <div class="fw-bold text-center fsize"><?php echo esc_html($size); ?></div>
-                                            </a>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
-                            
-                            <div class="col-12 d-flex gap-2">
-                                <a class="cta-button-a w-100 mt-3 aff-button" href="<?php echo esc_url($store['affiliate_url'] ?: $store['url']); ?>" target="<?php echo esc_attr($store['affiliate_target'] ?: '_blank'); ?>" rel="<?php echo esc_attr($store['affiliate_rel'] ?: 'sponsored'); ?>">
-                                    <span>
-                                        <?php echo !empty($store['affiliate_anchor']) ? esc_html($store['affiliate_anchor']) : __('към магазина', 'parfume-reviews'); ?>
-                                        <svg width="16px" height="16px" fill="#fff" focusable="false" aria-hidden="true" viewBox="0 0 24 24">
-                                            <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"></path>
-                                        </svg>
-                                    </span>
-                                </a>
-                                
-                                <?php if (!empty($store['promo_code'])): ?>
-                                    <a class="promocode-button-a w-100 mt-3 position-relative" href="<?php echo esc_url($store['affiliate_url'] ?: $store['url']); ?>" target="<?php echo esc_attr($store['affiliate_target'] ?: '_blank'); ?>" rel="<?php echo esc_attr($store['affiliate_rel'] ?: 'sponsored'); ?>">
-                                        <?php if (!empty($store['promo_text'])): ?>
-                                            <label><?php echo esc_html($store['promo_text']); ?></label>
-                                        <?php endif; ?>
-                                        <span>
-                                            <?php echo esc_html($store['promo_code']); ?>
-                                            <svg viewBox="0 0 24 24" width="16px" height="16px" fill="none" xmlns="http://www.w3.org/2000/svg" transform="matrix(-1, 0, 0, 1, 0, 0)">
-                                                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                                                <g id="SVGRepo_iconCarrier">
-                                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M21 8C21 6.34315 19.6569 5 18 5H10C8.34315 5 7 6.34315 7 8V20C7 21.6569 8.34315 23 10 23H18C19.6569 23 21 21.6569 21 20V8ZM19 8C19 7.44772 18.5523 7 18 7H10C9.44772 7 9 7.44772 9 8V20C9 20.5523 9.44772 21 10 21H18C18.5523 21 19 20.5523 19 20V8Z" fill="#fd4f00"></path>
-                                                    <path d="M6 3H16C16.5523 3 17 2.55228 17 2C17 1.44772 16.5523 1 16 1H6C4.34315 1 3 2.34315 3 4V18C3 18.5523 3.44772 19 4 19C4.55228 19 5 18.5523 5 18V4C5 3.44772 5.44772 3 6 3Z" fill="#fd4f00"></path>
-                                                </g>
-                                            </svg>
-                                        </span>
-                                    </a>
-                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <p><?php _e('Няма намерени магазини за този парфюм.', 'parfume-reviews'); ?></p>
+                <p class="no-stores"><?php _e('Няма налични магазини в момента.', 'parfume-reviews'); ?></p>
             <?php endif; ?>
         </div>
         <?php
         return ob_get_clean();
     }
     
+    /**
+     * [parfume_notes] - Показва нотки на парфюм
+     */
+    public function notes_shortcode($atts) {
+        global $post;
+        
+        if (!$post || $post->post_type !== 'parfume') {
+            return '';
+        }
+        
+        $atts = shortcode_atts(array(
+            'show_groups' => true,
+            'group_by' => 'position', // position, type
+            'show_empty' => false
+        ), $atts, 'parfume_notes');
+        
+        $notes = wp_get_post_terms($post->ID, 'notes');
+        
+        if (empty($notes) || is_wp_error($notes)) {
+            if (!filter_var($atts['show_empty'], FILTER_VALIDATE_BOOLEAN)) {
+                return '';
+            }
+            return '<div class="parfume-notes"><p>' . __('Няма дефинирани нотки.', 'parfume-reviews') . '</p></div>';
+        }
+        
+        ob_start();
+        
+        echo '<div class="parfume-notes">';
+        
+        if ($atts['group_by'] === 'position') {
+            $this->render_notes_by_position($post->ID);
+        } else {
+            $this->render_notes_by_type($notes);
+        }
+        
+        echo '</div>';
+        
+        return ob_get_clean();
+    }
+    
+    /**
+     * РАЗДЕЛ 3: TAXONOMY SHORTCODES
+     */
+    
+    /**
+     * [all_brands_archive] - Показва всички марки
+     */
+    public function all_brands_archive_shortcode($atts) {
+        return $this->render_taxonomy_archive('marki', $atts, array(
+            'columns' => 4,
+            'show_count' => true,
+            'hide_empty' => true,
+            'orderby' => 'name',
+            'order' => 'ASC',
+            'limit' => 0,
+            'show_images' => true,
+            'title' => __('Всички марки', 'parfume-reviews')
+        ));
+    }
+    
+    /**
+     * [all_notes_archive] - Показва всички нотки
+     */
+    public function all_notes_archive_shortcode($atts) {
+        return $this->render_taxonomy_archive('notes', $atts, array(
+            'columns' => 6,
+            'show_count' => true,
+            'hide_empty' => true,
+            'orderby' => 'name',
+            'order' => 'ASC',
+            'limit' => 0,
+            'show_images' => true,
+            'title' => __('Всички нотки', 'parfume-reviews')
+        ));
+    }
+    
+    /**
+     * [all_perfumers_archive] - Показва всички парфюмьори
+     */
+    public function all_perfumers_archive_shortcode($atts) {
+        return $this->render_taxonomy_archive('perfumer', $atts, array(
+            'columns' => 3,
+            'show_count' => true,
+            'hide_empty' => true,
+            'orderby' => 'name',
+            'order' => 'ASC',
+            'limit' => 0,
+            'show_images' => true,
+            'title' => __('Всички парфюмьори', 'parfume-reviews')
+        ));
+    }
+    
+    /**
+     * [brand_parfumes] - Показва парфюми от конкретна марка
+     */
+    public function brand_parfumes_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'brand' => '',
+            'limit' => 12,
+            'columns' => 3,
+            'orderby' => 'date',
+            'order' => 'DESC',
+            'title' => ''
+        ), $atts, 'brand_parfumes');
+        
+        if (empty($atts['brand'])) {
+            return '<p>' . __('Моля посочете марка.', 'parfume-reviews') . '</p>';
+        }
+        
+        if (empty($atts['title'])) {
+            $brand_term = get_term_by('slug', $atts['brand'], 'marki');
+            if ($brand_term) {
+                $atts['title'] = sprintf(__('Парфюми от %s', 'parfume-reviews'), $brand_term->name);
+            }
+        }
+        
+        $modified_atts = array(
+            'posts_per_page' => intval($atts['limit']),
+            'columns' => intval($atts['columns']),
+            'brand' => $atts['brand'],
+            'orderby' => $atts['orderby'],
+            'order' => $atts['order'],
+            'title' => $atts['title'],
+            'class' => 'brand-parfumes'
+        );
+        
+        return $this->parfume_grid_shortcode($modified_atts);
+    }
+    
+    /**
+     * РАЗДЕЛ 4: FILTER SHORTCODES
+     */
+    
+    /**
+     * [parfume_filters] - Показва филтри за парфюми
+     */
     public function filters_shortcode($atts) {
         $atts = shortcode_atts(array(
             'show_gender' => true,
@@ -247,620 +714,526 @@ class Shortcodes {
             'show_brand' => true,
             'show_season' => true,
             'show_intensity' => true,
-            'show_notes' => true,
-            'show_perfumer' => true,
-        ), $atts);
+            'show_notes' => false,
+            'show_perfumer' => false,
+            'show_price_range' => true,
+            'show_rating' => true,
+            'show_search' => true,
+            'layout' => 'vertical', // vertical, horizontal, compact
+            'ajax' => false
+        ), $atts, 'parfume_filters');
         
         // Convert string values to boolean
         foreach ($atts as $key => $value) {
-            $atts[$key] = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+            if (in_array($key, array('show_gender', 'show_aroma_type', 'show_brand', 'show_season', 'show_intensity', 'show_notes', 'show_perfumer', 'show_price_range', 'show_rating', 'show_search', 'ajax'))) {
+                $atts[$key] = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+            }
         }
         
         ob_start();
+        
+        echo '<div class="parfume-filters layout-' . esc_attr($atts['layout']) . '">';
+        echo '<form method="get" class="parfume-filters-form" data-ajax="' . ($atts['ajax'] ? 'true' : 'false') . '">';
+        
+        // Search field
+        if ($atts['show_search']) {
+            echo '<div class="filter-group search-group">';
+            echo '<input type="text" name="search" placeholder="' . esc_attr__('Търси парфюм...', 'parfume-reviews') . '" value="' . esc_attr($_GET['search'] ?? '') . '">';
+            echo '</div>';
+        }
+        
+        // Price range
+        if ($atts['show_price_range']) {
+            echo '<div class="filter-group price-group">';
+            echo '<label>' . __('Ценови диапазон:', 'parfume-reviews') . '</label>';
+            echo '<div class="price-inputs">';
+            echo '<input type="number" name="min_price" placeholder="' . esc_attr__('От', 'parfume-reviews') . '" value="' . esc_attr($_GET['min_price'] ?? '') . '" min="0" step="0.01">';
+            echo '<span>-</span>';
+            echo '<input type="number" name="max_price" placeholder="' . esc_attr__('До', 'parfume-reviews') . '" value="' . esc_attr($_GET['max_price'] ?? '') . '" min="0" step="0.01">';
+            echo '</div>';
+            echo '</div>';
+        }
+        
+        // Rating filter
+        if ($atts['show_rating']) {
+            echo '<div class="filter-group rating-group">';
+            echo '<label>' . __('Мин. рейтинг:', 'parfume-reviews') . '</label>';
+            echo '<select name="min_rating">';
+            echo '<option value="">' . __('Всички', 'parfume-reviews') . '</option>';
+            for ($i = 5; $i >= 1; $i--) {
+                $selected = (isset($_GET['min_rating']) && $_GET['min_rating'] == $i) ? ' selected' : '';
+                echo '<option value="' . $i . '"' . $selected . '>' . sprintf(__('%d+ звезди', 'parfume-reviews'), $i) . '</option>';
+            }
+            echo '</select>';
+            echo '</div>';
+        }
+        
+        // Taxonomy filters
+        $taxonomy_filters = array(
+            'gender' => __('Пол', 'parfume-reviews'),
+            'aroma_type' => __('Тип аромат', 'parfume-reviews'),
+            'brand' => array('marki', __('Марка', 'parfume-reviews')),
+            'season' => __('Сезон', 'parfume-reviews'),
+            'intensity' => __('Интензивност', 'parfume-reviews'),
+            'notes' => __('Нотки', 'parfume-reviews'),
+            'perfumer' => __('Парфюмерист', 'parfume-reviews')
+        );
+        
+        foreach ($taxonomy_filters as $filter_key => $filter_data) {
+            if (!$atts['show_' . $filter_key]) continue;
+            
+            if (is_array($filter_data)) {
+                $taxonomy = $filter_data[0];
+                $label = $filter_data[1];
+            } else {
+                $taxonomy = $filter_key;
+                $label = $filter_data;
+            }
+            
+            $this->render_taxonomy_filter($taxonomy, $label, $atts['layout']);
+        }
+        
+        // Submit button
+        echo '<div class="filter-submit">';
+        echo '<button type="submit" class="button button-primary">' . __('Филтрирай', 'parfume-reviews') . '</button>';
+        
+        // Reset button
+        $reset_url = strtok($_SERVER['REQUEST_URI'], '?');
+        echo '<a href="' . esc_url($reset_url) . '" class="button button-secondary">' . __('Изчисти', 'parfume-reviews') . '</a>';
+        echo '</div>';
+        
+        echo '</form>';
+        echo '</div>';
+        
+        return ob_get_clean();
+    }
+    
+    /**
+     * [parfume_search] - Показва търсачка за парфюми
+     */
+    public function search_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'placeholder' => __('Търси парфюм...', 'parfume-reviews'),
+            'button_text' => __('Търси', 'parfume-reviews'),
+            'show_suggestions' => true,
+            'ajax' => false
+        ), $atts, 'parfume_search');
+        
+        ob_start();
         ?>
-        <div class="parfume-filters">
-            <form method="get" id="parfume-filters-form">
-                
-                <?php if ($atts['show_gender']): ?>
-                    <div class="filter-group">
-                        <h4 class="filter-title">
-                            <span class="toggle-arrow">▼</span>
-                            <?php _e('Категории', 'parfume-reviews'); ?>
-                        </h4>
-                        <div class="filter-options">
-                            <label class="filter-option">
-                                <input type="checkbox" name="gender[]" value="all" class="select-all"> 
-                                <?php _e('Всички', 'parfume-reviews'); ?>
-                            </label>
-                            <?php
-                            $genders = get_terms(array(
-                                'taxonomy' => 'gender',
-                                'hide_empty' => false,
-                            ));
-                            
-                            $selected_genders = isset($_GET['gender']) ? (array) $_GET['gender'] : array();
-                            
-                            foreach ($genders as $gender): ?>
-                                <label class="filter-option">
-                                    <input type="checkbox" name="gender[]" value="<?php echo esc_attr($gender->slug); ?>" <?php echo in_array($gender->slug, $selected_genders) ? 'checked' : ''; ?>>
-                                    <?php echo esc_html($gender->name); ?> (<?php echo $gender->count; ?>)
-                                </label>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                <?php endif; ?>
-                
-                <?php if ($atts['show_aroma_type']): ?>
-                    <div class="filter-group">
-                        <h4 class="filter-title">
-                            <span class="toggle-arrow">▼</span>
-                            <?php _e('Вид аромат', 'parfume-reviews'); ?>
-                        </h4>
-                        <div class="filter-options">
-                            <label class="filter-option">
-                                <input type="checkbox" name="aroma_type[]" value="all" class="select-all"> 
-                                <?php _e('Всички', 'parfume-reviews'); ?>
-                            </label>
-                            <?php
-                            $aroma_types = get_terms(array(
-                                'taxonomy' => 'aroma_type',
-                                'hide_empty' => false,
-                            ));
-                            
-                            $selected_aroma_types = isset($_GET['aroma_type']) ? (array) $_GET['aroma_type'] : array();
-                            
-                            foreach ($aroma_types as $aroma_type): ?>
-                                <label class="filter-option">
-                                    <input type="checkbox" name="aroma_type[]" value="<?php echo esc_attr($aroma_type->slug); ?>" <?php echo in_array($aroma_type->slug, $selected_aroma_types) ? 'checked' : ''; ?>>
-                                    <?php echo esc_html($aroma_type->name); ?> (<?php echo $aroma_type->count; ?>)
-                                </label>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                <?php endif; ?>
-                
-                <?php if ($atts['show_brand']): ?>
-                    <div class="filter-group">
-                        <h4 class="filter-title">
-                            <span class="toggle-arrow">▼</span>
-                            <?php _e('Марка', 'parfume-reviews'); ?>
-                        </h4>
-                        <div class="filter-options">
-                            <input type="text" class="filter-search" placeholder="<?php _e('Търсене в марките...', 'parfume-reviews'); ?>">
-                            <label class="filter-option">
-                                <input type="checkbox" name="marki[]" value="all" class="select-all"> 
-                                <?php _e('Всички', 'parfume-reviews'); ?>
-                            </label>
-                            <div class="scrollable-options" style="max-height: 200px; overflow-y: auto;">
-                                <?php
-                                $brands = get_terms(array(
-                                    'taxonomy' => 'marki',
-                                    'hide_empty' => false,
-                                    'number' => 50,
-                                ));
-                                
-                                $selected_brands = isset($_GET['marki']) ? (array) $_GET['marki'] : array();
-                                
-                                foreach ($brands as $brand): ?>
-                                    <label class="filter-option">
-                                        <input type="checkbox" name="marki[]" value="<?php echo esc_attr($brand->slug); ?>" <?php echo in_array($brand->slug, $selected_brands) ? 'checked' : ''; ?>>
-                                        <?php echo esc_html($brand->name); ?> (<?php echo $brand->count; ?>)
-                                    </label>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    </div>
-                <?php endif; ?>
-                
-                <?php if ($atts['show_season']): ?>
-                    <div class="filter-group">
-                        <h4 class="filter-title">
-                            <span class="toggle-arrow">▼</span>
-                            <?php _e('Сезон', 'parfume-reviews'); ?>
-                        </h4>
-                        <div class="filter-options">
-                            <label class="filter-option">
-                                <input type="checkbox" name="season[]" value="all" class="select-all"> 
-                                <?php _e('Всички', 'parfume-reviews'); ?>
-                            </label>
-                            <?php
-                            $seasons = get_terms(array(
-                                'taxonomy' => 'season',
-                                'hide_empty' => false,
-                            ));
-                            
-                            $selected_seasons = isset($_GET['season']) ? (array) $_GET['season'] : array();
-                            
-                            foreach ($seasons as $season): ?>
-                                <label class="filter-option">
-                                    <input type="checkbox" name="season[]" value="<?php echo esc_attr($season->slug); ?>" <?php echo in_array($season->slug, $selected_seasons) ? 'checked' : ''; ?>>
-                                    <?php echo esc_html($season->name); ?> (<?php echo $season->count; ?>)
-                                </label>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                <?php endif; ?>
-                
-                <?php if ($atts['show_notes']): ?>
-                    <div class="filter-group">
-                        <h4 class="filter-title collapsed">
-                            <span class="toggle-arrow">▶</span>
-                            <?php _e('Ароматни нотки', 'parfume-reviews'); ?>
-                        </h4>
-                        <div class="filter-options" style="display: none;">
-                            <input type="text" class="filter-search" placeholder="<?php _e('Търсене в нотките...', 'parfume-reviews'); ?>">
-                            <label class="filter-option">
-                                <input type="checkbox" name="notes[]" value="all" class="select-all"> 
-                                <?php _e('Всички', 'parfume-reviews'); ?>
-                            </label>
-                            <div class="scrollable-options" style="max-height: 200px; overflow-y: auto;">
-                                <?php
-                                $notes = get_terms(array(
-                                    'taxonomy' => 'notes',
-                                    'hide_empty' => false,
-                                    'number' => 50,
-                                ));
-                                
-                                $selected_notes = isset($_GET['notes']) ? (array) $_GET['notes'] : array();
-                                
-                                foreach ($notes as $note): ?>
-                                    <label class="filter-option">
-                                        <input type="checkbox" name="notes[]" value="<?php echo esc_attr($note->slug); ?>" <?php echo in_array($note->slug, $selected_notes) ? 'checked' : ''; ?>>
-                                        <?php echo esc_html($note->name); ?> (<?php echo $note->count; ?>)
-                                    </label>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    </div>
-                <?php endif; ?>
-                
-                <?php if ($atts['show_perfumer']): ?>
-                    <div class="filter-group">
-                        <h4 class="filter-title collapsed">
-                            <span class="toggle-arrow">▶</span>
-                            <?php _e('Парфюмеристи', 'parfume-reviews'); ?>
-                        </h4>
-                        <div class="filter-options" style="display: none;">
-                            <input type="text" class="filter-search" placeholder="<?php _e('Търсене в парфюмеристите...', 'parfume-reviews'); ?>">
-                            <label class="filter-option">
-                                <input type="checkbox" name="perfumer[]" value="all" class="select-all"> 
-                                <?php _e('Всички', 'parfume-reviews'); ?>
-                            </label>
-                            <div class="scrollable-options" style="max-height: 200px; overflow-y: auto;">
-                                <?php
-                                $perfumers = get_terms(array(
-                                    'taxonomy' => 'perfumer',
-                                    'hide_empty' => false,
-                                    'number' => 50,
-                                ));
-                                
-                                $selected_perfumers = isset($_GET['perfumer']) ? (array) $_GET['perfumer'] : array();
-                                
-                                foreach ($perfumers as $perfumer): ?>
-                                    <label class="filter-option">
-                                        <input type="checkbox" name="perfumer[]" value="<?php echo esc_attr($perfumer->slug); ?>" <?php echo in_array($perfumer->slug, $selected_perfumers) ? 'checked' : ''; ?>>
-                                        <?php echo esc_html($perfumer->name); ?> (<?php echo $perfumer->count; ?>)
-                                    </label>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    </div>
-                <?php endif; ?>
-                
-                <div class="filter-submit">
-                    <button type="submit" class="filter-button"><?php _e('Филтрирай', 'parfume-reviews'); ?></button>
-                    <a href="<?php echo esc_url(remove_query_arg(array('gender', 'aroma_type', 'marki', 'season', 'notes', 'perfumer'))); ?>" class="reset-button"><?php _e('Изчисти', 'parfume-reviews'); ?></a>
+        <div class="parfume-search-form">
+            <form method="get" action="<?php echo esc_url(home_url('/')); ?>" class="search-form">
+                <input type="hidden" name="post_type" value="parfume">
+                <div class="search-input-wrapper">
+                    <input type="search" 
+                           name="s" 
+                           value="<?php echo esc_attr(get_search_query()); ?>"
+                           placeholder="<?php echo esc_attr($atts['placeholder']); ?>"
+                           class="search-input"
+                           data-suggestions="<?php echo $atts['show_suggestions'] ? 'true' : 'false'; ?>"
+                           data-ajax="<?php echo $atts['ajax'] ? 'true' : 'false'; ?>">
+                    <button type="submit" class="search-button">
+                        <?php echo esc_html($atts['button_text']); ?>
+                    </button>
                 </div>
+                
+                <?php if ($atts['show_suggestions']): ?>
+                    <div class="search-suggestions" style="display: none;"></div>
+                <?php endif; ?>
             </form>
         </div>
-        
-        <style>
-        .parfume-filters {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-        }
-        
-        .filter-group {
-            margin-bottom: 20px;
-            border-bottom: 1px solid #e9ecef;
-            padding-bottom: 15px;
-        }
-        
-        .filter-title {
-            cursor: pointer;
-            margin: 0 0 10px;
-            font-size: 16px;
-            font-weight: bold;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .toggle-arrow {
-            transition: transform 0.3s ease;
-            font-size: 12px;
-        }
-        
-        .filter-title.collapsed .toggle-arrow {
-            transform: rotate(0deg);
-        }
-        
-        .filter-options {
-            padding-left: 20px;
-        }
-        
-        .filter-search {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-        
-        .filter-option {
-            display: block;
-            margin-bottom: 8px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .filter-option input[type="checkbox"] {
-            margin-right: 8px;
-        }
-        
-        .scrollable-options {
-            max-height: 200px;
-            overflow-y: auto;
-            border: 1px solid #e9ecef;
-            border-radius: 4px;
-            padding: 10px;
-            background: white;
-        }
-        
-        .filter-submit {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-        }
-        
-        .filter-button {
-            background: linear-gradient(135deg, #0073aa, #005a87);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0,115,170,0.3);
-        }
-        
-        .filter-button:hover {
-            background: linear-gradient(135deg, #005a87, #004466);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0,115,170,0.4);
-        }
-        
-        .reset-button {
-            background: linear-gradient(135deg, #6c757d, #545b62);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(108,117,125,0.3);
-        }
-        
-        .reset-button:hover {
-            background: linear-gradient(135deg, #545b62, #3d4449);
-            color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(108,117,125,0.4);
-        }
-        </style>
-        
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Toggle filter sections
-            document.querySelectorAll('.filter-title').forEach(title => {
-                title.addEventListener('click', function() {
-                    const options = this.nextElementSibling;
-                    const arrow = this.querySelector('.toggle-arrow');
-                    
-                    if (options.style.display === 'none') {
-                        options.style.display = 'block';
-                        arrow.textContent = '▼';
-                        this.classList.remove('collapsed');
-                    } else {
-                        options.style.display = 'none';
-                        arrow.textContent = '▶';
-                        this.classList.add('collapsed');
-                    }
-                });
-            });
-            
-            // Handle "Select All" checkboxes
-            document.querySelectorAll('.select-all').forEach(selectAll => {
-                selectAll.addEventListener('change', function() {
-                    const group = this.closest('.filter-group');
-                    const checkboxes = group.querySelectorAll('input[type="checkbox"]:not(.select-all)');
-                    
-                    if (this.checked) {
-                        checkboxes.forEach(cb => cb.checked = false);
-                    }
-                });
-            });
-            
-            // Uncheck "Select All" when other options are selected
-            document.querySelectorAll('.filter-option input[type="checkbox"]:not(.select-all)').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    if (this.checked) {
-                        const selectAll = this.closest('.filter-group').querySelector('.select-all');
-                        if (selectAll) selectAll.checked = false;
-                    }
-                });
-            });
-            
-            // Search functionality
-            document.querySelectorAll('.filter-search').forEach(search => {
-                search.addEventListener('input', function() {
-                    const query = this.value.toLowerCase();
-                    const options = this.parentNode.querySelectorAll('.filter-option:not(:first-child)');
-                    
-                    options.forEach(option => {
-                        const text = option.textContent.toLowerCase();
-                        option.style.display = text.includes(query) ? 'block' : 'none';
-                    });
-                });
-            });
-            
-            // Fix form submission to use current page URL
-            document.getElementById('parfume-filters-form').addEventListener('submit', function(e) {
-                // Ensure we stay on the current archive page
-                const currentUrl = window.location.pathname;
-                this.action = currentUrl;
-            });
-        });
-        </script>
         <?php
         return ob_get_clean();
     }
     
-    public function similar_shortcode($atts) {
-        global $post;
-        
-        if (!$post || $post->post_type !== 'parfume') {
-            return '';
+    /**
+     * РАЗДЕЛ 5: HELPER МЕТОДИ
+     */
+    
+    /**
+     * Рендва parfume карточка
+     */
+    private function render_parfume_card($post_id, $atts) {
+        // Използваме template function ако е налична
+        if (function_exists('parfume_reviews_display_parfume_card')) {
+            parfume_reviews_display_parfume_card($post_id);
+            return;
         }
         
-        $atts = shortcode_atts(array(
-            'limit' => 4,
-            'title' => __('Подобни парфюми', 'parfume-reviews'),
-        ), $atts);
+        // Fallback rendering
+        $post = get_post($post_id);
+        $rating = get_post_meta($post_id, '_parfume_rating', true);
+        $price = get_post_meta($post_id, '_parfume_price', true);
         
-        $limit = intval($atts['limit']);
-        if ($limit <= 0) $limit = 4;
+        echo '<article class="parfume-card" data-post-id="' . esc_attr($post_id) . '">';
         
-        // Get current perfume taxonomies
-        $brands = wp_get_post_terms($post->ID, 'marki', array('fields' => 'ids'));
-        $notes = wp_get_post_terms($post->ID, 'notes', array('fields' => 'ids'));
-        $genders = wp_get_post_terms($post->ID, 'gender', array('fields' => 'ids'));
-        
-        if (is_wp_error($brands)) $brands = array();
-        if (is_wp_error($notes)) $notes = array();
-        if (is_wp_error($genders)) $genders = array();
-        
-        $tax_query = array('relation' => 'OR');
-        
-        if (!empty($brands)) {
-            $tax_query[] = array(
-                'taxonomy' => 'marki',
-                'field' => 'term_id',
-                'terms' => $brands,
-            );
+        // Image
+        if (has_post_thumbnail($post_id)) {
+            echo '<div class="parfume-image">';
+            echo '<a href="' . get_permalink($post_id) . '">';
+            echo get_the_post_thumbnail($post_id, 'medium');
+            echo '</a>';
+            echo '</div>';
         }
         
-        if (!empty($notes)) {
-            $tax_query[] = array(
-                'taxonomy' => 'notes',
-                'field' => 'term_id',
-                'terms' => $notes,
-            );
+        // Content
+        echo '<div class="parfume-content">';
+        echo '<h3 class="parfume-title"><a href="' . get_permalink($post_id) . '">' . get_the_title($post_id) . '</a></h3>';
+        
+        // Rating
+        if (!empty($rating) && ($atts['show_rating'] ?? true)) {
+            echo '<div class="parfume-rating">';
+            for ($i = 1; $i <= 5; $i++) {
+                echo '<span class="star ' . ($i <= round($rating) ? 'filled' : 'empty') . '">★</span>';
+            }
+            echo '</div>';
         }
         
-        if (!empty($genders)) {
-            $tax_query[] = array(
-                'taxonomy' => 'gender',
-                'field' => 'term_id',
-                'terms' => $genders,
-            );
+        // Price
+        if (!empty($price) && ($atts['show_price'] ?? true)) {
+            echo '<div class="parfume-price">' . esc_html($price) . '</div>';
         }
         
-        if (count($tax_query) === 1) {
-            return ''; // No taxonomies found
+        // Excerpt
+        if ($atts['show_excerpt'] ?? false) {
+            echo '<div class="parfume-excerpt">' . wp_trim_words(get_the_excerpt($post_id), 15) . '</div>';
         }
         
-        $args = array(
-            'post_type' => 'parfume',
-            'posts_per_page' => $limit,
-            'post__not_in' => array($post->ID),
-            'tax_query' => $tax_query,
+        echo '</div>';
+        echo '</article>';
+    }
+    
+    /**
+     * Получава стойност на поле за парфюм
+     */
+    private function get_parfume_field_value($post_id, $field) {
+        switch ($field) {
+            case 'brand':
+                $brands = wp_get_post_terms($post_id, 'marki', array('fields' => 'names'));
+                return !empty($brands) ? $brands[0] : '';
+                
+            case 'year':
+                return get_post_meta($post_id, '_parfume_release_year', true);
+                
+            case 'concentration':
+                return get_post_meta($post_id, '_parfume_concentration', true);
+                
+            case 'longevity':
+                return get_post_meta($post_id, '_parfume_longevity', true);
+                
+            case 'sillage':
+                return get_post_meta($post_id, '_parfume_sillage', true);
+                
+            case 'bottle_size':
+                return get_post_meta($post_id, '_parfume_bottle_size', true);
+                
+            case 'availability':
+                $availability = get_post_meta($post_id, '_parfume_availability', true);
+                return $this->format_availability($availability);
+                
+            default:
+                return get_post_meta($post_id, '_parfume_' . $field, true);
+        }
+    }
+    
+    /**
+     * Форматира availability статус
+     */
+    private function format_availability($availability) {
+        $statuses = array(
+            'available' => __('Наличен', 'parfume-reviews'),
+            'limited' => __('Ограничено издание', 'parfume-reviews'),
+            'discontinued' => __('Спрян от производство', 'parfume-reviews')
         );
         
-        $similar = new \WP_Query($args);
+        return $statuses[$availability] ?? $availability;
+    }
+    
+    /**
+     * Рендва taxonomy archive
+     */
+    private function render_taxonomy_archive($taxonomy, $user_atts, $default_atts) {
+        $atts = shortcode_atts($default_atts, $user_atts);
+        
+        $args = array(
+            'taxonomy' => $taxonomy,
+            'hide_empty' => filter_var($atts['hide_empty'], FILTER_VALIDATE_BOOLEAN),
+            'orderby' => sanitize_text_field($atts['orderby']),
+            'order' => sanitize_text_field($atts['order']),
+        );
+        
+        if ($atts['limit'] > 0) {
+            $args['number'] = intval($atts['limit']);
+        }
+        
+        $terms = get_terms($args);
+        
+        if (empty($terms) || is_wp_error($terms)) {
+            return '<p>' . sprintf(__('Няма намерени %s.', 'parfume-reviews'), $taxonomy) . '</p>';
+        }
         
         ob_start();
         
-        if ($similar->have_posts()):
-            ?>
-            <div class="similar-parfumes">
-                <h3><?php echo esc_html($atts['title']); ?></h3>
-                
-                <div class="parfume-grid">
-                    <?php while ($similar->have_posts()): $similar->the_post(); ?>
-                        <div class="parfume-item">
-                            <a href="<?php the_permalink(); ?>">
-                                <?php if (has_post_thumbnail()): ?>
-                                    <div class="parfume-thumbnail">
-                                        <?php the_post_thumbnail('thumbnail'); ?>
-                                    </div>
-                                <?php endif; ?>
-                                <h4><?php the_title(); ?></h4>
-                                <?php 
-                                $rating = get_post_meta(get_the_ID(), '_parfume_rating', true);
-                                if (!empty($rating) && is_numeric($rating)): 
-                                ?>
-                                    <div class="parfume-rating">
-                                        <?php for ($i = 1; $i <= 5; $i++): ?>
-                                            <span class="star <?php echo $i <= round(floatval($rating)) ? 'filled' : ''; ?>">★</span>
-                                        <?php endfor; ?>
-                                    </div>
-                                <?php endif; ?>
-                            </a>
-                        </div>
-                    <?php endwhile; ?>
-                </div>
-            </div>
-            <?php
-        endif;
+        echo '<div class="' . esc_attr($taxonomy) . '-archive-grid columns-' . intval($atts['columns']) . '">';
         
-        wp_reset_postdata();
+        if (!empty($atts['title'])) {
+            echo '<h2 class="archive-title">' . esc_html($atts['title']) . '</h2>';
+        }
+        
+        echo '<div class="terms-grid">';
+        
+        foreach ($terms as $term) {
+            echo '<div class="term-item">';
+            echo '<a href="' . get_term_link($term) . '">';
+            
+            // Term image
+            if ($atts['show_images'] && function_exists('parfume_reviews_get_term_image_url')) {
+                $image_url = parfume_reviews_get_term_image_url($term->term_id, $taxonomy, 'medium');
+                if ($image_url) {
+                    echo '<div class="term-image"><img src="' . esc_url($image_url) . '" alt="' . esc_attr($term->name) . '"></div>';
+                }
+            }
+            
+            echo '<h3>' . esc_html($term->name) . '</h3>';
+            
+            if ($atts['show_count']) {
+                echo '<span class="count">(' . $term->count . ')</span>';
+            }
+            
+            echo '</a>';
+            echo '</div>';
+        }
+        
+        echo '</div>';
+        echo '</div>';
         
         return ob_get_clean();
     }
     
-    public function brand_products_shortcode($atts) {
-        global $post;
+    /**
+     * Рендва taxonomy filter
+     */
+    private function render_taxonomy_filter($taxonomy, $label, $layout) {
+        $terms = get_terms(array(
+            'taxonomy' => $taxonomy,
+            'hide_empty' => true,
+            'number' => 50
+        ));
         
-        if (!$post || $post->post_type !== 'parfume') {
-            return '';
+        if (empty($terms) || is_wp_error($terms)) {
+            return;
         }
         
-        $atts = shortcode_atts(array(
-            'limit' => 4,
-            'title' => __('Други продукти от тази марка', 'parfume-reviews'),
-        ), $atts);
+        $selected_values = isset($_GET[$taxonomy]) ? (array)$_GET[$taxonomy] : array();
         
-        $limit = intval($atts['limit']);
-        if ($limit <= 0) $limit = 4;
+        echo '<div class="filter-group ' . esc_attr($taxonomy) . '-group">';
+        echo '<label class="filter-label">' . esc_html($label) . ':</label>';
         
-        // Get current perfume brand
-        $brands = wp_get_post_terms($post->ID, 'marki', array('fields' => 'ids'));
-        
-        if (is_wp_error($brands) || empty($brands)) {
-            return '';
+        if ($layout === 'compact') {
+            echo '<select name="' . esc_attr($taxonomy) . '[]" multiple>';
+            echo '<option value="">' . __('Всички', 'parfume-reviews') . '</option>';
+            foreach ($terms as $term) {
+                $selected = in_array($term->slug, $selected_values) ? ' selected' : '';
+                echo '<option value="' . esc_attr($term->slug) . '"' . $selected . '>' . esc_html($term->name) . ' (' . $term->count . ')</option>';
+            }
+            echo '</select>';
+        } else {
+            echo '<div class="filter-options">';
+            foreach ($terms as $term) {
+                $checked = in_array($term->slug, $selected_values) ? ' checked' : '';
+                echo '<label class="filter-option">';
+                echo '<input type="checkbox" name="' . esc_attr($taxonomy) . '[]" value="' . esc_attr($term->slug) . '"' . $checked . '>';
+                echo esc_html($term->name) . ' (' . $term->count . ')';
+                echo '</label>';
+            }
+            echo '</div>';
         }
         
-        $args = array(
-            'post_type' => 'parfume',
-            'posts_per_page' => $limit,
-            'post__not_in' => array($post->ID),
-            'tax_query' => array(
-                array(
-                    'taxonomy' => 'marki',
-                    'field' => 'term_id',
-                    'terms' => $brands,
-                ),
-            ),
-        );
-        
-        $brand_products = new \WP_Query($args);
-        
-        ob_start();
-        
-        if ($brand_products->have_posts()):
-            ?>
-            <div class="brand-products">
-                <h3><?php echo esc_html($atts['title']); ?></h3>
-                
-                <div class="parfume-grid">
-                    <?php while ($brand_products->have_posts()): $brand_products->the_post(); ?>
-                        <div class="parfume-item">
-                            <a href="<?php the_permalink(); ?>">
-                                <?php if (has_post_thumbnail()): ?>
-                                    <div class="parfume-thumbnail">
-                                        <?php the_post_thumbnail('thumbnail'); ?>
-                                    </div>
-                                <?php endif; ?>
-                                <h4><?php the_title(); ?></h4>
-                                <?php 
-                                $rating = get_post_meta(get_the_ID(), '_parfume_rating', true);
-                                if (!empty($rating) && is_numeric($rating)): 
-                                ?>
-                                    <div class="parfume-rating">
-                                        <?php for ($i = 1; $i <= 5; $i++): ?>
-                                            <span class="star <?php echo $i <= round(floatval($rating)) ? 'filled' : ''; ?>">★</span>
-                                        <?php endfor; ?>
-                                    </div>
-                                <?php endif; ?>
-                            </a>
-                        </div>
-                    <?php endwhile; ?>
-                </div>
-            </div>
-            <?php
-        endif;
-        
-        wp_reset_postdata();
-        
-        return ob_get_clean();
+        echo '</div>';
     }
     
+    /**
+     * Enqueue styles за shortcodes
+     */
+    public function enqueue_shortcode_styles() {
+        if (file_exists(PARFUME_REVIEWS_PLUGIN_DIR . 'assets/css/shortcodes.css')) {
+            wp_enqueue_style(
+                'parfume-reviews-shortcodes',
+                PARFUME_REVIEWS_PLUGIN_URL . 'assets/css/shortcodes.css',
+                array(),
+                PARFUME_REVIEWS_VERSION
+            );
+        }
+    }
+    
+    /**
+     * РАЗДЕЛ 6: LEGACY SHORTCODES
+     */
+    
+    /**
+     * [parfume_recently_viewed] - Показва наскоро разгледани
+     */
     public function recently_viewed_shortcode($atts) {
         $atts = shortcode_atts(array(
-            'limit' => 4,
-            'title' => __('Наскоро разгледани', 'parfume-reviews'),
-        ), $atts);
+            'limit' => 6,
+            'columns' => 3,
+            'title' => __('Наскоро разгледани', 'parfume-reviews')
+        ), $atts, 'parfume_recently_viewed');
         
-        $limit = intval($atts['limit']);
-        if ($limit <= 0) $limit = 4;
-        
-        // Get recently viewed from localStorage via JavaScript
-        // This will be populated by frontend.js
+        // Implement recently viewed logic here
+        // For now, return random parfumes
+        return $this->random_parfumes_shortcode($atts);
+    }
+    
+    /**
+     * РАЗДЕЛ 7: STATS SHORTCODES
+     */
+    
+    /**
+     * [parfume_stats] - Показва статистики
+     */
+    public function stats_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'show_total' => true,
+            'show_brands' => true,
+            'show_notes' => true,
+            'show_perfumers' => true,
+            'layout' => 'grid' // grid, list, inline
+        ), $atts, 'parfume_stats');
         
         ob_start();
-        ?>
-        <div class="recently-viewed" id="recently-viewed-container" style="display: none;">
-            <h3><?php echo esc_html($atts['title']); ?></h3>
-            <div class="parfume-grid" id="recently-viewed-grid">
-                <!-- Content will be populated by JavaScript -->
-            </div>
-        </div>
         
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get recently viewed from localStorage
-            var viewed = JSON.parse(localStorage.getItem('parfume_recently_viewed') || '[]');
-            
-            if (viewed.length > 0) {
-                var container = document.getElementById('recently-viewed-container');
-                var grid = document.getElementById('recently-viewed-grid');
-                
-                // Show container
-                container.style.display = 'block';
-                
-                // Take only the specified limit
-                var limitedViewed = viewed.slice(0, <?php echo $limit; ?>);
-                
-                // For each viewed perfume, create a card (simplified version)
-                limitedViewed.forEach(function(postId) {
-                    // Create a simple placeholder - in real implementation, 
-                    // you'd make AJAX calls to get post data
-                    var item = document.createElement('div');
-                    item.className = 'parfume-item';
-                    item.innerHTML = '<a href="/parfiumi/' + postId + '/">Парфюм #' + postId + '</a>';
-                    grid.appendChild(item);
-                });
+        echo '<div class="parfume-stats layout-' . esc_attr($atts['layout']) . '">';
+        
+        if ($atts['show_total']) {
+            $total_parfumes = wp_count_posts('parfume')->publish;
+            echo '<div class="stat-item total-parfumes">';
+            echo '<span class="stat-number">' . number_format($total_parfumes) . '</span>';
+            echo '<span class="stat-label">' . __('Парфюма', 'parfume-reviews') . '</span>';
+            echo '</div>';
+        }
+        
+        if ($atts['show_brands']) {
+            $total_brands = wp_count_terms('marki', array('hide_empty' => true));
+            echo '<div class="stat-item total-brands">';
+            echo '<span class="stat-number">' . number_format($total_brands) . '</span>';
+            echo '<span class="stat-label">' . __('Марки', 'parfume-reviews') . '</span>';
+            echo '</div>';
+        }
+        
+        if ($atts['show_notes']) {
+            $total_notes = wp_count_terms('notes', array('hide_empty' => true));
+            echo '<div class="stat-item total-notes">';
+            echo '<span class="stat-number">' . number_format($total_notes) . '</span>';
+            echo '<span class="stat-label">' . __('Нотки', 'parfume-reviews') . '</span>';
+            echo '</div>';
+        }
+        
+        if ($atts['show_perfumers']) {
+            $total_perfumers = wp_count_terms('perfumer', array('hide_empty' => true));
+            echo '<div class="stat-item total-perfumers">';
+            echo '<span class="stat-number">' . number_format($total_perfumers) . '</span>';
+            echo '<span class="stat-label">' . __('Парфюмьори', 'parfume-reviews') . '</span>';
+            echo '</div>';
+        }
+        
+        echo '</div>';
+        
+        return ob_get_clean();
+    }
+    
+    /**
+     * [popular_brands] - Показва популярни марки
+     */
+    public function popular_brands_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'limit' => 10,
+            'show_count' => true,
+            'title' => __('Популярни марки', 'parfume-reviews')
+        ), $atts, 'popular_brands');
+        
+        $terms = get_terms(array(
+            'taxonomy' => 'marki',
+            'orderby' => 'count',
+            'order' => 'DESC',
+            'number' => intval($atts['limit']),
+            'hide_empty' => true
+        ));
+        
+        if (empty($terms) || is_wp_error($terms)) {
+            return '<p>' . __('Няма намерени марки.', 'parfume-reviews') . '</p>';
+        }
+        
+        ob_start();
+        
+        echo '<div class="popular-brands">';
+        
+        if (!empty($atts['title'])) {
+            echo '<h3 class="widget-title">' . esc_html($atts['title']) . '</h3>';
+        }
+        
+        echo '<ul class="brands-list">';
+        foreach ($terms as $term) {
+            echo '<li class="brand-item">';
+            echo '<a href="' . get_term_link($term) . '">' . esc_html($term->name) . '</a>';
+            if ($atts['show_count']) {
+                echo ' <span class="count">(' . $term->count . ')</span>';
             }
-        });
-        </script>
-        <?php
+            echo '</li>';
+        }
+        echo '</ul>';
+        
+        echo '</div>';
+        
+        return ob_get_clean();
+    }
+    
+    /**
+     * [popular_notes] - Показва популярни нотки
+     */
+    public function popular_notes_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'limit' => 15,
+            'show_count' => false,
+            'title' => __('Популярни нотки', 'parfume-reviews')
+        ), $atts, 'popular_notes');
+        
+        $terms = get_terms(array(
+            'taxonomy' => 'notes',
+            'orderby' => 'count',
+            'order' => 'DESC',
+            'number' => intval($atts['limit']),
+            'hide_empty' => true
+        ));
+        
+        if (empty($terms) || is_wp_error($terms)) {
+            return '<p>' . __('Няма намерени нотки.', 'parfume-reviews') . '</p>';
+        }
+        
+        ob_start();
+        
+        echo '<div class="popular-notes">';
+        
+        if (!empty($atts['title'])) {
+            echo '<h3 class="widget-title">' . esc_html($atts['title']) . '</h3>';
+        }
+        
+        echo '<div class="notes-cloud">';
+        foreach ($terms as $term) {
+            $font_size = min(100 + ($term->count * 2), 150); // Font size based on count
+            echo '<a href="' . get_term_link($term) . '" class="note-tag" style="font-size: ' . $font_size . '%;">';
+            echo esc_html($term->name);
+            if ($atts['show_count']) {
+                echo ' (' . $term->count . ')';
+            }
+            echo '</a>';
+        }
+        echo '</div>';
+        
+        echo '</div>';
         
         return ob_get_clean();
     }
 }
+
+// End of file
