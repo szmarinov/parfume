@@ -1,0 +1,1012 @@
+/**
+ * Single Perfumer CSS - стилове за отделни страници на парфюмеристи
+ * assets/css/single-perfumer.css
+ * РАЗШИРЕНА ВЕРСИЯ С НОВИ СТИЛОВЕ
+ */
+
+/* ========================================
+   ОСНОВНИ СТИЛОВЕ
+   ======================================== */
+
+.single-perfumer-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f8f9fa;
+    min-height: 100vh;
+}
+
+.single-perfumer-page .container {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+
+/* ========================================
+   BREADCRUMBS
+   ======================================== */
+
+.breadcrumb {
+    margin-bottom: 30px;
+    font-size: 14px;
+    color: #666;
+    padding: 15px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.breadcrumb a {
+    color: #667eea;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.breadcrumb a:hover {
+    color: #764ba2;
+    text-decoration: underline;
+}
+
+.breadcrumb .separator {
+    margin: 0 12px;
+    color: #999;
+    font-weight: 300;
+}
+
+.breadcrumb .current {
+    color: #333;
+    font-weight: 600;
+}
+
+/* ========================================
+   PERFUMER HEADER - НОВИ СТИЛОВЕ
+   ======================================== */
+
+.perfumer-header {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    margin-bottom: 40px;
+    padding: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 0;
+    color: white;
+    box-shadow: 0 15px 35px rgba(102, 126, 234, 0.25);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Декоративен елемент в header */
+.perfumer-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    animation: float 6s ease-in-out infinite;
+}
+
+.perfumer-header::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 150px;
+    height: 150px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    animation: float 8s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+.perfumer-photo {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+}
+
+.perfumer-image img {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.perfumer-image img:hover {
+    transform: scale(1.05);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+.perfumer-avatar {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.perfumer-avatar:hover {
+    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.perfumer-initials {
+    font-size: 3em;
+    font-weight: 900;
+    color: white;
+    text-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+    letter-spacing: 2px;
+}
+
+.perfumer-info {
+    flex: 1;
+    position: relative;
+    z-index: 2;
+}
+
+.perfumer-name {
+    font-size: 3em;
+    margin: 0 0 20px 0;
+    font-weight: 800;
+    text-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+    line-height: 1.2;
+    letter-spacing: 1px;
+}
+
+.perfumer-description {
+    font-size: 1.2em;
+    line-height: 1.6;
+    margin-bottom: 25px;
+    opacity: 0.95;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* ========================================
+   PERFUMER STATISTICS - НОВИ СТИЛОВЕ
+   ======================================== */
+
+.perfumer-stats {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.stat-item {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 20px;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    min-width: 120px;
+    transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.stat-number {
+    display: block;
+    font-size: 2.2em;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.stat-label {
+    font-size: 0.9em;
+    opacity: 0.9;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* ========================================
+   PERFUMER LINKS - НОВИ СТИЛОВЕ
+   ======================================== */
+
+.perfumer-links {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.perfumer-website,
+.perfumer-social {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    text-decoration: none;
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+}
+
+.perfumer-website:hover,
+.perfumer-social:hover {
+    background: rgba(255, 255, 255, 0.9);
+    color: #667eea;
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.perfumer-website .dashicons,
+.perfumer-social .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* ========================================
+   PERFUMER CONTENT SECTIONS - БЕЗ ТАБОВЕ
+   ======================================== */
+
+.perfumer-content {
+    padding: 0;
+    background: white;
+}
+
+.perfumer-content > div {
+    padding: 40px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.perfumer-content > div:last-child {
+    border-bottom: none;
+}
+
+.perfumer-content h2 {
+    font-size: 2.5em;
+    margin: 0 0 30px 0;
+    color: #333;
+    position: relative;
+    padding-bottom: 15px;
+    font-weight: 700;
+}
+
+.perfumer-content h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 2px;
+}
+
+/* ========================================
+   BIOGRAPHY SECTION - НОВИ СТИЛОВЕ
+   ======================================== */
+
+.biography-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 30px;
+    margin-top: 30px;
+}
+
+.bio-section {
+    background: #f8f9fa;
+    padding: 30px;
+    border-radius: 15px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.bio-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.bio-section:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    background: white;
+}
+
+.bio-section h3 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 1.4em;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.bio-section h3::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: #667eea;
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.meta-item {
+    margin-bottom: 15px;
+    padding: 12px 0;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.meta-item:last-child {
+    border-bottom: none;
+}
+
+.meta-label {
+    font-weight: 600;
+    color: #667eea;
+    min-width: 140px;
+    font-size: 0.95em;
+}
+
+.meta-value {
+    color: #333;
+    flex: 1;
+    line-height: 1.5;
+}
+
+.education-content,
+.style-content {
+    line-height: 1.7;
+    color: #555;
+    font-size: 1.05em;
+}
+
+/* ========================================
+   PERFUMES GRID - НОВИ СТИЛОВЕ
+   ======================================== */
+
+.perfumes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+    margin-top: 30px;
+}
+
+.perfume-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    transition: all 0.4s ease;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+    position: relative;
+}
+
+.perfume-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.perfume-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
+}
+
+.perfume-card:hover::before {
+    transform: scaleX(1);
+}
+
+.perfume-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    height: 100%;
+}
+
+.perfume-image {
+    position: relative;
+    overflow: hidden;
+    height: 220px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+.perfume-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.perfume-card:hover .perfume-image img {
+    transform: scale(1.1);
+}
+
+.no-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    color: #999;
+}
+
+.no-image .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+}
+
+.perfume-info {
+    padding: 25px;
+}
+
+.perfume-title {
+    font-size: 1.3em;
+    margin: 0 0 10px 0;
+    color: #333;
+    font-weight: 700;
+    line-height: 1.3;
+    transition: color 0.3s ease;
+}
+
+.perfume-card:hover .perfume-title {
+    color: #667eea;
+}
+
+.perfume-brand {
+    color: #764ba2;
+    font-size: 1em;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.perfume-rating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.star {
+    color: #ddd;
+    font-size: 18px;
+    transition: all 0.2s ease;
+}
+
+.star.filled {
+    color: #ffd700;
+    text-shadow: 0 1px 3px rgba(255, 215, 0, 0.3);
+    animation: twinkle 2s ease-in-out infinite;
+}
+
+.star.half {
+    background: linear-gradient(90deg, #ffd700 50%, #ddd 50%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+@keyframes twinkle {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.rating-number {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: 600;
+    margin-left: 5px;
+}
+
+/* ========================================
+   AWARDS SECTION - НОВИ СТИЛОВЕ
+   ======================================== */
+
+.awards-list {
+    display: grid;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.award-item {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #ffeaa7;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.award-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #f39c12, #e67e22);
+}
+
+.award-item:hover {
+    background: linear-gradient(135deg, #fff8dc, #ffeaa7);
+    transform: translateX(10px);
+    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
+}
+
+.award-item .dashicons {
+    color: #f39c12;
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.award-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 1.05em;
+    line-height: 1.4;
+}
+
+/* ========================================
+   NO CONTENT STATES - НОВИ СТИЛОВЕ
+   ======================================== */
+
+.no-perfumes,
+.no-perfumers {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 15px;
+    border: 2px dashed #dee2e6;
+    margin: 30px 0;
+}
+
+.no-perfumes::before,
+.no-perfumers::before {
+    content: '🔍';
+    font-size: 3em;
+    display: block;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+/* ========================================
+   ARCHIVE STYLES - ПАРФЮМЕРИСТИ АРХИВ
+   ======================================== */
+
+.perfumers-archive-page .container {
+    padding: 40px;
+}
+
+.archive-header {
+    text-align: center;
+    margin-bottom: 50px;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 15px;
+    position: relative;
+    overflow: hidden;
+}
+
+.archive-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    animation: float 8s ease-in-out infinite;
+}
+
+.archive-title {
+    font-size: 3em;
+    margin: 0 0 20px 0;
+    font-weight: 800;
+    text-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.archive-description {
+    font-size: 1.2em;
+    opacity: 0.95;
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+.perfumers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 30px;
+    margin-top: 40px;
+}
+
+.perfumer-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    transition: all 0.4s ease;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+    position: relative;
+}
+
+.perfumer-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.perfumer-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 25px 50px rgba(102, 126, 234, 0.15);
+}
+
+.perfumer-card:hover::before {
+    transform: scaleX(1);
+}
+
+.perfumer-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    height: 100%;
+}
+
+.perfumer-card-image {
+    padding: 30px;
+    text-align: center;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+.perfumer-card-image img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid white;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.perfumer-card:hover .perfumer-card-image img {
+    transform: scale(1.1);
+}
+
+.perfumer-card-image .perfumer-avatar {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto;
+    background: rgba(102, 126, 234, 0.1);
+    border: 4px solid white;
+}
+
+.perfumer-card-info {
+    padding: 25px;
+    text-align: center;
+}
+
+.perfumer-card-name {
+    font-size: 1.4em;
+    margin: 0 0 10px 0;
+    color: #333;
+    font-weight: 700;
+    transition: color 0.3s ease;
+}
+
+.perfumer-card:hover .perfumer-card-name {
+    color: #667eea;
+}
+
+.perfumer-card-count {
+    color: #764ba2;
+    font-weight: 600;
+    margin-bottom: 15px;
+    font-size: 0.95em;
+}
+
+.perfumer-card-description {
+    color: #666;
+    line-height: 1.5;
+    font-size: 0.95em;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN - ПОДОБРЕНИ МЕДИЯ ЗАЯВКИ
+   ======================================== */
+
+@media (max-width: 768px) {
+    .single-perfumer-page {
+        padding: 10px;
+    }
+    
+    .single-perfumer-page .container {
+        margin-bottom: 15px;
+    }
+    
+    .perfumer-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 25px;
+        padding: 30px 20px;
+    }
+    
+    .perfumer-name {
+        font-size: 2.2em;
+    }
+    
+    .perfumer-stats {
+        justify-content: center;
+        gap: 15px;
+    }
+    
+    .stat-item {
+        min-width: 100px;
+        padding: 15px;
+    }
+    
+    .perfumer-content > div {
+        padding: 25px 20px;
+    }
+    
+    .perfumer-content h2 {
+        font-size: 2em;
+    }
+    
+    .biography-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .perfumes-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+    }
+    
+    .perfumers-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+    }
+    
+    .archive-title {
+        font-size: 2.2em;
+    }
+    
+    .archive-description {
+        font-size: 1.1em;
+    }
+}
+
+@media (max-width: 480px) {
+    .perfumer-image img,
+    .perfumer-avatar {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .perfumer-name {
+        font-size: 1.8em;
+    }
+    
+    .perfumer-stats {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .stat-item {
+        margin: 0 auto;
+        max-width: 200px;
+    }
+    
+    .perfumes-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .perfumers-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .meta-item {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .meta-label {
+        min-width: auto;
+        font-weight: 700;
+    }
+    
+    .perfumer-links {
+        justify-content: center;
+    }
+}
+
+/* ========================================
+   LOADING ANIMATIONS - АНИМАЦИИ ЗА ЗАРЕЖДАНЕ
+   ======================================== */
+
+.perfumer-content.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.perfumer-content.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 10;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ========================================
+   PRINT STYLES - СТИЛОВЕ ЗА ПЕЧАТ
+   ======================================== */
+
+@media print {
+    .single-perfumer-page {
+        background: white;
+        box-shadow: none;
+        max-width: none;
+    }
+    
+    .perfumer-header {
+        background: #f8f9fa !important;
+        color: #333 !important;
+        box-shadow: none;
+    }
+    
+    .perfumer-tabs,
+    .perfumer-links {
+        display: none;
+    }
+    
+    .tab-content {
+        display: block !important;
+        page-break-inside: avoid;
+    }
+    
+    .perfume-card {
+        break-inside: avoid;
+    }
+}
+
+/* ========================================
+   ACCESSIBILITY IMPROVEMENTS - ПОДОБРЕНИЯ ЗА ДОСТЪПНОСТ
+   ======================================== */
+
+.tab-link:focus,
+.perfumer-website:focus,
+.perfumer-social:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+.perfume-card:focus-within {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .perfumer-header::before,
+    .perfumer-header::after,
+    .tab-link::before {
+        animation: none;
+    }
+    
+    .perfume-card,
+    .perfumer-card,
+    .bio-section,
+    .famous-fragrance-item,
+    .award-item {
+        transition: none;
+    }
+}
+
+/* ========================================
+   DARK MODE SUPPORT - ПОДДРЪЖКА ЗА ТЪМЕН РЕЖИМ
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+    .single-perfumer-page {
+        background: #1a1a1a;
+    }
+    
+    .single-perfumer-page .container {
+        background: #2d2d2d;
+        color: #e0e0e0;
+    }
+    
+    .tab-content h2,
+    .perfume-title,
+    .perfumer-card-name,
+    .meta-value,
+    .fragrance-name,
+    .award-name {
+        color: #e0e0e0;
+    }
+    
+    .bio-section {
+        background: #3a3a3a;
+        border-color: #4a4a4a;
+    }
+    
+    .perfume-card,
+    .perfumer-card {
+        background: #3a3a3a;
+        border-color: #4a4a4a;
+    }
+    
+    .famous-fragrance-item {
+        background: linear-gradient(135deg, #3a3a3a, #2d2d2d);
+        border-color: #4a4a4a;
+    }
+}
