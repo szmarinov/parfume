@@ -152,6 +152,23 @@ add_action('admin_init', function() {
     }
 });
 
+// НОВА ДОБАВКА: Force flush при първо зареждане след промените
+add_action('init', function() {
+    // Проверяваме дали е била направена поправката на taxonomy files
+    $taxonomy_fix_applied = get_option('parfume_reviews_taxonomy_404_fix', false);
+    if (!$taxonomy_fix_applied) {
+        // Задействаме flush на rewrite rules
+        update_option('parfume_reviews_flush_rewrite_rules', true);
+        update_option('parfume_reviews_taxonomy_404_fix', true);
+        
+        // Flush-ваме веднага
+        add_action('wp_loaded', function() {
+            flush_rewrite_rules();
+            parfume_reviews_debug_log("Applied taxonomy 404 fix - flushed rewrite rules");
+        }, 999);
+    }
+}, 20);
+
 // Activation hook with error handling
 function parfume_reviews_activate() {
     try {
@@ -167,12 +184,12 @@ function parfume_reviews_activate() {
             $taxonomies = new Parfume_Reviews\Taxonomies();
         }
         
-        // Set default options
+        // Set default options including taxonomy fixes
         $defaults = array(
             'parfume_slug' => 'parfiumi',
             'brands_slug' => 'marki',
-            'notes_slug' => 'notes',
-            'perfumers_slug' => 'parfumers',
+            'notes_slug' => 'notki',  // ПОПРАВЕНО: правилният slug
+            'perfumers_slug' => 'parfumeri', // ПОПРАВЕНО: правилният slug
             'gender_slug' => 'gender',
             'aroma_type_slug' => 'aroma-type',
             'season_slug' => 'season',
@@ -205,10 +222,19 @@ function parfume_reviews_activate() {
         // Only add if it doesn't exist
         if (!get_option('parfume_reviews_settings')) {
             add_option('parfume_reviews_settings', $defaults);
+        } else {
+            // Update existing settings with correct slugs
+            $current_settings = get_option('parfume_reviews_settings', array());
+            $current_settings['notes_slug'] = 'notki';
+            $current_settings['perfumers_slug'] = 'parfumeri';
+            update_option('parfume_reviews_settings', $current_settings);
         }
         
         // Set version
         update_option('parfume_reviews_version', PARFUME_REVIEWS_VERSION);
+        
+        // Force the taxonomy fix flag
+        update_option('parfume_reviews_taxonomy_404_fix', false); // Reset to trigger fix on next load
         
         // Flush rewrite rules immediately during activation
         flush_rewrite_rules();
@@ -216,7 +242,7 @@ function parfume_reviews_activate() {
         // Also set flag for next page load as backup
         update_option('parfume_reviews_flush_rewrite_rules', true);
         
-        parfume_reviews_debug_log("Plugin activated successfully");
+        parfume_reviews_debug_log("Plugin activated successfully with taxonomy fixes");
         
     } catch (Exception $e) {
         parfume_reviews_debug_log("Error during activation: " . $e->getMessage());
@@ -230,6 +256,7 @@ function parfume_reviews_deactivate() {
         flush_rewrite_rules();
         delete_option('parfume_reviews_flush_rewrite_rules');
         delete_option('parfume_reviews_version');
+        delete_option('parfume_reviews_taxonomy_404_fix'); // НОВА ДОБАВКА: изчистваме fix флага
         parfume_reviews_debug_log("Plugin deactivated successfully");
     } catch (Exception $e) {
         parfume_reviews_debug_log("Error during deactivation: " . $e->getMessage());
@@ -356,8 +383,10 @@ function parfume_reviews_debug_urls() {
         
         echo '<li><strong>Примерни URL-и:</strong></li>';
         echo '<li>└── Архив: <a href="' . home_url('/' . $parfume_slug . '/') . '" target="_blank">' . home_url('/' . $parfume_slug . '/') . '</a></li>';
-        echo '<li>└── Марки: <a href="' . home_url('/marki/') . '" target="_blank">' . home_url('/marki/') . '</a></li>';
-        echo '<li>└── Ноти: <a href="' . home_url('/notes/') . '" target="_blank">' . home_url('/notes/') . '</a></li>';
+        echo '<li>└── Марки: <a href="' . home_url('/' . $parfume_slug . '/marki/') . '" target="_blank">' . home_url('/' . $parfume_slug . '/marki/') . '</a></li>';
+        echo '<li>└── Ноти: <a href="' . home_url('/' . $parfume_slug . '/notki/') . '" target="_blank">' . home_url('/' . $parfume_slug . '/notki/') . '</a></li>';
+        echo '<li>└── Парфюмеристи: <a href="' . home_url('/' . $parfume_slug . '/parfumeri/') . '" target="_blank">' . home_url('/' . $parfume_slug . '/parfumeri/') . '</a></li>';
+        echo '<li>└── Сезони: <a href="' . home_url('/' . $parfume_slug . '/season/') . '" target="_blank">' . home_url('/' . $parfume_slug . '/season/') . '</a></li>';
         
         echo '</ul></div>';
     }
@@ -369,6 +398,7 @@ add_action('admin_notices', 'parfume_reviews_debug_urls');
 add_action('admin_notices', function() {
     if (current_user_can('manage_options') && isset($_GET['flush_parfume_rules'])) {
         flush_rewrite_rules();
+        update_option('parfume_reviews_flush_rewrite_rules', true);
         echo '<div class="notice notice-success"><p><strong>Parfume Reviews:</strong> Rewrite rules са изчистени и обновени!</p></div>';
     }
     
