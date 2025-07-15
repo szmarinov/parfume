@@ -6,6 +6,7 @@ namespace Parfume_Reviews;
  * Зарежда всички settings компоненти от отделни файлове
  * 
  * Файл: includes/class-settings.php
+ * FIXED VERSION: Поправени табове и JavaScript селектори
  */
 class Settings {
     
@@ -61,30 +62,32 @@ class Settings {
                     $property_name = strtolower(str_replace('Settings_', '', $class_name)) . '_settings';
                     $this->$property_name = new $full_class_name();
                     
-                    // Debug лог
-                    if (function_exists('parfume_reviews_debug_log') && defined('WP_DEBUG') && WP_DEBUG) {
-                        parfume_reviews_debug_log("Settings component loaded: {$class_name}");
+                    // Debug logging ако е включен
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log("Parfume Reviews: Loaded settings component: {$class_name}");
                     }
                 } else {
-                    if (function_exists('parfume_reviews_debug_log') && defined('WP_DEBUG') && WP_DEBUG) {
-                        parfume_reviews_debug_log("Settings component class not found: {$full_class_name}", 'error');
+                    // Debug logging за липсващи класове
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log("Parfume Reviews: Settings component class not found: {$full_class_name}");
                     }
                 }
             } else {
-                if (function_exists('parfume_reviews_debug_log') && defined('WP_DEBUG') && WP_DEBUG) {
-                    parfume_reviews_debug_log("Missing settings component file: {$file}", 'error');
+                // Debug logging за липсващи файлове
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Parfume Reviews: Settings component file not found: {$file_path}");
                 }
             }
         }
     }
     
     /**
-     * Добавя админ менюто
+     * Добавя admin менюто
      */
     public function add_admin_menu() {
         add_submenu_page(
             'edit.php?post_type=parfume',
-            __('Parfume Reviews Settings', 'parfume-reviews'),
+            __('Parfume Reviews настройки', 'parfume-reviews'),
             __('Настройки', 'parfume-reviews'),
             'manage_options',
             'parfume-reviews-settings',
@@ -93,17 +96,30 @@ class Settings {
     }
     
     /**
-     * Зарежда admin скриптове и стилове
+     * Enqueue admin scripts и styles
      */
     public function enqueue_admin_scripts($hook) {
+        // Зареждаме само на нашата settings страница
         if ($hook !== 'parfume_page_parfume-reviews-settings') {
             return;
         }
         
-        wp_enqueue_style('parfume-admin-settings', PARFUME_REVIEWS_PLUGIN_URL . 
-            'assets/css/admin-settings.css', array(), PARFUME_REVIEWS_VERSION);
-        wp_enqueue_script('parfume-settings-tabs', PARFUME_REVIEWS_PLUGIN_URL . 
-            'assets/js/admin-settings.js', array('jquery'), PARFUME_REVIEWS_VERSION, true);
+        // Enqueue CSS
+        wp_enqueue_style(
+            'parfume-admin-settings',
+            PARFUME_REVIEWS_PLUGIN_URL . 'assets/css/admin-settings.css',
+            array(),
+            PARFUME_REVIEWS_VERSION
+        );
+        
+        // Enqueue JavaScript - FIXED: Правилният file
+        wp_enqueue_script(
+            'parfume-settings-tabs',
+            PARFUME_REVIEWS_PLUGIN_URL . 'assets/js/admin-settings.js',
+            array('jquery'),
+            PARFUME_REVIEWS_VERSION,
+            true
+        );
         
         // Enqueue media uploader за store логота
         wp_enqueue_media();
@@ -160,6 +176,7 @@ class Settings {
     
     /**
      * Рендерира главната settings страница
+     * FIXED: Правилна HTML структура за табовете
      */
     public function render_settings_page() {
         if (isset($_GET['settings-updated'])) {
@@ -174,8 +191,8 @@ class Settings {
         <div class="wrap parfume-settings">
             <h1><?php _e('Parfume Reviews настройки', 'parfume-reviews'); ?></h1>
             
-            <!-- Tab navigation -->
-            <h2 class="nav-tab-wrapper">
+            <!-- Tab navigation - FIXED: Правилните CSS класове -->
+            <div class="nav-tab-wrapper parfume-settings-tabs">
                 <a href="#general" class="nav-tab nav-tab-active"><?php _e('Общи', 'parfume-reviews'); ?></a>
                 <a href="#url" class="nav-tab"><?php _e('URL настройки', 'parfume-reviews'); ?></a>
                 <a href="#homepage" class="nav-tab"><?php _e('Начална страница', 'parfume-reviews'); ?></a>
@@ -186,7 +203,7 @@ class Settings {
                 <a href="#import_export" class="nav-tab"><?php _e('Импорт/Експорт', 'parfume-reviews'); ?></a>
                 <a href="#shortcodes" class="nav-tab"><?php _e('Shortcodes', 'parfume-reviews'); ?></a>
                 <a href="#debug" class="nav-tab"><?php _e('Дебъг', 'parfume-reviews'); ?></a>
-            </h2>
+            </div>
             
             <form action="options.php" method="post">
                 <?php
@@ -195,12 +212,14 @@ class Settings {
                 ?>
                 
                 <!-- General Tab -->
-                <div id="general" class="tab-content">
+                <div id="general" class="tab-content tab-content-active">
                     <h2><?php _e('Общи настройки', 'parfume-reviews'); ?></h2>
                     <p><?php _e('Основни настройки на плъгина.', 'parfume-reviews'); ?></p>
                     <?php
                     if (isset($this->general_settings) && method_exists($this->general_settings, 'render_section')) {
                         $this->general_settings->render_section();
+                    } else {
+                        echo '<p class="notice notice-warning">' . __('General settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
                     }
                     ?>
                 </div>
@@ -212,6 +231,8 @@ class Settings {
                     <?php
                     if (isset($this->url_settings) && method_exists($this->url_settings, 'render_section')) {
                         $this->url_settings->render_section();
+                    } else {
+                        echo '<p class="notice notice-warning">' . __('URL settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
                     }
                     ?>
                 </div>
@@ -223,6 +244,8 @@ class Settings {
                     <?php
                     if (isset($this->homepage_settings) && method_exists($this->homepage_settings, 'render_section')) {
                         $this->homepage_settings->render_section();
+                    } else {
+                        echo '<p class="notice notice-warning">' . __('Homepage settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
                     }
                     ?>
                 </div>
@@ -234,6 +257,8 @@ class Settings {
                     <?php
                     if (isset($this->mobile_settings) && method_exists($this->mobile_settings, 'render_section')) {
                         $this->mobile_settings->render_section();
+                    } else {
+                        echo '<p class="notice notice-warning">' . __('Mobile settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
                     }
                     ?>
                 </div>
@@ -245,6 +270,8 @@ class Settings {
                     <?php
                     if (isset($this->stores_settings) && method_exists($this->stores_settings, 'render_section')) {
                         $this->stores_settings->render_section();
+                    } else {
+                        echo '<p class="notice notice-warning">' . __('Stores settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
                     }
                     ?>
                 </div>
@@ -256,6 +283,8 @@ class Settings {
                     <?php
                     if (isset($this->scraper_settings) && method_exists($this->scraper_settings, 'render_section')) {
                         $this->scraper_settings->render_section();
+                    } else {
+                        echo '<p class="notice notice-warning">' . __('Scraper settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
                     }
                     ?>
                 </div>
@@ -267,6 +296,8 @@ class Settings {
                     <?php
                     if (isset($this->price_settings) && method_exists($this->price_settings, 'render_section')) {
                         $this->price_settings->render_section();
+                    } else {
+                        echo '<p class="notice notice-warning">' . __('Price settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
                     }
                     ?>
                 </div>
@@ -278,6 +309,8 @@ class Settings {
                     <?php
                     if (isset($this->import_export_settings) && method_exists($this->import_export_settings, 'render_section')) {
                         $this->import_export_settings->render_section();
+                    } else {
+                        echo '<p class="notice notice-warning">' . __('Import/Export settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
                     }
                     ?>
                 </div>
@@ -289,6 +322,8 @@ class Settings {
                     <?php
                     if (isset($this->shortcodes_settings) && method_exists($this->shortcodes_settings, 'render_section')) {
                         $this->shortcodes_settings->render_section();
+                    } else {
+                        echo '<p class="notice notice-warning">' . __('Shortcodes settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
                     }
                     ?>
                 </div>
@@ -300,6 +335,8 @@ class Settings {
                     <?php
                     if (isset($this->debug_settings) && method_exists($this->debug_settings, 'render_section')) {
                         $this->debug_settings->render_section();
+                    } else {
+                        echo '<p class="notice notice-warning">' . __('Debug settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
                     }
                     ?>
                 </div>
@@ -307,6 +344,83 @@ class Settings {
                 <?php submit_button(); ?>
             </form>
         </div>
+        
+        <!-- INLINE CSS FIXES - Поправя визуалните проблеми -->
+        <style>
+        .parfume-settings-tabs {
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 0;
+        }
+        
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e1e5e9;
+            border-top: none;
+        }
+        
+        .tab-content.tab-content-active {
+            display: block;
+        }
+        
+        .url-structure-info li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-family: monospace;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border-left: 3px solid #0073aa;
+        }
+        
+        .view-archive-btn {
+            margin-left: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        
+        .notice {
+            margin: 15px 0;
+            padding: 12px;
+            border-left: 4px solid #ffba00;
+            background: #fff8e5;
+        }
+        </style>
+        
+        <!-- INLINE JAVASCRIPT BACKUP - В случай че външният файл не се зарежда -->
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            // Backup tab functionality ако външният JS не работи
+            if (typeof window.initTabs === 'undefined') {
+                $('.parfume-settings-tabs .nav-tab').on('click', function(e) {
+                    e.preventDefault();
+                    
+                    var $clickedTab = $(this);
+                    var targetTabId = $clickedTab.attr('href').replace('#', '');
+                    
+                    // Update active tab
+                    $('.parfume-settings-tabs .nav-tab').removeClass('nav-tab-active');
+                    $clickedTab.addClass('nav-tab-active');
+                    
+                    // Show/hide content
+                    $('.tab-content').removeClass('tab-content-active').hide();
+                    $('#' + targetTabId).addClass('tab-content-active').show();
+                });
+                
+                // Initialize first tab
+                $('.parfume-settings-tabs .nav-tab').first().trigger('click');
+            }
+        });
+        </script>
         <?php
     }
     
@@ -324,5 +438,27 @@ class Settings {
     public function has_component($component_name) {
         $property_name = $component_name . '_settings';
         return isset($this->$property_name);
+    }
+    
+    /**
+     * Debug метод - показва кои компоненти са заредени
+     */
+    public function debug_loaded_components() {
+        if (!current_user_can('manage_options') || !defined('WP_DEBUG') || !WP_DEBUG) {
+            return;
+        }
+        
+        $components = array(
+            'general_settings', 'url_settings', 'homepage_settings', 'mobile_settings',
+            'stores_settings', 'scraper_settings', 'price_settings', 'import_export_settings',
+            'shortcodes_settings', 'debug_settings'
+        );
+        
+        echo '<div class="notice notice-info" style="margin: 20px 0;"><h4>Debug: Заредени компоненти</h4><ul>';
+        foreach ($components as $component) {
+            $loaded = isset($this->$component) ? '✅' : '❌';
+            echo '<li>' . $loaded . ' ' . $component . '</li>';
+        }
+        echo '</ul></div>';
     }
 }
