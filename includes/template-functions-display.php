@@ -517,3 +517,636 @@ function parfume_reviews_update_available_template_functions() {
         )
     );
 }
+
+// ================ HOMEPAGE DISPLAY FUNCTIONS ================
+// ДОБАВЯНЕ КЪМ КРАЯ НА СЪЩЕСТВУВАЩИЯ template-functions-display.php
+
+/**
+ * НОВА ФУНКЦИЯ: Показва секцията "Най-добрите мъжки парфюми"
+ */
+function parfume_reviews_display_men_perfumes_section() {
+    $settings = get_option('parfume_reviews_settings', array());
+    $men_perfumes = isset($settings['homepage_men_perfumes']) ? $settings['homepage_men_perfumes'] : array();
+    
+    if (empty($men_perfumes)) {
+        return;
+    }
+    
+    ?>
+    <section class="homepage-section men-perfumes-section">
+        <div class="container">
+            <h2 class="section-title"><?php _e('Най-добрите мъжки парфюми', 'parfume-reviews'); ?></h2>
+            
+            <div class="perfumes-grid perfumes-grid-5">
+                <?php foreach ($men_perfumes as $perfume_id): ?>
+                    <?php if (get_post_status($perfume_id) === 'publish'): ?>
+                        <?php parfume_reviews_display_parfume_card($perfume_id); ?>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    
+    <style>
+    .men-perfumes-section .perfumes-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 20px;
+        margin-top: 30px;
+    }
+    
+    @media (max-width: 1200px) {
+        .men-perfumes-section .perfumes-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .men-perfumes-section .perfumes-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .men-perfumes-section .perfumes-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    </style>
+    <?php
+}
+
+/**
+ * НОВА ФУНКЦИЯ: Показва секцията "Най-търсените дамски парфюми"
+ */
+function parfume_reviews_display_women_perfumes_section() {
+    $settings = get_option('parfume_reviews_settings', array());
+    $women_perfumes = isset($settings['homepage_women_perfumes']) ? $settings['homepage_women_perfumes'] : array();
+    
+    if (empty($women_perfumes)) {
+        return;
+    }
+    
+    ?>
+    <section class="homepage-section women-perfumes-section">
+        <div class="container">
+            <h2 class="section-title"><?php _e('Най-търсените дамски парфюми', 'parfume-reviews'); ?></h2>
+            
+            <div class="perfumes-grid perfumes-grid-5">
+                <?php foreach ($women_perfumes as $perfume_id): ?>
+                    <?php if (get_post_status($perfume_id) === 'publish'): ?>
+                        <?php parfume_reviews_display_parfume_card($perfume_id); ?>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    
+    <style>
+    .women-perfumes-section .perfumes-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 20px;
+        margin-top: 30px;
+    }
+    
+    @media (max-width: 1200px) {
+        .women-perfumes-section .perfumes-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .women-perfumes-section .perfumes-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .women-perfumes-section .perfumes-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    </style>
+    <?php
+}
+
+/**
+ * НОВА ФУНКЦИЯ: Показва секцията "Известни марки парфюми"
+ */
+function parfume_reviews_display_featured_brands_section() {
+    $settings = get_option('parfume_reviews_settings', array());
+    $featured_brands = isset($settings['homepage_featured_brands']) ? $settings['homepage_featured_brands'] : array();
+    
+    if (empty($featured_brands)) {
+        return;
+    }
+    
+    // Получаваме парфюми от избраните марки
+    $brand_perfumes = array();
+    foreach ($featured_brands as $brand_id) {
+        $perfumes = get_posts(array(
+            'post_type' => 'parfume',
+            'posts_per_page' => 1,
+            'post_status' => 'publish',
+            'tax_query' => array(
+                array(
+                    'taxonomy' => 'marki',
+                    'field' => 'term_id',
+                    'terms' => $brand_id
+                )
+            ),
+            'meta_key' => '_parfume_rating',
+            'orderby' => 'meta_value_num',
+            'order' => 'DESC'
+        ));
+        
+        if (!empty($perfumes)) {
+            $brand_perfumes[] = $perfumes[0]->ID;
+        }
+    }
+    
+    if (empty($brand_perfumes)) {
+        return;
+    }
+    
+    ?>
+    <section class="homepage-section featured-brands-section">
+        <div class="container">
+            <h2 class="section-title"><?php _e('Известни марки парфюми', 'parfume-reviews'); ?></h2>
+            
+            <div class="perfumes-grid perfumes-grid-5">
+                <?php foreach ($brand_perfumes as $perfume_id): ?>
+                    <?php parfume_reviews_display_parfume_card($perfume_id); ?>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    
+    <style>
+    .featured-brands-section .perfumes-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 20px;
+        margin-top: 30px;
+    }
+    
+    @media (max-width: 1200px) {
+        .featured-brands-section .perfumes-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .featured-brands-section .perfumes-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .featured-brands-section .perfumes-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    </style>
+    <?php
+}
+
+/**
+ * НОВА ФУНКЦИЯ: Показва секцията "Арабски парфюми"
+ */
+function parfume_reviews_display_arabic_perfumes_section() {
+    $settings = get_option('parfume_reviews_settings', array());
+    $arabic_perfumes = isset($settings['homepage_arabic_perfumes']) ? $settings['homepage_arabic_perfumes'] : array();
+    
+    if (empty($arabic_perfumes)) {
+        return;
+    }
+    
+    ?>
+    <section class="homepage-section arabic-perfumes-section">
+        <div class="container">
+            <h2 class="section-title"><?php _e('Арабски парфюми', 'parfume-reviews'); ?></h2>
+            
+            <div class="perfumes-grid perfumes-grid-5">
+                <?php foreach ($arabic_perfumes as $perfume_id): ?>
+                    <?php if (get_post_status($perfume_id) === 'publish'): ?>
+                        <?php parfume_reviews_display_parfume_card($perfume_id); ?>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    
+    <style>
+    .arabic-perfumes-section .perfumes-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 20px;
+        margin-top: 30px;
+    }
+    
+    @media (max-width: 1200px) {
+        .arabic-perfumes-section .perfumes-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .arabic-perfumes-section .perfumes-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .arabic-perfumes-section .perfumes-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    </style>
+    <?php
+}
+
+/**
+ * НОВА ФУНКЦИЯ: Показва секцията "Последно добавени" (10 парфюма на 2 реда)
+ */
+function parfume_reviews_display_latest_perfumes_section() {
+    $settings = get_option('parfume_reviews_settings', array());
+    $latest_count = isset($settings['homepage_latest_count']) ? $settings['homepage_latest_count'] : 8;
+    
+    // Показваме 10 вместо настройката за тази специфична секция
+    $latest_perfumes = get_posts(array(
+        'post_type' => 'parfume',
+        'posts_per_page' => 10,
+        'post_status' => 'publish',
+        'orderby' => 'date',
+        'order' => 'DESC'
+    ));
+    
+    if (empty($latest_perfumes)) {
+        return;
+    }
+    
+    ?>
+    <section class="homepage-section latest-perfumes-section">
+        <div class="container">
+            <h2 class="section-title"><?php _e('Последно добавени', 'parfume-reviews'); ?></h2>
+            
+            <div class="perfumes-grid perfumes-grid-5">
+                <?php foreach ($latest_perfumes as $perfume): ?>
+                    <?php parfume_reviews_display_parfume_card($perfume->ID); ?>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    
+    <style>
+    .latest-perfumes-section .perfumes-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 20px;
+        margin-top: 30px;
+    }
+    
+    @media (max-width: 1200px) {
+        .latest-perfumes-section .perfumes-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .latest-perfumes-section .perfumes-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .latest-perfumes-section .perfumes-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    </style>
+    <?php
+}
+
+/**
+ * НОВА ФУНКЦИЯ: Показва секцията "Последни от блога"
+ */
+function parfume_reviews_display_blog_section() {
+    $settings = get_option('parfume_reviews_settings', array());
+    $blog_count = isset($settings['homepage_blog_count']) ? $settings['homepage_blog_count'] : 3;
+    
+    $blog_posts = get_posts(array(
+        'post_type' => 'parfume_blog',
+        'posts_per_page' => $blog_count,
+        'post_status' => 'publish',
+        'orderby' => 'date',
+        'order' => 'DESC'
+    ));
+    
+    if (empty($blog_posts)) {
+        return;
+    }
+    
+    ?>
+    <section class="homepage-section blog-section">
+        <div class="container">
+            <h2 class="section-title"><?php _e('Последни от блога', 'parfume-reviews'); ?></h2>
+            
+            <div class="blog-grid blog-grid-3">
+                <?php foreach ($blog_posts as $post): ?>
+                    <article class="blog-card">
+                        <div class="blog-card-image">
+                            <?php if (has_post_thumbnail($post->ID)): ?>
+                                <a href="<?php echo get_permalink($post->ID); ?>">
+                                    <?php echo get_the_post_thumbnail($post->ID, 'medium'); ?>
+                                </a>
+                            <?php else: ?>
+                                <div class="blog-card-placeholder">
+                                    <span class="dashicons dashicons-format-aside"></span>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="blog-card-content">
+                            <h3 class="blog-card-title">
+                                <a href="<?php echo get_permalink($post->ID); ?>">
+                                    <?php echo esc_html($post->post_title); ?>
+                                </a>
+                            </h3>
+                            
+                            <div class="blog-card-meta">
+                                <span class="blog-date">
+                                    <?php echo get_the_date('j F Y', $post->ID); ?>
+                                </span>
+                            </div>
+                            
+                            <div class="blog-card-excerpt">
+                                <?php 
+                                $excerpt = has_excerpt($post->ID) ? get_the_excerpt($post->ID) : wp_trim_words($post->post_content, 20);
+                                echo esc_html($excerpt);
+                                ?>
+                            </div>
+                            
+                            <a href="<?php echo get_permalink($post->ID); ?>" class="read-more-btn">
+                                <?php _e('Прочети повече', 'parfume-reviews'); ?>
+                            </a>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+            
+            <div class="section-footer">
+                <a href="<?php echo get_post_type_archive_link('parfume_blog'); ?>" class="view-all-btn">
+                    <?php _e('Виж всички статии', 'parfume-reviews'); ?>
+                </a>
+            </div>
+        </div>
+    </section>
+    
+    <style>
+    .blog-section .blog-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 30px;
+        margin-top: 30px;
+    }
+    
+    .blog-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .blog-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .blog-card-image {
+        height: 200px;
+        overflow: hidden;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .blog-card-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .blog-card-placeholder {
+        font-size: 48px;
+        color: #dee2e6;
+    }
+    
+    .blog-card-content {
+        padding: 20px;
+    }
+    
+    .blog-card-title {
+        margin: 0 0 10px;
+        font-size: 1.2em;
+        line-height: 1.4;
+    }
+    
+    .blog-card-title a {
+        color: #333;
+        text-decoration: none;
+    }
+    
+    .blog-card-title a:hover {
+        color: #0073aa;
+    }
+    
+    .blog-card-meta {
+        margin-bottom: 15px;
+        color: #666;
+        font-size: 0.9em;
+    }
+    
+    .blog-card-excerpt {
+        margin-bottom: 15px;
+        color: #555;
+        line-height: 1.5;
+    }
+    
+    .read-more-btn {
+        display: inline-block;
+        background: #0073aa;
+        color: white !important;
+        padding: 8px 16px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.9em;
+        transition: background 0.3s ease;
+    }
+    
+    .read-more-btn:hover {
+        background: #005a87;
+    }
+    
+    .section-footer {
+        text-align: center;
+        margin-top: 40px;
+    }
+    
+    .view-all-btn {
+        display: inline-block;
+        background: transparent;
+        color: #0073aa;
+        border: 2px solid #0073aa;
+        padding: 12px 24px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+    
+    .view-all-btn:hover {
+        background: #0073aa;
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .blog-section .blog-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        
+        .blog-card-image {
+            height: 150px;
+        }
+    }
+    </style>
+    <?php
+}
+
+/**
+ * НОВА ФУНКЦИЯ: Показва секцията с описание
+ */
+function parfume_reviews_display_description_section() {
+    $settings = get_option('parfume_reviews_settings', array());
+    $description = isset($settings['homepage_description']) ? $settings['homepage_description'] : '';
+    
+    if (empty($description)) {
+        return;
+    }
+    
+    ?>
+    <section class="homepage-section description-section">
+        <div class="container">
+            <div class="description-content">
+                <?php echo wp_kses_post($description); ?>
+            </div>
+        </div>
+    </section>
+    
+    <style>
+    .description-section {
+        background: #f8f9fa;
+        padding: 60px 0;
+    }
+    
+    .description-content {
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
+        font-size: 1.1em;
+        line-height: 1.7;
+        color: #555;
+    }
+    
+    .description-content h1,
+    .description-content h2,
+    .description-content h3 {
+        color: #333;
+        margin-bottom: 20px;
+    }
+    
+    .description-content p {
+        margin-bottom: 20px;
+    }
+    
+    @media (max-width: 768px) {
+        .description-section {
+            padding: 40px 0;
+        }
+        
+        .description-content {
+            padding: 0 20px;
+            font-size: 1em;
+        }
+    }
+    </style>
+    <?php
+}
+
+/**
+ * НОВА ФУНКЦИЯ: Показва всички homepage секции наведнъж
+ */
+function parfume_reviews_display_homepage_sections() {
+    ?>
+    <div class="parfume-homepage">
+        <?php parfume_reviews_display_men_perfumes_section(); ?>
+        <?php parfume_reviews_display_women_perfumes_section(); ?>
+        <?php parfume_reviews_display_featured_brands_section(); ?>
+        <?php parfume_reviews_display_arabic_perfumes_section(); ?>
+        <?php parfume_reviews_display_latest_perfumes_section(); ?>
+        <?php parfume_reviews_display_blog_section(); ?>
+        <?php parfume_reviews_display_description_section(); ?>
+    </div>
+    
+    <style>
+    .parfume-homepage {
+        width: 100%;
+    }
+    
+    .homepage-section {
+        padding: 60px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .homepage-section:last-child {
+        border-bottom: none;
+    }
+    
+    .homepage-section .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+    
+    .section-title {
+        text-align: center;
+        font-size: 2.5em;
+        margin-bottom: 20px;
+        color: #333;
+        font-weight: 300;
+    }
+    
+    @media (max-width: 768px) {
+        .homepage-section {
+            padding: 40px 0;
+        }
+        
+        .section-title {
+            font-size: 2em;
+        }
+    }
+    </style>
+    <?php
+}
+
+// ================ END HOMEPAGE DISPLAY FUNCTIONS ================

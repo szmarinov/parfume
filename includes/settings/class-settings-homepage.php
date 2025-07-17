@@ -5,7 +5,7 @@ namespace Parfume_Reviews\Settings;
  * Settings_Homepage class - Управлява настройките за начална страница
  * 
  * Файл: includes/settings/class-settings-homepage.php
- * Извлечен от оригинален class-settings.php
+ * РАЗШИРЕНА ВЕРСИЯ: Добавени настройки за всички homepage секции
  */
 class Settings_Homepage {
     
@@ -59,11 +59,13 @@ class Settings_Homepage {
     
     /**
      * Рендерира секцията с homepage настройки
+     * РАЗШИРЕНА ВЕРСИЯ: Добавени всички нови секции
      */
     public function render_section() {
         ?>
         <table class="form-table" role="presentation">
             <tbody>
+                <!-- Hero Section -->
                 <tr>
                     <th scope="row">
                         <label for="homepage_hero_enabled"><?php _e('Покажи hero секция', 'parfume-reviews'); ?></label>
@@ -72,6 +74,8 @@ class Settings_Homepage {
                         <?php $this->homepage_hero_enabled_callback(); ?>
                     </td>
                 </tr>
+                
+                <!-- Featured Perfumes -->
                 <tr>
                     <th scope="row">
                         <label for="homepage_featured_enabled"><?php _e('Покажи препоръчани парфюми', 'parfume-reviews'); ?></label>
@@ -80,6 +84,48 @@ class Settings_Homepage {
                         <?php $this->homepage_featured_enabled_callback(); ?>
                     </td>
                 </tr>
+                
+                <!-- Men's Perfumes Section -->
+                <tr>
+                    <th scope="row">
+                        <label><?php _e('Най-добрите мъжки парфюми', 'parfume-reviews'); ?></label>
+                    </th>
+                    <td>
+                        <?php $this->men_perfumes_callback(); ?>
+                    </td>
+                </tr>
+                
+                <!-- Women's Perfumes Section -->
+                <tr>
+                    <th scope="row">
+                        <label><?php _e('Най-търсените дамски парфюми', 'parfume-reviews'); ?></label>
+                    </th>
+                    <td>
+                        <?php $this->women_perfumes_callback(); ?>
+                    </td>
+                </tr>
+                
+                <!-- Featured Brands Section -->
+                <tr>
+                    <th scope="row">
+                        <label><?php _e('Известни марки парфюми', 'parfume-reviews'); ?></label>
+                    </th>
+                    <td>
+                        <?php $this->featured_brands_callback(); ?>
+                    </td>
+                </tr>
+                
+                <!-- Arabic Perfumes Section -->
+                <tr>
+                    <th scope="row">
+                        <label><?php _e('Арабски парфюми', 'parfume-reviews'); ?></label>
+                    </th>
+                    <td>
+                        <?php $this->arabic_perfumes_callback(); ?>
+                    </td>
+                </tr>
+                
+                <!-- Latest Count -->
                 <tr>
                     <th scope="row">
                         <label for="homepage_latest_count"><?php _e('Брой последни парфюми', 'parfume-reviews'); ?></label>
@@ -88,8 +134,104 @@ class Settings_Homepage {
                         <?php $this->homepage_latest_count_callback(); ?>
                     </td>
                 </tr>
+                
+                <!-- Blog Section -->
+                <tr>
+                    <th scope="row">
+                        <label for="homepage_blog_count"><?php _e('Брой статии от блога', 'parfume-reviews'); ?></label>
+                    </th>
+                    <td>
+                        <?php $this->homepage_blog_count_callback(); ?>
+                    </td>
+                </tr>
+                
+                <!-- Description Section -->
+                <tr>
+                    <th scope="row">
+                        <label for="homepage_description"><?php _e('Описание за началната страница', 'parfume-reviews'); ?></label>
+                    </th>
+                    <td>
+                        <?php $this->homepage_description_callback(); ?>
+                    </td>
+                </tr>
             </tbody>
         </table>
+        
+        <style>
+        .perfume-selector {
+            max-width: 500px;
+        }
+        .perfume-selector select {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .selected-perfumes {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .selected-perfume-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .selected-perfume-item:last-child {
+            border-bottom: none;
+        }
+        .remove-perfume {
+            color: #a00;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .remove-perfume:hover {
+            color: #f00;
+        }
+        </style>
+        
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            // Initialize perfume selectors
+            $('.perfume-selector').each(function() {
+                initPerfumeSelector($(this));
+            });
+            
+            function initPerfumeSelector($container) {
+                var $select = $container.find('select');
+                var $selectedList = $container.find('.selected-perfumes');
+                var fieldName = $select.data('field');
+                
+                $select.on('change', function() {
+                    var selectedId = $(this).val();
+                    var selectedText = $(this).find('option:selected').text();
+                    
+                    if (selectedId && !$selectedList.find('[data-id="' + selectedId + '"]').length) {
+                        addSelectedPerfume(selectedId, selectedText, fieldName, $selectedList);
+                        $(this).val(''); // Reset select
+                    }
+                });
+                
+                $(document).on('click', '.remove-perfume', function(e) {
+                    e.preventDefault();
+                    $(this).closest('.selected-perfume-item').remove();
+                });
+            }
+            
+            function addSelectedPerfume(id, name, fieldName, $container) {
+                var html = '<div class="selected-perfume-item" data-id="' + id + '">';
+                html += '<span>' + name + '</span>';
+                html += '<input type="hidden" name="parfume_reviews_settings[' + fieldName + '][]" value="' + id + '">';
+                html += '<a href="#" class="remove-perfume">✕</a>';
+                html += '</div>';
+                
+                $container.append(html);
+            }
+        });
+        </script>
         <?php
     }
     
@@ -128,6 +270,173 @@ class Settings_Homepage {
     }
     
     /**
+     * НОВА ФУНКЦИЯ: Callback за мъжки парфюми
+     */
+    public function men_perfumes_callback() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $selected_perfumes = isset($settings['homepage_men_perfumes']) ? $settings['homepage_men_perfumes'] : array();
+        
+        echo '<div class="perfume-selector">';
+        echo '<p class="description">' . __('Изберете до 5 мъжки парфюми за показване в секцията "Най-добрите мъжки парфюми".', 'parfume-reviews') . '</p>';
+        
+        // Dropdown за избор на парфюми
+        echo '<select data-field="homepage_men_perfumes">';
+        echo '<option value="">' . __('Изберете парфюм...', 'parfume-reviews') . '</option>';
+        
+        // Получаваме мъжките парфюми
+        $men_perfumes = $this->get_perfumes_by_gender('мъжки');
+        foreach ($men_perfumes as $perfume) {
+            echo '<option value="' . esc_attr($perfume->ID) . '">' . esc_html($perfume->post_title) . '</option>';
+        }
+        
+        echo '</select>';
+        
+        // Показваме избраните парфюми
+        echo '<div class="selected-perfumes">';
+        if (!empty($selected_perfumes)) {
+            foreach ($selected_perfumes as $perfume_id) {
+                $perfume = get_post($perfume_id);
+                if ($perfume) {
+                    echo '<div class="selected-perfume-item" data-id="' . esc_attr($perfume_id) . '">';
+                    echo '<span>' . esc_html($perfume->post_title) . '</span>';
+                    echo '<input type="hidden" name="parfume_reviews_settings[homepage_men_perfumes][]" value="' . esc_attr($perfume_id) . '">';
+                    echo '<a href="#" class="remove-perfume">✕</a>';
+                    echo '</div>';
+                }
+            }
+        }
+        echo '</div>';
+        echo '</div>';
+    }
+    
+    /**
+     * НОВА ФУНКЦИЯ: Callback за дамски парфюми
+     */
+    public function women_perfumes_callback() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $selected_perfumes = isset($settings['homepage_women_perfumes']) ? $settings['homepage_women_perfumes'] : array();
+        
+        echo '<div class="perfume-selector">';
+        echo '<p class="description">' . __('Изберете до 5 дамски парфюми за показване в секцията "Най-търсените дамски парфюми".', 'parfume-reviews') . '</p>';
+        
+        // Dropdown за избор на парфюми
+        echo '<select data-field="homepage_women_perfumes">';
+        echo '<option value="">' . __('Изберете парфюм...', 'parfume-reviews') . '</option>';
+        
+        // Получаваме дамските парфюми
+        $women_perfumes = $this->get_perfumes_by_gender('дамски');
+        foreach ($women_perfumes as $perfume) {
+            echo '<option value="' . esc_attr($perfume->ID) . '">' . esc_html($perfume->post_title) . '</option>';
+        }
+        
+        echo '</select>';
+        
+        // Показваме избраните парфюми
+        echo '<div class="selected-perfumes">';
+        if (!empty($selected_perfumes)) {
+            foreach ($selected_perfumes as $perfume_id) {
+                $perfume = get_post($perfume_id);
+                if ($perfume) {
+                    echo '<div class="selected-perfume-item" data-id="' . esc_attr($perfume_id) . '">';
+                    echo '<span>' . esc_html($perfume->post_title) . '</span>';
+                    echo '<input type="hidden" name="parfume_reviews_settings[homepage_women_perfumes][]" value="' . esc_attr($perfume_id) . '">';
+                    echo '<a href="#" class="remove-perfume">✕</a>';
+                    echo '</div>';
+                }
+            }
+        }
+        echo '</div>';
+        echo '</div>';
+    }
+    
+    /**
+     * НОВА ФУНКЦИЯ: Callback за марки
+     */
+    public function featured_brands_callback() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $selected_brands = isset($settings['homepage_featured_brands']) ? $settings['homepage_featured_brands'] : array();
+        
+        echo '<div class="perfume-selector">';
+        echo '<p class="description">' . __('Изберете до 5 марки за показване в секцията "Известни марки парфюми".', 'parfume-reviews') . '</p>';
+        
+        // Dropdown за избор на марки
+        echo '<select data-field="homepage_featured_brands">';
+        echo '<option value="">' . __('Изберете марка...', 'parfume-reviews') . '</option>';
+        
+        // Получаваме всички марки
+        $brands = get_terms(array(
+            'taxonomy' => 'marki',
+            'hide_empty' => false,
+            'orderby' => 'name'
+        ));
+        
+        if (!is_wp_error($brands)) {
+            foreach ($brands as $brand) {
+                echo '<option value="' . esc_attr($brand->term_id) . '">' . esc_html($brand->name) . '</option>';
+            }
+        }
+        
+        echo '</select>';
+        
+        // Показваме избраните марки
+        echo '<div class="selected-perfumes">';
+        if (!empty($selected_brands)) {
+            foreach ($selected_brands as $brand_id) {
+                $brand = get_term($brand_id, 'marki');
+                if ($brand && !is_wp_error($brand)) {
+                    echo '<div class="selected-perfume-item" data-id="' . esc_attr($brand_id) . '">';
+                    echo '<span>' . esc_html($brand->name) . '</span>';
+                    echo '<input type="hidden" name="parfume_reviews_settings[homepage_featured_brands][]" value="' . esc_attr($brand_id) . '">';
+                    echo '<a href="#" class="remove-perfume">✕</a>';
+                    echo '</div>';
+                }
+            }
+        }
+        echo '</div>';
+        echo '</div>';
+    }
+    
+    /**
+     * НОВА ФУНКЦИЯ: Callback за арабски парфюми
+     */
+    public function arabic_perfumes_callback() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $selected_perfumes = isset($settings['homepage_arabic_perfumes']) ? $settings['homepage_arabic_perfumes'] : array();
+        
+        echo '<div class="perfume-selector">';
+        echo '<p class="description">' . __('Изберете до 5 арабски парфюми за показване в секцията "Арабски парфюми".', 'parfume-reviews') . '</p>';
+        
+        // Dropdown за избор на парфюми
+        echo '<select data-field="homepage_arabic_perfumes">';
+        echo '<option value="">' . __('Изберете парфюм...', 'parfume-reviews') . '</option>';
+        
+        // Получаваме арабските парфюми
+        $arabic_perfumes = $this->get_arabic_perfumes();
+        foreach ($arabic_perfumes as $perfume) {
+            echo '<option value="' . esc_attr($perfume->ID) . '">' . esc_html($perfume->post_title) . '</option>';
+        }
+        
+        echo '</select>';
+        
+        // Показваме избраните парфюми
+        echo '<div class="selected-perfumes">';
+        if (!empty($selected_perfumes)) {
+            foreach ($selected_perfumes as $perfume_id) {
+                $perfume = get_post($perfume_id);
+                if ($perfume) {
+                    echo '<div class="selected-perfume-item" data-id="' . esc_attr($perfume_id) . '">';
+                    echo '<span>' . esc_html($perfume->post_title) . '</span>';
+                    echo '<input type="hidden" name="parfume_reviews_settings[homepage_arabic_perfumes][]" value="' . esc_attr($perfume_id) . '">';
+                    echo '<a href="#" class="remove-perfume">✕</a>';
+                    echo '</div>';
+                }
+            }
+        }
+        echo '</div>';
+        echo '</div>';
+    }
+    
+    /**
      * Callback за homepage_latest_count настройката
      */
     public function homepage_latest_count_callback() {
@@ -141,7 +450,104 @@ class Settings_Homepage {
                      min="1" 
                      max="20" 
                      class="small-text" />';
-        echo '<p class="description">' . __('Брой последни парфюми за показване на началната страница.', 'parfume-reviews') . '</p>';
+        echo '<p class="description">' . __('Брой последни парфюми за показване на началната страница в секцията "Последно добавени".', 'parfume-reviews') . '</p>';
+    }
+    
+    /**
+     * НОВА ФУНКЦИЯ: Callback за брой статии от блога
+     */
+    public function homepage_blog_count_callback() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $value = isset($settings['homepage_blog_count']) ? $settings['homepage_blog_count'] : 3;
+        
+        echo '<input type="number" 
+                     id="homepage_blog_count"
+                     name="parfume_reviews_settings[homepage_blog_count]" 
+                     value="' . esc_attr($value) . '" 
+                     min="1" 
+                     max="10" 
+                     class="small-text" />';
+        echo '<p class="description">' . __('Брой статии от блога за показване в секцията "Последни от блога".', 'parfume-reviews') . '</p>';
+    }
+    
+    /**
+     * НОВА ФУНКЦИЯ: Callback за описание
+     */
+    public function homepage_description_callback() {
+        $settings = get_option('parfume_reviews_settings', array());
+        $value = isset($settings['homepage_description']) ? $settings['homepage_description'] : '';
+        
+        echo '<textarea id="homepage_description" 
+                        name="parfume_reviews_settings[homepage_description]" 
+                        rows="5" 
+                        cols="50" 
+                        class="large-text">' . esc_textarea($value) . '</textarea>';
+        echo '<p class="description">' . __('Описание и текст за показване на началната страница. Може да съдържа HTML.', 'parfume-reviews') . '</p>';
+    }
+    
+    // ================ HELPER FUNCTIONS ================
+    
+    /**
+     * НОВА ФУНКЦИЯ: Получава парфюми по пол
+     */
+    private function get_perfumes_by_gender($gender) {
+        $args = array(
+            'post_type' => 'parfume',
+            'posts_per_page' => 100,
+            'post_status' => 'publish',
+            'tax_query' => array(
+                array(
+                    'taxonomy' => 'gender',
+                    'field' => 'name',
+                    'terms' => $gender
+                )
+            ),
+            'orderby' => 'title',
+            'order' => 'ASC'
+        );
+        
+        $query = new \WP_Query($args);
+        return $query->posts;
+    }
+    
+    /**
+     * НОВА ФУНКЦИЯ: Получава арабски парфюми
+     */
+    private function get_arabic_perfumes() {
+        // Търсим парфюми с арабски марки или които съдържат "араб" в заглавието
+        $arabic_brands = array('Ajmal', 'Al Haramain', 'Amouage', 'Creed', 'Tom Ford');
+        
+        $args = array(
+            'post_type' => 'parfume',
+            'posts_per_page' => 100,
+            'post_status' => 'publish',
+            'meta_query' => array(
+                'relation' => 'OR',
+                array(
+                    'key' => '_parfume_origin',
+                    'value' => 'arab',
+                    'compare' => 'LIKE'
+                )
+            ),
+            'orderby' => 'title',
+            'order' => 'ASC'
+        );
+        
+        // Ако не намерим специфично арабски, връщаме всички за сега
+        $query = new \WP_Query($args);
+        
+        if (empty($query->posts)) {
+            $args = array(
+                'post_type' => 'parfume',
+                'posts_per_page' => 50,
+                'post_status' => 'publish',
+                'orderby' => 'title',
+                'order' => 'ASC'
+            );
+            $query = new \WP_Query($args);
+        }
+        
+        return $query->posts;
     }
     
     /**
@@ -172,6 +578,57 @@ class Settings_Homepage {
             }
         }
         
+        // НОВА ВАЛИДАЦИЯ: Мъжки парфюми
+        if (isset($input['homepage_men_perfumes']) && is_array($input['homepage_men_perfumes'])) {
+            $men_perfumes = array_map('intval', $input['homepage_men_perfumes']);
+            $men_perfumes = array_slice($men_perfumes, 0, 5); // Max 5
+            $validated['homepage_men_perfumes'] = $men_perfumes;
+        } else {
+            $validated['homepage_men_perfumes'] = array();
+        }
+        
+        // НОВА ВАЛИДАЦИЯ: Дамски парфюми
+        if (isset($input['homepage_women_perfumes']) && is_array($input['homepage_women_perfumes'])) {
+            $women_perfumes = array_map('intval', $input['homepage_women_perfumes']);
+            $women_perfumes = array_slice($women_perfumes, 0, 5); // Max 5
+            $validated['homepage_women_perfumes'] = $women_perfumes;
+        } else {
+            $validated['homepage_women_perfumes'] = array();
+        }
+        
+        // НОВА ВАЛИДАЦИЯ: Марки
+        if (isset($input['homepage_featured_brands']) && is_array($input['homepage_featured_brands'])) {
+            $featured_brands = array_map('intval', $input['homepage_featured_brands']);
+            $featured_brands = array_slice($featured_brands, 0, 5); // Max 5
+            $validated['homepage_featured_brands'] = $featured_brands;
+        } else {
+            $validated['homepage_featured_brands'] = array();
+        }
+        
+        // НОВА ВАЛИДАЦИЯ: Арабски парфюми
+        if (isset($input['homepage_arabic_perfumes']) && is_array($input['homepage_arabic_perfumes'])) {
+            $arabic_perfumes = array_map('intval', $input['homepage_arabic_perfumes']);
+            $arabic_perfumes = array_slice($arabic_perfumes, 0, 5); // Max 5
+            $validated['homepage_arabic_perfumes'] = $arabic_perfumes;
+        } else {
+            $validated['homepage_arabic_perfumes'] = array();
+        }
+        
+        // НОВА ВАЛИДАЦИЯ: Брой статии от блога
+        if (isset($input['homepage_blog_count'])) {
+            $blog_count = intval($input['homepage_blog_count']);
+            if ($blog_count >= 1 && $blog_count <= 10) {
+                $validated['homepage_blog_count'] = $blog_count;
+            } else {
+                $validated['homepage_blog_count'] = 3; // default value
+            }
+        }
+        
+        // НОВА ВАЛИДАЦИЯ: Описание
+        if (isset($input['homepage_description'])) {
+            $validated['homepage_description'] = wp_kses_post($input['homepage_description']);
+        }
+        
         return $validated;
     }
     
@@ -184,7 +641,13 @@ class Settings_Homepage {
         $defaults = array(
             'homepage_hero_enabled' => 1,
             'homepage_featured_enabled' => 1,
-            'homepage_latest_count' => 8
+            'homepage_latest_count' => 8,
+            'homepage_men_perfumes' => array(),
+            'homepage_women_perfumes' => array(),
+            'homepage_featured_brands' => array(),
+            'homepage_arabic_perfumes' => array(),
+            'homepage_blog_count' => 3,
+            'homepage_description' => ''
         );
         
         if (isset($defaults[$setting_name])) {
@@ -210,6 +673,23 @@ class Settings_Homepage {
                 $count = intval($value);
                 $settings[$setting_name] = ($count >= 1 && $count <= 20) ? $count : 8;
                 break;
+            case 'homepage_blog_count':
+                $count = intval($value);
+                $settings[$setting_name] = ($count >= 1 && $count <= 10) ? $count : 3;
+                break;
+            case 'homepage_men_perfumes':
+            case 'homepage_women_perfumes':
+            case 'homepage_featured_brands':
+            case 'homepage_arabic_perfumes':
+                if (is_array($value)) {
+                    $settings[$setting_name] = array_map('intval', array_slice($value, 0, 5));
+                } else {
+                    $settings[$setting_name] = array();
+                }
+                break;
+            case 'homepage_description':
+                $settings[$setting_name] = wp_kses_post($value);
+                break;
             default:
                 $settings[$setting_name] = $value;
         }
@@ -226,7 +706,13 @@ class Settings_Homepage {
         return array(
             'homepage_hero_enabled' => isset($settings['homepage_hero_enabled']) ? $settings['homepage_hero_enabled'] : 1,
             'homepage_featured_enabled' => isset($settings['homepage_featured_enabled']) ? $settings['homepage_featured_enabled'] : 1,
-            'homepage_latest_count' => isset($settings['homepage_latest_count']) ? $settings['homepage_latest_count'] : 8
+            'homepage_latest_count' => isset($settings['homepage_latest_count']) ? $settings['homepage_latest_count'] : 8,
+            'homepage_men_perfumes' => isset($settings['homepage_men_perfumes']) ? $settings['homepage_men_perfumes'] : array(),
+            'homepage_women_perfumes' => isset($settings['homepage_women_perfumes']) ? $settings['homepage_women_perfumes'] : array(),
+            'homepage_featured_brands' => isset($settings['homepage_featured_brands']) ? $settings['homepage_featured_brands'] : array(),
+            'homepage_arabic_perfumes' => isset($settings['homepage_arabic_perfumes']) ? $settings['homepage_arabic_perfumes'] : array(),
+            'homepage_blog_count' => isset($settings['homepage_blog_count']) ? $settings['homepage_blog_count'] : 3,
+            'homepage_description' => isset($settings['homepage_description']) ? $settings['homepage_description'] : ''
         );
     }
     
@@ -242,6 +728,11 @@ class Settings_Homepage {
             $errors[] = __('Броят последни парфюми трябва да бъде между 1 и 20.', 'parfume-reviews');
         }
         
+        // Проверка за homepage_blog_count
+        if ($settings['homepage_blog_count'] < 1 || $settings['homepage_blog_count'] > 10) {
+            $errors[] = __('Броят статии от блога трябва да бъде между 1 и 10.', 'parfume-reviews');
+        }
+        
         return empty($errors) ? true : $errors;
     }
     
@@ -252,7 +743,13 @@ class Settings_Homepage {
         $defaults = array(
             'homepage_hero_enabled' => 1,
             'homepage_featured_enabled' => 1,
-            'homepage_latest_count' => 8
+            'homepage_latest_count' => 8,
+            'homepage_men_perfumes' => array(),
+            'homepage_women_perfumes' => array(),
+            'homepage_featured_brands' => array(),
+            'homepage_arabic_perfumes' => array(),
+            'homepage_blog_count' => 3,
+            'homepage_description' => ''
         );
         
         $current_settings = get_option('parfume_reviews_settings', array());
@@ -262,142 +759,21 @@ class Settings_Homepage {
     }
     
     /**
-     * Ресетира homepage настройките към стойностите по подразбиране
-     */
-    public function reset_to_defaults() {
-        $defaults = array(
-            'homepage_hero_enabled' => 1,
-            'homepage_featured_enabled' => 1,
-            'homepage_latest_count' => 8
-        );
-        
-        $current_settings = get_option('parfume_reviews_settings', array());
-        
-        // Запазваме настройките от други компоненти
-        foreach ($defaults as $key => $value) {
-            $current_settings[$key] = $value;
-        }
-        
-        return update_option('parfume_reviews_settings', $current_settings);
-    }
-    
-    /**
-     * Проверява дали hero секцията е включена
-     */
-    public function is_hero_enabled() {
-        return (bool) $this->get_setting('homepage_hero_enabled', 1);
-    }
-    
-    /**
-     * Проверява дали секцията с препоръчани парфюми е включена
-     */
-    public function is_featured_enabled() {
-        return (bool) $this->get_setting('homepage_featured_enabled', 1);
-    }
-    
-    /**
-     * Получава броя последни парфюми за показване
-     */
-    public function get_latest_count() {
-        return intval($this->get_setting('homepage_latest_count', 8));
-    }
-    
-    /**
      * Получава конфигурацията за homepage секциите
      */
     public function get_homepage_config() {
-        return array(
-            'hero_enabled' => $this->is_hero_enabled(),
-            'featured_enabled' => $this->is_featured_enabled(),
-            'latest_count' => $this->get_latest_count()
-        );
-    }
-    
-    /**
-     * Експортира homepage настройките в JSON формат
-     */
-    public function export_settings() {
-        $settings = $this->get_all_settings();
-        
-        return json_encode(array(
-            'component' => 'homepage',
-            'version' => PARFUME_REVIEWS_VERSION,
-            'timestamp' => current_time('mysql'),
-            'settings' => $settings
-        ), JSON_PRETTY_PRINT);
-    }
-    
-    /**
-     * Импортира homepage настройки от JSON данни
-     */
-    public function import_settings($json_data) {
-        $data = json_decode($json_data, true);
-        
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return new \WP_Error('invalid_json', __('Невалиден JSON формат.', 'parfume-reviews'));
-        }
-        
-        if (!isset($data['component']) || $data['component'] !== 'homepage') {
-            return new \WP_Error('invalid_component', __('Файлът не съдържа homepage настройки.', 'parfume-reviews'));
-        }
-        
-        if (!isset($data['settings']) || !is_array($data['settings'])) {
-            return new \WP_Error('invalid_settings', __('Невалидни настройки в файла.', 'parfume-reviews'));
-        }
-        
-        // Валидираме настройките
-        $validated_settings = $this->validate_settings($data['settings']);
-        
-        // Запазваме настройките
-        $current_settings = get_option('parfume_reviews_settings', array());
-        $current_settings = array_merge($current_settings, $validated_settings);
-        
-        $result = update_option('parfume_reviews_settings', $current_settings);
-        
-        if ($result) {
-            return array(
-                'success' => true,
-                'message' => __('Homepage настройките са импортирани успешно.', 'parfume-reviews'),
-                'imported_count' => count($validated_settings)
-            );
-        } else {
-            return new \WP_Error('save_failed', __('Грешка при запазване на настройките.', 'parfume-reviews'));
-        }
-    }
-    
-    /**
-     * Получава настройките за homepage shortcode
-     */
-    public function get_shortcode_settings() {
         $settings = $this->get_all_settings();
         
         return array(
-            'show_hero' => $settings['homepage_hero_enabled'],
-            'show_featured' => $settings['homepage_featured_enabled'],
-            'latest_count' => $settings['homepage_latest_count']
+            'hero_enabled' => (bool) $settings['homepage_hero_enabled'],
+            'featured_enabled' => (bool) $settings['homepage_featured_enabled'],
+            'latest_count' => $settings['homepage_latest_count'],
+            'men_perfumes' => $settings['homepage_men_perfumes'],
+            'women_perfumes' => $settings['homepage_women_perfumes'],
+            'featured_brands' => $settings['homepage_featured_brands'],
+            'arabic_perfumes' => $settings['homepage_arabic_perfumes'],
+            'blog_count' => $settings['homepage_blog_count'],
+            'description' => $settings['homepage_description']
         );
-    }
-    
-    /**
-     * Тества homepage настройките
-     */
-    public function test_settings() {
-        $settings = $this->get_all_settings();
-        $test_results = array();
-        
-        // Тест за hero секция
-        $test_results['hero_status'] = $settings['homepage_hero_enabled'] ? 'enabled' : 'disabled';
-        
-        // Тест за featured секция
-        $test_results['featured_status'] = $settings['homepage_featured_enabled'] ? 'enabled' : 'disabled';
-        
-        // Тест за latest count
-        $test_results['latest_count'] = $settings['homepage_latest_count'];
-        $test_results['latest_count_valid'] = ($settings['homepage_latest_count'] >= 1 && $settings['homepage_latest_count'] <= 20);
-        
-        // Общ статус
-        $test_results['overall_status'] = $test_results['latest_count_valid'] ? 'valid' : 'invalid';
-        
-        return $test_results;
     }
 }
