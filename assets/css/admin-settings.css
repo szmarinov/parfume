@@ -1,26 +1,46 @@
-/* Admin Settings Styles for Parfume Reviews Plugin */
+/**
+ * Enhanced Admin Settings CSS for Parfume Reviews Plugin
+ * FIXED VERSION: Добавени стилове за search функционалност и submit button
+ */
 
 /* ================================== 
-   Табове и основна структура
+   Main Settings Container
    ================================== */
 
-/* Tab Navigation */
-.parfume-settings-tabs {
-    border-bottom: 1px solid #ccd0d4;
+.parfume-settings {
+    max-width: 1200px;
+}
+
+.parfume-settings h1 {
     margin-bottom: 30px;
-    background: #f8f9fa;
+    color: #0073aa;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+/* ================================== 
+   Tab Navigation Enhancement
+   ================================== */
+
+.parfume-settings-tabs {
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 30px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
     border-radius: 8px 8px 0 0;
+    padding: 0 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .parfume-settings-tabs .nav-tab {
-    border: none;
     background: transparent;
-    color: #50575e;
-    padding: 12px 20px;
-    margin: 0;
-    border-radius: 8px 8px 0 0;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #666;
     font-weight: 500;
+    padding: 15px 20px;
+    margin: 0 5px;
     transition: all 0.3s ease;
+    text-decoration: none;
     position: relative;
     overflow: hidden;
 }
@@ -28,45 +48,69 @@
 .parfume-settings-tabs .nav-tab::before {
     content: '';
     position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%) scaleX(0);
+    top: 0;
+    left: -100%;
     width: 100%;
-    height: 3px;
-    background: linear-gradient(90deg, #667eea, #764ba2);
-    transition: transform 0.3s ease;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
 }
 
 .parfume-settings-tabs .nav-tab:hover {
-    background: #e9ecef;
-    color: #32373c;
-    transform: translateY(-1px);
+    color: #0073aa;
+    background: rgba(255, 255, 255, 0.5);
+    border-bottom-color: #0073aa;
+    transform: translateY(-2px);
 }
 
-.parfume-settings-tabs .nav-tab.nav-tab-active {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+.parfume-settings-tabs .nav-tab:hover::before {
+    left: 100%;
 }
 
-.parfume-settings-tabs .nav-tab.nav-tab-active::before {
-    transform: translateX(-50%) scaleX(1);
+.parfume-settings-tabs .nav-tab-active {
+    background: white;
+    color: #0073aa;
+    border-bottom-color: #0073aa;
+    box-shadow: 0 -2px 8px rgba(0, 115, 170, 0.1);
+    font-weight: 600;
+    transform: translateY(-3px);
 }
 
-/* Tab Content */
+/* ================================== 
+   Tab Content Areas
+   ================================== */
+
 .tab-content {
     display: none;
     background: white;
+    border-radius: 12px;
     padding: 30px;
-    border-radius: 0 0 8px 8px;
+    margin-bottom: 20px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e1e5e9;
-    border-top: none;
+    border: 1px solid #e9ecef;
+    animation: fadeInUp 0.4s ease-out;
+    min-height: 400px;
 }
 
-.tab-content.active {
+.tab-content-active {
     display: block;
-    animation: fadeInUp 0.4s ease-out;
+}
+
+.tab-content h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #0073aa;
+    font-size: 24px;
+    font-weight: 600;
+    border-bottom: 2px solid #f0f0f1;
+    padding-bottom: 15px;
+}
+
+.tab-content > p {
+    color: #666;
+    font-size: 16px;
+    margin-bottom: 25px;
+    line-height: 1.6;
 }
 
 @keyframes fadeInUp {
@@ -99,6 +143,7 @@
     padding: 20px;
     border-bottom: 1px solid #dee2e6;
     position: relative;
+    width: 220px;
 }
 
 .tab-content .form-table th::after {
@@ -126,6 +171,244 @@
 
 .tab-content .form-table tr:last-child td {
     border-bottom: none;
+}
+
+/* ================================== 
+   FIXED: Submit Button Section
+   ================================== */
+
+.submit-section {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 0 0 12px 12px;
+    padding: 25px 30px;
+    text-align: right;
+    border-top: 2px solid #dee2e6;
+    margin-top: 0;
+    margin-left: -30px;
+    margin-right: -30px;
+    margin-bottom: -30px;
+}
+
+.submit-section .button-primary {
+    background: linear-gradient(135deg, #0073aa, #005a87);
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.3);
+    text-shadow: none;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 12px 30px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.submit-section .button-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.submit-section .button-primary:hover {
+    background: linear-gradient(135deg, #005a87, #004a73);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 115, 170, 0.4);
+}
+
+.submit-section .button-primary:hover::before {
+    left: 100%;
+}
+
+.submit-section .button-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 115, 170, 0.3);
+}
+
+.submit-section .button-primary.updating-message {
+    background: #666;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.submit-section .button-primary.updating-message::after {
+    content: ' ...';
+    animation: dots 1.5s infinite;
+}
+
+@keyframes dots {
+    0%, 20% { content: ' .'; }
+    40% { content: ' ..'; }
+    60% { content: ' ...'; }
+    80%, 100% { content: ' ....'; }
+}
+
+/* ================================== 
+   FIXED: Enhanced Perfume/Brand Selectors with Search
+   ================================== */
+
+.perfume-selector, .brand-selector {
+    margin-bottom: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+
+.perfume-selector .description, .brand-selector .description {
+    margin-bottom: 15px;
+    font-style: italic;
+    color: #666;
+}
+
+/* Select2 Custom Styling */
+.select2-container {
+    width: 100% !important;
+    margin-bottom: 15px;
+}
+
+.select2-container--default .select2-selection--single {
+    height: 40px !important;
+    border: 2px solid #ddd !important;
+    border-radius: 6px !important;
+    padding: 6px 12px !important;
+    font-size: 14px !important;
+    transition: all 0.3s ease !important;
+}
+
+.select2-container--default .select2-selection--single:focus,
+.select2-container--default.select2-container--open .select2-selection--single {
+    border-color: #0073aa !important;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2) !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 26px !important;
+    color: #555 !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #999 !important;
+}
+
+.select2-dropdown {
+    border: 2px solid #0073aa !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #0073aa !important;
+    color: white !important;
+}
+
+.select2-search--dropdown .select2-search__field {
+    border: 1px solid #ddd !important;
+    border-radius: 4px !important;
+    padding: 8px !important;
+    font-size: 14px !important;
+}
+
+/* Selected Items Display */
+.selected-perfumes, .selected-brands {
+    min-height: 50px;
+    border: 2px dashed #ccd0d4;
+    border-radius: 6px;
+    padding: 15px;
+    background: #ffffff;
+    margin-top: 15px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.selected-perfumes:hover, .selected-brands:hover {
+    border-color: #0073aa;
+    background: #f8f9fa;
+}
+
+.selected-perfume-item, .selected-brand-item {
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(135deg, #0073aa, #005a87);
+    color: white;
+    padding: 8px 15px;
+    margin: 4px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 2px 6px rgba(0, 115, 170, 0.3);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.selected-perfume-item::before, .selected-brand-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.selected-perfume-item:hover, .selected-brand-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.4);
+}
+
+.selected-perfume-item:hover::before, .selected-brand-item:hover::before {
+    left: 100%;
+}
+
+.selected-perfume-item .remove-perfume,
+.selected-brand-item .remove-brand {
+    color: white;
+    text-decoration: none;
+    margin-left: 10px;
+    font-weight: bold;
+    font-size: 16px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.selected-perfume-item .remove-perfume:hover,
+.selected-brand-item .remove-brand:hover {
+    background: #ff4444;
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Empty State */
+.selected-perfumes:empty::after, .selected-brands:empty::after {
+    content: attr(data-empty-text);
+    color: #999;
+    font-style: italic;
+    display: block;
+    text-align: center;
+    padding: 20px;
+}
+
+.selected-perfumes:empty::after {
+    content: 'Няма избрани парфюми. Използвайте полето за търсене по-горе.';
+}
+
+.selected-brands:empty::after {
+    content: 'Няма избрани марки. Използвайте полето за търсене по-горе.';
 }
 
 /* Archive Buttons */
@@ -159,30 +442,87 @@
     cursor: not-allowed;
 }
 
-/* Input Field Enhancements */
+/* ================================== 
+   Input Field Enhancements
+   ================================== */
+
 .tab-content input[type="text"],
 .tab-content input[type="number"],
+.tab-content input[type="email"],
+.tab-content input[type="url"],
 .tab-content select,
 .tab-content textarea {
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 14px;
     transition: all 0.3s ease;
+    background: white;
+    width: 100%;
+    max-width: 400px;
 }
 
 .tab-content input[type="text"]:focus,
 .tab-content input[type="number"]:focus,
+.tab-content input[type="email"]:focus,
+.tab-content input[type="url"]:focus,
 .tab-content select:focus,
 .tab-content textarea:focus {
     border-color: #0073aa;
-    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.1);
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2);
     transform: translateY(-1px);
+    outline: none;
 }
 
-/* URL Structure Info */
+.tab-content input.valid {
+    border-color: #28a745;
+    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+}
+
+.tab-content input.invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
+}
+
+.tab-content .small-text {
+    max-width: 100px;
+}
+
+.tab-content .large-text {
+    max-width: 600px;
+}
+
+/* Checkbox and Radio Styling */
+.tab-content input[type="checkbox"],
+.tab-content input[type="radio"] {
+    width: auto;
+    margin-right: 8px;
+    transform: scale(1.2);
+}
+
+/* Help Icons */
+.help-icon {
+    margin-left: 8px;
+    color: #666;
+    cursor: help;
+    transition: color 0.3s ease;
+}
+
+.help-icon:hover {
+    color: #0073aa;
+}
+
+/* ================================== 
+   URL Structure Info
+   ================================== */
+
 .url-structure-info {
-    background: #f8f9fa;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
     border: 1px solid #dee2e6;
     border-radius: 8px;
-    padding: 20px;
+    padding: 25px;
     margin-top: 30px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .url-structure-info h3 {
@@ -190,37 +530,52 @@
     color: #0073aa;
     border-bottom: 2px solid #dee2e6;
     padding-bottom: 10px;
+    font-size: 20px;
+    font-weight: 600;
 }
 
 .url-structure-info ul {
-    margin: 10px 0;
-    padding-left: 20px;
+    margin: 15px 0;
+    padding-left: 0;
+    list-style: none;
 }
 
 .url-structure-info li {
-    margin-bottom: 8px;
-    font-family: monospace;
+    margin-bottom: 12px;
+    font-family: 'Courier New', monospace;
     background: white;
-    padding: 8px 12px;
-    border-radius: 4px;
-    border-left: 3px solid #0073aa;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border-left: 4px solid #0073aa;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.url-structure-info li:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .url-structure-info code {
     background: #e9ecef;
-    padding: 2px 6px;
-    border-radius: 3px;
+    padding: 4px 8px;
+    border-radius: 4px;
     font-weight: bold;
     color: #0073aa;
+    font-size: 13px;
 }
 
-/* Import/Export Section */
+/* ================================== 
+   Import/Export Section
+   ================================== */
+
 .import-export-section {
-    background: #f8f9fa;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
     border: 1px solid #dee2e6;
     border-radius: 8px;
-    padding: 20px;
-    margin-top: 20px;
+    padding: 25px;
+    margin-top: 25px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .import-export-section h3 {
@@ -228,6 +583,77 @@
     color: #0073aa;
     border-bottom: 2px solid #dee2e6;
     padding-bottom: 10px;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.import-export-section h4 {
+    color: #555;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* File Input Styling */
+.import-export-section input[type="file"] {
+    padding: 10px;
+    border: 2px dashed #ccd0d4;
+    border-radius: 6px;
+    background: white;
+    width: 100%;
+    max-width: 400px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.import-export-section input[type="file"]:hover {
+    border-color: #0073aa;
+    background: #f8f9fa;
+}
+
+/* ================================== 
+   Loading States
+   ================================== */
+
+.settings-loading {
+    opacity: 0.7;
+    pointer-events: none;
+    position: relative;
+}
+
+.settings-loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+}
+
+.settings-loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 1000;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 /* ================================== 
@@ -243,101 +669,75 @@
         padding: 10px 15px;
         font-size: 14px;
     }
+    
+    .submit-section {
+        padding: 20px;
+        margin-left: -20px;
+        margin-right: -20px;
+    }
 }
 
 @media (max-width: 782px) {
+    .parfume-settings {
+        margin: 10px;
+    }
+    
     .parfume-settings-tabs {
-        border-radius: 0;
+        padding: 0 10px;
+        flex-wrap: wrap;
     }
     
     .parfume-settings-tabs .nav-tab {
-        display: block;
-        width: 100%;
-        text-align: center;
-        border-radius: 0;
-        margin-bottom: 1px;
-        min-width: 0;
-    }
-    
-    .tab-content .form-table,
-    .tab-content .form-table tbody,
-    .tab-content .form-table tr,
-    .tab-content .form-table td,
-    .tab-content .form-table th {
-        display: block;
-        width: 100%;
-    }
-    
-    .tab-content .form-table th {
-        padding-bottom: 5px;
-        font-weight: bold;
-    }
-    
-    .tab-content .form-table td {
-        padding-top: 0;
-        padding-bottom: 20px;
-    }
-    
-    .view-archive-btn {
-        margin-left: 0;
-        margin-top: 10px;
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .url-structure-info,
-    .import-export-section {
-        padding: 15px;
-    }
-}
-
-@media (max-width: 480px) {
-    .parfume-settings-tabs .nav-tab {
-        font-size: 11px;
-        padding: 6px 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        margin: 2px;
     }
     
     .tab-content {
-        padding: 15px 0;
+        padding: 15px;
+        margin: 10px 0;
     }
     
-    .wp-list-table {
-        font-size: 13px;
+    .tab-content .form-table th,
+    .tab-content .form-table td {
+        padding: 15px;
     }
     
-    .wp-list-table th,
-    .wp-list-table td {
-        padding: 8px 5px;
+    .tab-content .form-table th {
+        width: auto;
+    }
+    
+    .submit-section {
+        text-align: center;
+        padding: 20px 15px;
+        margin-left: -15px;
+        margin-right: -15px;
+    }
+    
+    .selected-perfume-item, .selected-brand-item {
+        display: block;
+        margin: 5px 0;
+        text-align: center;
     }
 }
 
-/* Loading States */
-.settings-loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-/* Success/Error Messages */
-.notice {
-    margin: 20px 0;
-    border-left: 4px solid #0073aa;
-}
-
-.notice.notice-success {
-    border-left-color: #4caf50;
-}
-
-.notice.notice-error {
-    border-left-color: #f44336;
-}
-
-/* Accessibility */
-.nav-tab:focus {
-    outline: 2px solid #0073aa;
-    outline-offset: 2px;
-}
-
-.view-archive-btn:focus {
-    outline: 2px solid #0073aa;
-    outline-offset: 2px;
+@media (max-width: 600px) {
+    .parfume-settings h1 {
+        font-size: 24px;
+    }
+    
+    .tab-content h2 {
+        font-size: 20px;
+    }
+    
+    .tab-content input[type="text"],
+    .tab-content input[type="number"],
+    .tab-content select,
+    .tab-content textarea {
+        max-width: 100%;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
 }
