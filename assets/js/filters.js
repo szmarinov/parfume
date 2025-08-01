@@ -40,8 +40,9 @@ jQuery(document).ready(function($) {
             removeFilter($(this));
         });
         
-        // Handle expandable filter sections
-        $('.filter-title').on('click', function() {
+        // Handle expandable filter sections - ПОПРАВЕНО
+        $('.filter-title').on('click', function(e) {
+            e.preventDefault();
             toggleFilterSection($(this));
         });
         
@@ -49,6 +50,147 @@ jQuery(document).ready(function($) {
         $('.filter-search').on('input', function() {
             filterOptions($(this));
         });
+    }
+    
+    function collectFilters() {
+        var filters = {};
+        
+        // Collect multiple choice filters (checkboxes)
+        $('.parfume-filters input[type="checkbox"]:checked').each(function() {
+            var name = $(this).attr('name');
+            if (name) {
+                var key = name.replace('[]', '');
+                if (!filters[key]) {
+                    filters[key] = [];
+                }
+                filters[key].push($(this).val());
+            }
+        });
+        
+        // Collect single choice filters (selects)
+        $('.parfume-filters select').each(function() {
+            var name = $(this).attr('name');
+            var value = $(this).val();
+            if (name && value) {
+                filters[name] = value;
+            }
+        });
+        
+        // Collect range filters (price inputs)
+        var minPrice = $('.parfume-filters input[name="min_price"]').val();
+        var maxPrice = $('.parfume-filters input[name="max_price"]').val();
+        
+        if (minPrice) {
+            filters['min_price'] = minPrice;
+        }
+        if (maxPrice) {
+            filters['max_price'] = maxPrice;
+        }
+        
+        return filters;
+    }
+    
+    function buildFilterUrl(filters) {
+        var baseUrl = window.location.pathname;
+        var params = [];
+        
+        for (var key in filters) {
+            if (filters.hasOwnProperty(key)) {
+                var value = filters[key];
+                if (Array.isArray(value)) {
+                    value.forEach(function(item) {
+                        params.push(encodeURIComponent(key) + '[]=' + encodeURIComponent(item));
+                    });
+                } else {
+                    params.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+                }
+            }
+        }
+        
+        if (params.length > 0) {
+            return baseUrl + '?' + params.join('&');
+        }
+        
+        return baseUrl;
+    }
+    
+    function showLoadingState() {
+        $('.parfume-filters').addClass('loading');
+    }
+    
+    function initializeFromUrl() {
+        var urlParams = new URLSearchParams(window.location.search);
+        
+        // Изчиствам всички филтри първо
+        $('.parfume-filters input[type="checkbox"]').prop('checked', false);
+        $('.parfume-filters select').val('');
+        $('.parfume-filters input[type="number"], .parfume-filters input[type="text"]').val('');
+        
+        // Зареждам стойностите от URL-а
+        urlParams.forEach(function(value, key) {
+            if (key.endsWith('[]')) {
+                // Множествен избор (checkboxes)
+                var cleanKey = key.replace('[]', '');
+                var decodedValue = decodeURIComponent(value);
+                $('.parfume-filters input[name="' + cleanKey + '[]"][value="' + decodedValue + '"]').prop('checked', true);
+            } else {
+                // Единичен избор (select, input)
+                var decodedValue = decodeURIComponent(value);
+                $('.parfume-filters [name="' + key + '"]').val(decodedValue);
+            }
+        });
+    }
+    
+    function getHumanReadableName(filterType, value) {
+        // Търси етикета на checkbox-а или option-а
+        var $input = $('.parfume-filters input[name="' + filterType + '[]"][value="' + value + '"], ' +
+                      '.parfume-filters option[value="' + value + '"]');
+        
+        if ($input.length > 0) {
+            if ($input.is('input')) {
+                var $label = $input.closest('label');
+                if ($label.length > 0) {
+                    return $label.text().trim().replace(/\(\d+\)$/, '').trim();
+                }
+            } else {
+                return $input.text().trim();
+            }
+        }
+        
+        return decodeURIComponent(value);
+    }
+    
+    function createActiveFilterTags() {
+        var $activeContainer = $('.active-filters .filter-tags');
+        if ($activeContainer.length === 0) return;
+        
+        $activeContainer.empty();
+        
+        var urlParams = new URLSearchParams(window.location.search);
+        
+        urlParams.forEach(function(value, key) {
+            if (key.endsWith('[]')) {
+                var cleanKey = key.replace('[]', '');
+                var decodedValue = decodeURIComponent(value);
+                
+                // Получаваме човешки четимо име
+                var displayName = getHumanReadableName(cleanKey, value);
+                
+                var $tag = $('<span class="filter-tag">' + 
+                           displayName + 
+                           '<button class="remove-tag" data-filter-type="' + cleanKey + '" data-filter-value="' + decodedValue + '">×</button>' +
+                           '</span>');
+                
+                $activeContainer.append($tag);
+            }
+        });
+        
+        // Show/hide active filters container
+        if ($activeContainer.children().length > 0) {
+            $('.active-filters').show();
+        } else {
+            $('.active-filters').hide();
+        }
     }
     
     function applyFilters() {
@@ -102,208 +244,38 @@ jQuery(document).ready(function($) {
         $previewContainer.empty();
         
         var hasFilters = false;
-        var previewHtml = '<small><strong>Избрани филтри:</strong> ';
-        var previewItems = [];
-        
         for (var key in filters) {
             if (filters.hasOwnProperty(key)) {
                 var value = filters[key];
                 if (Array.isArray(value) && value.length > 0) {
                     hasFilters = true;
-                    var humanReadableValues = [];
-                    
-                    // Получаваме човешки четими имена за всяка стойност
-                    value.forEach(function(val) {
-                        var humanName = getHumanReadableName(key, val);
-                        humanReadableValues.push(humanName);
+                    value.forEach(function(item) {
+                        var displayName = getHumanReadableName(key, item);
+                        $previewContainer.append('<span class="preview-tag">' + displayName + '</span>');
                     });
-                    
-                    var filterLabel = getFilterLabel(key);
-                    previewItems.push(filterLabel + ': ' + humanReadableValues.join(', '));
                 } else if (value !== '') {
                     hasFilters = true;
-                    var humanName = getHumanReadableName(key, value);
-                    var filterLabel = getFilterLabel(key);
-                    previewItems.push(filterLabel + ': ' + humanName);
+                    $previewContainer.append('<span class="preview-tag">' + key + ': ' + value + '</span>');
                 }
             }
         }
         
         if (hasFilters) {
-            previewHtml += previewItems.join(' | ') + '</small>';
-            $previewContainer.html(previewHtml).show();
+            $previewContainer.show();
         } else {
             $previewContainer.hide();
         }
     }
     
-    // НОВА ФУНКЦИЯ ЗА ПОЛУЧАВАНЕ НА ЧОВЕШКИ ЧЕТИМИ ИМЕНА
-    function getHumanReadableName(filterType, value) {
-        // Първо декодираме URL encoding
-        var decodedValue = decodeURIComponent(value);
-        
-        // Търсим съответния label в DOM
-        var $matchingOption = $('.parfume-filters input[name="' + filterType + '[]"][value="' + value + '"]').closest('.filter-option');
-        if ($matchingOption.length === 0) {
-            // Пробваме с декодираната стойност
-            $matchingOption = $('.parfume-filters input[value="' + decodedValue + '"]').closest('.filter-option');
-        }
-        
-        if ($matchingOption.length > 0) {
-            var labelText = $matchingOption.find('label').clone();
-            // Премахваме count-а ако има
-            labelText.find('.count, .filter-count').remove();
-            var cleanText = labelText.text().trim();
-            if (cleanText) {
-                return cleanText;
-            }
-        }
-        
-        // Ако не намерим в DOM, пробваме да декодираме и форматираме
-        try {
-            // Двойно декодиране за случай че е двойно кодирано
-            var doubleDecoded = decodeURIComponent(decodedValue);
-            if (doubleDecoded !== decodedValue) {
-                return doubleDecoded;
-            }
-        } catch (e) {
-            // Игнорираме грешките при декодиране
-        }
-        
-        // Ако всичко останало не е работило, поне заменяме тиретата с интервали и капитализираме
-        return decodedValue.replace(/-/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); });
-    }
-    
-    // НОВА ФУНКЦИЯ ЗА ПОЛУЧАВАНЕ НА LABELS НА ФИЛТРИТЕ
-    function getFilterLabel(filterType) {
-        var filterLabels = {
-            'gender': 'Категория',
-            'aroma_type': 'Тип арома', 
-            'marki': 'Марка',
-            'season': 'Сезон',
-            'intensity': 'Интензивност',
-            'notes': 'Нотки',
-            'perfumer': 'Парфюмер',
-            'min_price': 'Мин. цена',
-            'max_price': 'Макс. цена',
-            'min_rating': 'Мин. рейтинг',
-            'orderby': 'Сортиране',
-            'order': 'Посока'
-        };
-        
-        return filterLabels[filterType] || filterType;
-    }
-    
-    function collectFilters() {
-        var filters = {};
-        
-        // Collect taxonomy filters
-        $('.parfume-filters input[type="checkbox"]:checked').each(function() {
-            var name = $(this).attr('name');
-            var value = $(this).val();
-            
-            if (name && value) {
-                // Remove [] from name if present
-                var cleanName = name.replace('[]', '');
-                
-                if (!filters[cleanName]) {
-                    filters[cleanName] = [];
-                }
-                filters[cleanName].push(value);
-            }
-        });
-        
-        // Collect select filters
-        $('.parfume-filters select').each(function() {
-            var name = $(this).attr('name');
-            var value = $(this).val();
-            
-            if (name && value && value !== '') {
-                filters[name] = value;
-            }
-        });
-        
-        // Collect price range
-        var minPrice = $('.parfume-filters input[name="min_price"]').val();
-        var maxPrice = $('.parfume-filters input[name="max_price"]').val();
-        
-        if (minPrice && minPrice !== '') {
-            filters.min_price = minPrice;
-        }
-        if (maxPrice && maxPrice !== '') {
-            filters.max_price = maxPrice;
-        }
-        
-        // Collect rating filter
-        var minRating = $('.parfume-filters input[name="min_rating"]').val();
-        if (minRating && minRating !== '') {
-            filters.min_rating = minRating;
-        }
-        
-        // Collect sorting
-        var orderby = $('.parfume-filters select[name="orderby"]').val();
-        var order = $('.parfume-filters select[name="order"]').val();
-        
-        if (orderby && orderby !== '') {
-            filters.orderby = orderby;
-        }
-        if (order && order !== '') {
-            filters.order = order;
-        }
-        
-        return filters;
-    }
-    
-    function buildFilterUrl(filters) {
-        // Get current base URL
-        var baseUrl = window.location.pathname;
-        
-        // Remove any existing query parameters from base URL
-        if (baseUrl.indexOf('?') !== -1) {
-            baseUrl = baseUrl.substring(0, baseUrl.indexOf('?'));
-        }
-        
-        // Build query string
-        var queryParams = [];
-        
-        for (var key in filters) {
-            if (filters.hasOwnProperty(key)) {
-                var value = filters[key];
-                
-                if (Array.isArray(value)) {
-                    // Multiple values for same parameter
-                    value.forEach(function(val) {
-                        queryParams.push(encodeURIComponent(key + '[]') + '=' + encodeURIComponent(val));
-                    });
-                } else {
-                    // Single value
-                    queryParams.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
-                }
-            }
-        }
-        
-        var queryString = queryParams.join('&');
-        var finalUrl = baseUrl + (queryString ? '?' + queryString : '');
-        
-        console.log('Built filter URL:', finalUrl);
-        return finalUrl;
-    }
-    
     function resetFilters() {
-        // Clear all form fields
+        // Clear all inputs
         $('.parfume-filters input[type="checkbox"]').prop('checked', false);
         $('.parfume-filters select').val('');
-        $('.parfume-filters input[type="text"], .parfume-filters input[type="number"]').val('');
+        $('.parfume-filters input[type="number"], .parfume-filters input[type="text"]').val('');
         
-        // Hide preview
-        $('.filter-preview').hide();
-        
-        // Reset button text
-        $('.filter-submit .button-primary, .filter-button').text('Филтрирай').removeClass('has-filters');
-        
-        // Navigate to clean URL
+        // Remove URL parameters and redirect to clean URL
         var baseUrl = window.location.pathname;
-        if (baseUrl.indexOf('?') !== -1) {
+        if (window.location.search !== '') {
             baseUrl = baseUrl.substring(0, baseUrl.indexOf('?'));
         }
         
@@ -330,18 +302,26 @@ jQuery(document).ready(function($) {
         }
     }
     
+    // ПОПРАВЕНО - функцията за toggle на filter секциите
     function toggleFilterSection($title) {
         var $options = $title.next('.filter-options');
         var $arrow = $title.find('.toggle-arrow');
         
-        if ($options.is(':visible')) {
-            $options.slideUp(300);
-            $title.addClass('collapsed');
-            $arrow.text('▶');
-        } else {
-            $options.slideDown(300);
+        // Проверяваме дали опциите са скрити
+        if ($options.is(':hidden') || $options.hasClass('hidden') || $options.css('display') === 'none') {
+            // Показваме секцията
+            $options.slideDown(300).removeClass('hidden');
             $title.removeClass('collapsed');
-            $arrow.text('▼');
+            if ($arrow.length > 0) {
+                $arrow.text('▼');
+            }
+        } else {
+            // Скриваме секцията
+            $options.slideUp(300).addClass('hidden');
+            $title.addClass('collapsed');
+            if ($arrow.length > 0) {
+                $arrow.text('▶');
+            }
         }
     }
     
@@ -359,72 +339,6 @@ jQuery(document).ready(function($) {
                 $option.hide();
             }
         });
-    }
-    
-    function showLoadingState() {
-        $('.parfume-filters').addClass('filters-loading');
-        $('.filter-submit .button-primary, .filter-button').text('Зареждане...');
-    }
-    
-    function hideLoadingState() {
-        $('.parfume-filters').removeClass('filters-loading');
-        $('.filter-submit .button-primary, .filter-button').text('Филтрирай');
-    }
-    
-    // Initialize filter state from URL on page load
-    function initializeFromUrl() {
-        var urlParams = new URLSearchParams(window.location.search);
-        
-        // Set checkbox values
-        urlParams.forEach(function(value, key) {
-            if (key.endsWith('[]')) {
-                var cleanKey = key.replace('[]', '');
-                var $checkbox = $('.parfume-filters input[name="' + key + '"][value="' + decodeURIComponent(value) + '"]');
-                $checkbox.prop('checked', true);
-            } else {
-                var $input = $('.parfume-filters input[name="' + key + '"], .parfume-filters select[name="' + key + '"]');
-                $input.val(decodeURIComponent(value));
-            }
-        });
-        
-        // Актуализираме preview при зареждане
-        updateFilterPreview();
-    }
-    
-    // Create active filter tags
-    function createActiveFilterTags() {
-        var $activeContainer = $('.active-filters .filter-tags');
-        if ($activeContainer.length === 0) {
-            return;
-        }
-        
-        $activeContainer.empty();
-        
-        var urlParams = new URLSearchParams(window.location.search);
-        
-        urlParams.forEach(function(value, key) {
-            if (key.endsWith('[]')) {
-                var cleanKey = key.replace('[]', '');
-                var decodedValue = decodeURIComponent(value);
-                
-                // Получаваме човешки четимо име
-                var displayName = getHumanReadableName(cleanKey, value);
-                
-                var $tag = $('<span class="filter-tag">' + 
-                           displayName + 
-                           '<button class="remove-tag" data-filter-type="' + cleanKey + '" data-filter-value="' + decodedValue + '">×</button>' +
-                           '</span>');
-                
-                $activeContainer.append($tag);
-            }
-        });
-        
-        // Show/hide active filters container
-        if ($activeContainer.children().length > 0) {
-            $('.active-filters').show();
-        } else {
-            $('.active-filters').hide();
-        }
     }
     
     // Initialize on page load
