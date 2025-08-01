@@ -195,49 +195,18 @@ jQuery(document).ready(function($) {
     
     function applyFilters() {
         var filters = collectFilters();
-        var url = buildFilterUrl(filters);
+        var filterUrl = buildFilterUrl(filters);
         
-        // Show loading state
         showLoadingState();
-        
-        // Navigate to filtered URL
-        window.location.href = url;
+        window.location.href = filterUrl;
     }
     
-    // НОВА ФУНКЦИЯ ЗА PREVIEW НА ФИЛТРИТЕ БЕЗ ПРЕНАСОЧВАНЕ
     function updateFilterPreview() {
         var filters = collectFilters();
-        var selectedCount = 0;
-        
-        // Преброяваме избраните филтри
-        for (var key in filters) {
-            if (filters.hasOwnProperty(key)) {
-                if (Array.isArray(filters[key])) {
-                    selectedCount += filters[key].length;
-                } else if (filters[key] !== '') {
-                    selectedCount++;
-                }
-            }
-        }
-        
-        // Актуализираме бутона за филтриране
-        var $submitBtn = $('.filter-submit .button-primary, .filter-button');
-        if (selectedCount > 0) {
-            $submitBtn.text('Филтрирай (' + selectedCount + ')').addClass('has-filters');
-        } else {
-            $submitBtn.text('Филтрирай').removeClass('has-filters');
-        }
-        
-        // Показваме preview на избраните филтри (опционално)
-        createFilterPreview(filters);
-    }
-    
-    // НОВА ФУНКЦИЯ ЗА PREVIEW НА ИЗБРАНИТЕ ФИЛТРИ
-    function createFilterPreview(filters) {
         var $previewContainer = $('.filter-preview');
+        
         if ($previewContainer.length === 0) {
-            // Създаваме контейнер за preview ако не съществува
-            $previewContainer = $('<div class="filter-preview" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; display: none;"></div>');
+            $previewContainer = $('<div class="filter-preview"></div>');
             $('.filter-submit').before($previewContainer);
         }
         
@@ -325,20 +294,77 @@ jQuery(document).ready(function($) {
         }
     }
     
+    // ПОПРАВЕНА функция за търсене в опциите на филтрите
     function filterOptions($searchInput) {
         var searchTerm = $searchInput.val().toLowerCase();
-        var $options = $searchInput.siblings('.filter-options').find('.filter-option');
+        var $filterContainer, $options;
         
-        $options.each(function() {
-            var $option = $(this);
-            var optionText = $option.find('label').text().toLowerCase();
-            
-            if (optionText.indexOf(searchTerm) !== -1) {
-                $option.show();
-            } else {
-                $option.hide();
+        // Търсим родителския контейнер за филтрите
+        $filterContainer = $searchInput.closest('.filter-section, .filter-group, .parfume-filters');
+        
+        if ($filterContainer.length === 0) {
+            // Ако не намерим контейнер, търсим в целия документ
+            $filterContainer = $('.parfume-filters');
+        }
+        
+        // Търсим опциите в различни възможни структури
+        $options = $filterContainer.find('.filter-option');
+        if ($options.length === 0) {
+            // Пробваме с други селектори
+            $options = $filterContainer.find('.filter-options .filter-option');
+        }
+        if ($options.length === 0) {
+            // Пробваме в scrollable-options
+            $options = $filterContainer.find('.scrollable-options .filter-option');
+        }
+        if ($options.length === 0) {
+            // Пробваме с непосредствените siblings
+            $options = $searchInput.siblings('.filter-options').find('.filter-option');
+        }
+        if ($options.length === 0) {
+            // Последна опция - търсим в родителя
+            $options = $searchInput.parent().find('.filter-option');
+        }
+        
+        // Ако все още нямаме опции, търсим по placeholder текста
+        if ($options.length === 0) {
+            var placeholder = $searchInput.attr('placeholder');
+            if (placeholder && placeholder.includes('марки')) {
+                $options = $('.parfume-filters').find('input[name="marki[]"]').closest('.filter-option');
+            } else if (placeholder && placeholder.includes('нотки')) {
+                $options = $('.parfume-filters').find('input[name="notes[]"]').closest('.filter-option');
             }
-        });
+        }
+        
+        // Прилагаме филтриране ако намерим опции
+        if ($options.length > 0) {
+            $options.each(function() {
+                var $option = $(this);
+                var optionText = '';
+                
+                // Вземаме текста от етикета
+                var $label = $option.find('label');
+                if ($label.length > 0) {
+                    optionText = $label.text().toLowerCase();
+                } else {
+                    optionText = $option.text().toLowerCase();
+                }
+                
+                // Показваме/скриваме според търсения термин
+                if (searchTerm === '' || optionText.indexOf(searchTerm) !== -1) {
+                    $option.show();
+                } else {
+                    $option.hide();
+                }
+            });
+        } else {
+            // Debug режим - ако има проблем, логираме
+            if (typeof console !== 'undefined' && console.log) {
+                console.log('FilterOptions Debug: No options found for search input', $searchInput[0]);
+                console.log('Filter container:', $filterContainer[0]);
+                console.log('Search term:', searchTerm);
+            }
+        }
     }
     
     // Initialize on page load
