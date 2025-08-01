@@ -864,5 +864,3 @@ class Shortcodes {
         return ob_get_clean();
     }
 }
-
-

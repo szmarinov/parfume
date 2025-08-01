@@ -1,310 +1,160 @@
 <?php
-/**
- * Archive template for parfume post type
- * Показва homepage на плъгина на /parfiumi/
- * 
- * Template: templates/archive-parfume.php
- * МОДИФИЦИРАН: Добавени homepage секции в началото
- */
+get_header();
 
-if (!defined('ABSPATH')) {
-    exit;
-}
-
-get_header(); 
-
-// Получаваме настройките
 $settings = get_option('parfume_reviews_settings', array());
+$archive_title = post_type_archive_title('', false);
 $show_sidebar = isset($settings['show_archive_sidebar']) ? $settings['show_archive_sidebar'] : 1;
-$posts_per_page = isset($settings['archive_posts_per_page']) ? $settings['archive_posts_per_page'] : 12;
 $grid_columns = isset($settings['archive_grid_columns']) ? $settings['archive_grid_columns'] : 3;
+$card_settings = array(
+    'show_image' => isset($settings['card_show_image']) ? $settings['card_show_image'] : 1,
+    'show_brand' => isset($settings['card_show_brand']) ? $settings['card_show_brand'] : 1,
+    'show_name' => isset($settings['card_show_name']) ? $settings['card_show_name'] : 1,
+    'show_price' => isset($settings['card_show_price']) ? $settings['card_show_price'] : 1,
+    'show_availability' => isset($settings['card_show_availability']) ? $settings['card_show_availability'] : 1,
+    'show_shipping' => isset($settings['card_show_shipping']) ? $settings['card_show_shipping'] : 1,
+);
 ?>
 
-<div class="parfume-archive parfume-homepage">
-    <!-- НОВИ HOMEPAGE СЕКЦИИ - ДОБАВЕНИ В НАЧАЛОТО -->
-    
-    <?php
-    // Показваме homepage секциите само ако не е pagination (първа страница)
-    $paged = get_query_var('paged') ? get_query_var('paged') : 1;
-    if ($paged <= 1):
-    ?>
-        <!-- Homepage секции -->
-        <div class="homepage-sections">
-            <?php
-            // Проверяваме дали функциите съществуват и ги извикваме
-            if (function_exists('parfume_reviews_display_men_perfumes_section')) {
-                parfume_reviews_display_men_perfumes_section();
-            }
-            
-            if (function_exists('parfume_reviews_display_women_perfumes_section')) {
-                parfume_reviews_display_women_perfumes_section();
-            }
-            
-            if (function_exists('parfume_reviews_display_featured_brands_section')) {
-                parfume_reviews_display_featured_brands_section();
-            }
-            
-            if (function_exists('parfume_reviews_display_arabic_perfumes_section')) {
-                parfume_reviews_display_arabic_perfumes_section();
-            }
-            
-            if (function_exists('parfume_reviews_display_latest_perfumes_section')) {
-                parfume_reviews_display_latest_perfumes_section();
-            }
-            
-            if (function_exists('parfume_reviews_display_blog_section')) {
-                parfume_reviews_display_blog_section();
-            }
-            
-            if (function_exists('parfume_reviews_display_description_section')) {
-                parfume_reviews_display_description_section();
-            }
-            ?>
-        </div>
-        
-        <!-- Разделител между homepage секции и архив -->
-        <div class="section-divider">
-            <div class="container">
-                <hr style="margin: 60px 0; border: none; border-top: 2px solid #eee;">
-            </div>
-        </div>
-    <?php endif; ?>
-    
-    <!-- ОРИГИНАЛЕН ARCHIVE CONTENT -->
-    <div class="archive-header">
+<div class="parfume-archive">
+    <header class="archive-header">
         <div class="container">
-            <h1 class="archive-title">
-                <?php 
-                if ($paged > 1) {
-                    printf(__('Всички Парфюми - Страница %d', 'parfume-reviews'), $paged);
-                } else {
-                    _e('Всички Парфюми', 'parfume-reviews'); 
-                }
-                ?>
-            </h1>
+            <h1 class="archive-title"><?php echo $archive_title; ?></h1>
             
-            <?php if ($paged <= 1): ?>
+            <?php if (!empty($settings['archive_description'])): ?>
                 <div class="archive-description">
-                    <p><?php _e('Открийте най-добрите парфюми от цял свят. Разгледайте нашата колекция от ексклузивни аромати.', 'parfume-reviews'); ?></p>
+                    <?php echo wpautop($settings['archive_description']); ?>
                 </div>
             <?php endif; ?>
-            
-            <div class="archive-stats">
-                <?php
-                global $wp_query;
-                $total = $wp_query->found_posts;
-                printf(_n('Намерен %d парфюм', 'Намерени %d парфюма', $total, 'parfume-reviews'), number_format($total));
-                ?>
-            </div>
         </div>
-    </div>
-
+    </header>
+    
     <div class="archive-content">
         <div class="container">
             <div class="archive-layout <?php echo $show_sidebar ? 'has-sidebar' : 'full-width'; ?>">
-                
                 <?php if ($show_sidebar): ?>
-                <aside class="archive-sidebar">
-                    <div class="sidebar-content">
-                        <div class="widget widget-filters">
-                            <h3><?php _e('Филтрирай парфюми', 'parfume-reviews'); ?></h3>
-                            
-                            <!-- Search -->
-                            <div class="filter-group">
-                                <label><?php _e('Търсене', 'parfume-reviews'); ?></label>
-                                <input type="text" id="parfume-search" placeholder="<?php _e('Търси парфюм...', 'parfume-reviews'); ?>">
-                            </div>
-                            
-                            <!-- Brand Filter -->
-                            <div class="filter-group">
-                                <label><?php _e('Марка', 'parfume-reviews'); ?></label>
-                                <select id="brand-filter">
-                                    <option value=""><?php _e('Всички марки', 'parfume-reviews'); ?></option>
-                                    <?php
-                                    $brands = get_terms(array(
-                                        'taxonomy' => 'marki',
-                                        'hide_empty' => true,
-                                        'orderby' => 'name'
-                                    ));
-                                    foreach ($brands as $brand):
-                                    ?>
-                                        <option value="<?php echo esc_attr($brand->slug); ?>"><?php echo esc_html($brand->name); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            
-                            <!-- Gender Filter -->
-                            <div class="filter-group">
-                                <label><?php _e('Пол', 'parfume-reviews'); ?></label>
-                                <select id="gender-filter">
-                                    <option value=""><?php _e('Всички', 'parfume-reviews'); ?></option>
-                                    <?php
-                                    $genders = get_terms(array(
-                                        'taxonomy' => 'gender',
-                                        'hide_empty' => true
-                                    ));
-                                    foreach ($genders as $gender):
-                                    ?>
-                                        <option value="<?php echo esc_attr($gender->slug); ?>"><?php echo esc_html($gender->name); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            
-                            <!-- Price Range -->
-                            <div class="filter-group">
-                                <label><?php _e('Ценова категория', 'parfume-reviews'); ?></label>
-                                <select id="price-filter">
-                                    <option value=""><?php _e('Всички цени', 'parfume-reviews'); ?></option>
-                                    <option value="0-50"><?php _e('До 50 лв.', 'parfume-reviews'); ?></option>
-                                    <option value="50-100"><?php _e('50-100 лв.', 'parfume-reviews'); ?></option>
-                                    <option value="100-200"><?php _e('100-200 лв.', 'parfume-reviews'); ?></option>
-                                    <option value="200+"><?php _e('Над 200 лв.', 'parfume-reviews'); ?></option>
-                                </select>
-                            </div>
-                        </div>
+                    <aside class="archive-sidebar">
+                        <?php echo do_shortcode('[parfume_filters]'); ?>
                         
-                        <!-- Popular Brands Widget -->
-                        <div class="widget popular-brands">
+                        <div class="popular-brands">
                             <h3><?php _e('Популярни марки', 'parfume-reviews'); ?></h3>
-                            <div class="brand-cloud">
-                                <?php
-                                $popular_brands = get_terms(array(
-                                    'taxonomy' => 'marki',
-                                    'orderby' => 'count',
-                                    'order' => 'DESC',
-                                    'number' => 10,
-                                    'hide_empty' => true
-                                ));
-                                
-                                foreach ($popular_brands as $brand):
-                                    $brand_url = get_term_link($brand);
-                                ?>
-                                    <a href="<?php echo esc_url($brand_url); ?>" class="brand-tag">
-                                        <?php echo esc_html($brand->name); ?>
-                                        <span class="count">(<?php echo $brand->count; ?>)</span>
-                                    </a>
-                                <?php endforeach; ?>
-                            </div>
+                            <?php
+                            $brands = get_terms(array(
+                                'taxonomy' => 'marki',
+                                'orderby' => 'count',
+                                'order' => 'DESC',
+                                'number' => 10,
+                                'hide_empty' => true,
+                            ));
+                            
+                            if (!empty($brands)): ?>
+                                <ul>
+                                    <?php foreach ($brands as $brand): ?>
+                                        <li>
+                                            <a href="<?php echo get_term_link($brand); ?>">
+                                                <?php echo $brand->name; ?>
+                                                <span class="count">(<?php echo $brand->count; ?>)</span>
+                                            </a>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php endif; ?>
                         </div>
-                    </div>
-                </aside>
+                    </aside>
                 <?php endif; ?>
-
+                
                 <main class="archive-main">
-                    <div class="archive-controls">
-                        <div class="view-controls">
-                            <span><?php _e('Изглед:', 'parfume-reviews'); ?></span>
-                            <button class="view-btn grid-view active" data-view="grid">
-                                <span class="dashicons dashicons-grid-view"></span>
-                            </button>
-                            <button class="view-btn list-view" data-view="list">
-                                <span class="dashicons dashicons-list-view"></span>
-                            </button>
-                        </div>
-                        
-                        <div class="sort-controls">
-                            <label><?php _e('Сортирай по:', 'parfume-reviews'); ?></label>
-                            <select id="sort-select">
-                                <option value="date"><?php _e('Най-нови', 'parfume-reviews'); ?></option>
-                                <option value="title"><?php _e('Име А-Я', 'parfume-reviews'); ?></option>
-                                <option value="popularity"><?php _e('Популярност', 'parfume-reviews'); ?></option>
-                                <option value="rating"><?php _e('Рейтинг', 'parfume-reviews'); ?></option>
-                                <option value="price"><?php _e('Цена', 'parfume-reviews'); ?></option>
-                            </select>
-                        </div>
-                    </div>
-
                     <?php if (have_posts()): ?>
                         <div class="parfume-grid" data-columns="<?php echo esc_attr($grid_columns); ?>">
                             <?php while (have_posts()): the_post(); ?>
-                                <div class="parfume-card">
-                                    <div class="parfume-thumbnail">
-                                        <a href="<?php the_permalink(); ?>">
-                                            <?php if (has_post_thumbnail()): ?>
+                                <article class="parfume-card">
+                                    <?php if ($card_settings['show_image'] && has_post_thumbnail()): ?>
+                                        <div class="parfume-thumbnail">
+                                            <a href="<?php the_permalink(); ?>">
                                                 <?php the_post_thumbnail('medium'); ?>
-                                            <?php else: ?>
-                                                <div class="no-image">
-                                                    <span class="dashicons dashicons-format-image"></span>
-                                                </div>
-                                            <?php endif; ?>
-                                        </a>
+                                            </a>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <div class="parfume-content">
+                                        <?php if ($card_settings['show_name']): ?>
+                                            <h2 class="parfume-title">
+                                                <a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
+                                            </h2>
+                                        <?php endif; ?>
                                         
-                                        <?php 
+                                        <?php if ($card_settings['show_brand']): ?>
+                                            <?php
+                                            $brands = wp_get_post_terms(get_the_ID(), 'marki', array('fields' => 'names'));
+                                            if (!empty($brands) && !is_wp_error($brands)): ?>
+                                                <div class="parfume-brand"><?php echo implode(', ', $brands); ?></div>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                        
+                                        <?php
                                         $rating = get_post_meta(get_the_ID(), '_parfume_rating', true);
-                                        if ($rating):
-                                        ?>
+                                        if (!empty($rating)): ?>
                                             <div class="parfume-rating">
-                                                <div class="rating-stars">
-                                                    <?php 
-                                                    if (function_exists('parfume_reviews_get_rating_stars')) {
-                                                        echo parfume_reviews_get_rating_stars($rating);
-                                                    }
-                                                    ?>
-                                                </div>
+                                                <?php echo parfume_reviews_get_rating_stars($rating); ?>
                                                 <span class="rating-number"><?php echo number_format($rating, 1); ?></span>
                                             </div>
                                         <?php endif; ?>
-                                    </div>
-
-                                    <div class="parfume-content">
-                                        <h3 class="parfume-title">
-                                            <a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
-                                        </h3>
-
-                                        <?php 
-                                        $brands = wp_get_post_terms(get_the_ID(), 'marki', array('fields' => 'names'));
-                                        if (!empty($brands) && !is_wp_error($brands)): 
-                                        ?>
-                                            <div class="parfume-brand"><?php echo esc_html($brands[0]); ?></div>
-                                        <?php endif; ?>
-
-                                        <?php 
-                                        $price = get_post_meta(get_the_ID(), '_parfume_price', true);
-                                        if ($price):
-                                        ?>
-                                            <div class="parfume-price">
-                                                <span class="price-label"><?php _e('Цена:', 'parfume-reviews'); ?></span>
-                                                <span class="price-value"><?php echo esc_html($price); ?></span>
-                                            </div>
-                                        <?php endif; ?>
-
-                                        <div class="parfume-meta">
+                                        
+                                        <?php if ($card_settings['show_price']): ?>
                                             <?php 
-                                            $availability = get_post_meta(get_the_ID(), '_parfume_availability', true);
-                                            $availability_class = ($availability === 'in_stock') ? 'available' : 'unavailable';
-                                            $availability_text = ($availability === 'in_stock') ? __('В наличност', 'parfume-reviews') : __('Няма в наличност', 'parfume-reviews');
-                                            ?>
-                                            <div class="availability <?php echo esc_attr($availability_class); ?>">
-                                                <span class="dashicons dashicons-yes-alt"></span>
-                                                <?php echo esc_html($availability_text); ?>
-                                            </div>
+                                            $lowest_store = parfume_reviews_get_lowest_price(get_the_ID());
+                                            if ($lowest_store): ?>
+                                                <div class="parfume-price">
+                                                    <span class="price-label">от:</span>
+                                                    <span class="price-value"><?php echo esc_html($lowest_store['price']); ?></span>
+                                                </div>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                        
+                                        <div class="parfume-meta">
+                                            <?php if ($card_settings['show_availability']): ?>
+                                                <div class="availability">
+                                                    <?php if (parfume_reviews_is_available(get_the_ID())): ?>
+                                                        <span class="available">
+                                                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                                <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                                            </svg>
+                                                            Наличен
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="unavailable">
+                                                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                                                            </svg>
+                                                            Не е наличен
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
                                             
-                                            <div class="shipping">
-                                                <span class="dashicons dashicons-cart"></span>
-                                                <?php _e('Безплатна доставка', 'parfume-reviews'); ?>
-                                            </div>
+                                            <?php if ($card_settings['show_shipping']): ?>
+                                                <?php 
+                                                $shipping = parfume_reviews_get_cheapest_shipping(get_the_ID());
+                                                if ($shipping): ?>
+                                                    <div class="shipping">
+                                                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                            <path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h9A1.5 1.5 0 0 1 12 3.5V5h1.02a1.5 1.5 0 0 1 1.17.563l1.481 1.85a1.5 1.5 0 0 1 .329.938V10.5a1.5 1.5 0 0 1-1.5 1.5H14a2 2 0 1 1-4 0H5a2 2 0 1 1-3.998-.085A1.5 1.5 0 0 1 0 10.5v-7zm1.294 7.456A1.999 1.999 0 0 1 4.732 11h5.536a2.01 2.01 0 0 1 .732-.732V3.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .294.456zM12 10a2 2 0 0 1 1.732 1h.768a.5.5 0 0 0 .5-.5V8.35a.5.5 0 0 0-.11-.312l-1.48-1.85A.5.5 0 0 0 13.02 6H12v4zm-9 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm9 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+                                                        </svg>
+                                                        <?php echo esc_html($shipping); ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
-                                </div>
+                                </article>
                             <?php endwhile; ?>
                         </div>
-
-                        <?php
-                        // Pagination
-                        the_posts_pagination(array(
-                            'prev_text' => '<i class="icon-arrow-left"></i> ' . __('Предишна', 'parfume-reviews'),
-                            'next_text' => __('Следваща', 'parfume-reviews') . ' <i class="icon-arrow-right"></i>',
-                            'type' => 'list',
-                            'end_size' => 2,
-                            'mid_size' => 2,
-                        ));
-                        ?>
-
+                        
+                        <?php the_posts_pagination(array(
+                            'prev_text' => __('‹ Предишна', 'parfume-reviews'),
+                            'next_text' => __('Следваща ›', 'parfume-reviews'),
+                        )); ?>
                     <?php else: ?>
-                        <div class="no-parfumes">
-                            <h2><?php _e('Няма намерени парфюми', 'parfume-reviews'); ?></h2>
-                            <p><?php _e('Няма парфюми, които да отговарят на вашите критерии.', 'parfume-reviews'); ?></p>
-                        </div>
+                        <p class="no-perfumes"><?php _e('Няма намерени парфюми.', 'parfume-reviews'); ?></p>
                     <?php endif; ?>
                 </main>
             </div>
@@ -313,20 +163,6 @@ $grid_columns = isset($settings['archive_grid_columns']) ? $settings['archive_gr
 </div>
 
 <style>
-/* Homepage секции стилове */
-.homepage-sections {
-    margin-bottom: 40px;
-}
-
-.homepage-sections .homepage-section {
-    margin-bottom: 60px;
-}
-
-.section-divider {
-    margin: 40px 0;
-}
-
-/* Основни стилове запазени */
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -390,40 +226,12 @@ $grid_columns = isset($settings['archive_grid_columns']) ? $settings['archive_gr
 .parfume-thumbnail {
     height: 200px;
     overflow: hidden;
-    position: relative;
 }
 
 .parfume-thumbnail img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-}
-
-.no-image {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    background: #f8f9fa;
-    color: #dee2e6;
-    font-size: 48px;
-}
-
-.parfume-rating {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 5px 8px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.8em;
-}
-
-.rating-stars {
-    color: #ffc107;
 }
 
 .parfume-content {
@@ -448,6 +256,23 @@ $grid_columns = isset($settings['archive_grid_columns']) ? $settings['archive_gr
     color: #666;
     font-size: 0.9em;
     margin-bottom: 10px;
+}
+
+.parfume-rating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.rating-stars {
+    color: #ffc107;
+}
+
+.rating-number {
+    font-weight: bold;
+    color: #333;
+    font-size: 0.9em;
 }
 
 .parfume-price {
@@ -495,127 +320,45 @@ $grid_columns = isset($settings['archive_grid_columns']) ? $settings['archive_gr
     color: #666;
 }
 
-/* Archive Header */
-.archive-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 60px 0;
-    text-align: center;
+.popular-brands h3 {
+    margin-bottom: 15px;
+    color: #333;
 }
 
-.archive-title {
-    font-size: 3rem;
-    margin-bottom: 20px;
-    font-weight: 700;
+.popular-brands ul {
+    list-style: none;
+    padding: 0;
 }
 
-.archive-description {
-    font-size: 1.2rem;
-    margin-bottom: 20px;
-    opacity: 0.9;
+.popular-brands li {
+    margin-bottom: 8px;
 }
 
-.archive-stats {
-    font-size: 1.1rem;
-    opacity: 0.8;
-}
-
-/* Controls */
-.archive-controls {
+.popular-brands a {
+    text-decoration: none;
+    color: #0073aa;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
-    padding: 20px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 5px;
+    border-radius: 3px;
+    transition: background-color 0.3s ease;
 }
 
-.view-controls, .sort-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.view-btn {
+.popular-brands a:hover {
     background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    padding: 8px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.3s ease;
 }
 
-.view-btn.active, .view-btn:hover {
-    background: #0073aa;
-    color: white;
-    border-color: #0073aa;
-}
-
-/* Sidebar */
-.archive-sidebar {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    height: fit-content;
-}
-
-.widget {
-    margin-bottom: 30px;
-}
-
-.widget h3 {
-    margin-bottom: 15px;
-    color: #333;
-    font-size: 1.1em;
-}
-
-.filter-group {
-    margin-bottom: 15px;
-}
-
-.filter-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
+.popular-brands .count {
     color: #666;
-}
-
-.filter-group input,
-.filter-group select {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-}
-
-.brand-cloud {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.brand-tag {
-    display: inline-block;
-    background: #f8f9fa;
-    color: #666;
-    padding: 6px 10px;
-    border-radius: 4px;
-    text-decoration: none;
-    font-size: 0.9em;
-    transition: all 0.3s ease;
-}
-
-.brand-tag:hover {
-    background: #0073aa;
-    color: white;
-}
-
-.brand-tag .count {
-    opacity: 0.7;
     font-size: 0.8em;
+}
+
+.no-perfumes {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+    font-size: 1.2em;
 }
 
 /* Responsive */
@@ -625,7 +368,7 @@ $grid_columns = isset($settings['archive_grid_columns']) ? $settings['archive_gr
     }
     
     .archive-sidebar {
-        order: 2;
+        flex: 0 0 auto;
     }
     
     .parfume-grid[data-columns="2"],
@@ -634,19 +377,13 @@ $grid_columns = isset($settings['archive_grid_columns']) ? $settings['archive_gr
     .parfume-grid[data-columns="5"] {
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     }
-    
-    .archive-controls {
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .archive-title {
-        font-size: 2rem;
-    }
 }
 
 @media (max-width: 480px) {
-    .parfume-grid {
+    .parfume-grid[data-columns="2"],
+    .parfume-grid[data-columns="3"],
+    .parfume-grid[data-columns="4"],
+    .parfume-grid[data-columns="5"] {
         grid-template-columns: 1fr;
     }
     
