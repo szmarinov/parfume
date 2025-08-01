@@ -6,12 +6,12 @@ namespace Parfume_Reviews;
  * Зарежда всички settings компоненти от отделни файлове
  * 
  * Файл: includes/class-settings.php
- * FIXED VERSION: Поправени табове и JavaScript селектори
+ * UPDATED VERSION: Добавени нови компоненти за Stores, Scraper и Mobile
  */
 class Settings {
     
     /**
-     * Instances от различните settings компоненти
+     * Instances от különböző settings компоненти
      */
     private $general_settings;
     private $url_settings;
@@ -112,7 +112,7 @@ class Settings {
             PARFUME_REVIEWS_VERSION
         );
         
-        // Enqueue JavaScript - FIXED: Правилният file
+        // Enqueue JavaScript
         wp_enqueue_script(
             'parfume-settings-tabs',
             PARFUME_REVIEWS_PLUGIN_URL . 'assets/js/admin-settings.js',
@@ -145,6 +145,7 @@ class Settings {
         register_setting('parfume-reviews-settings', 'parfume_reviews_settings');
         register_setting('parfume-reviews-settings', 'parfume_reviews_stores');
         register_setting('parfume-reviews-settings', 'parfume_reviews_scraper_settings');
+        register_setting('parfume-reviews-settings', 'parfume_reviews_mobile_settings');
         
         // Позволяваме на всеки компонент да регистрира собствените си настройки
         $this->register_component_settings();
@@ -176,7 +177,6 @@ class Settings {
     
     /**
      * Рендерира главната settings страница
-     * FIXED: Правилна HTML структура за табовете
      */
     public function render_settings_page() {
         if (isset($_GET['settings-updated'])) {
@@ -188,244 +188,231 @@ class Settings {
         
         settings_errors('parfume_reviews_messages');
         ?>
-        <div class="wrap parfume-settings">
-            <h1><?php _e('Parfume Reviews настройки', 'parfume-reviews'); ?></h1>
+        <div class="wrap">
+            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
             
-            <!-- Tab navigation - FIXED: Правилните CSS класове -->
-            <div class="nav-tab-wrapper parfume-settings-tabs">
-                <a href="#general" class="nav-tab nav-tab-active"><?php _e('Общи', 'parfume-reviews'); ?></a>
-                <a href="#url" class="nav-tab"><?php _e('URL настройки', 'parfume-reviews'); ?></a>
-                <a href="#homepage" class="nav-tab"><?php _e('Начална страница', 'parfume-reviews'); ?></a>
-                <a href="#mobile" class="nav-tab"><?php _e('Mobile настройки', 'parfume-reviews'); ?></a>
-                <a href="#stores" class="nav-tab"><?php _e('Stores', 'parfume-reviews'); ?></a>
-                <a href="#product-scraper" class="nav-tab"><?php _e('Product Scraper', 'parfume-reviews'); ?></a>
-                <a href="#prices" class="nav-tab"><?php _e('Цени', 'parfume-reviews'); ?></a>
-                <a href="#import_export" class="nav-tab"><?php _e('Импорт/Експорт', 'parfume-reviews'); ?></a>
-                <a href="#shortcodes" class="nav-tab"><?php _e('Shortcodes', 'parfume-reviews'); ?></a>
-                <a href="#debug" class="nav-tab"><?php _e('Дебъг', 'parfume-reviews'); ?></a>
-            </div>
+            <!-- Tab Navigation -->
+            <nav class="nav-tab-wrapper">
+                <a href="#general" class="nav-tab nav-tab-active" data-tab="general">
+                    <?php _e('Общи', 'parfume-reviews'); ?>
+                </a>
+                <a href="#url" class="nav-tab" data-tab="url">
+                    <?php _e('URL', 'parfume-reviews'); ?>
+                </a>
+                <a href="#homepage" class="nav-tab" data-tab="homepage">
+                    <?php _e('Начална страница', 'parfume-reviews'); ?>
+                </a>
+                <a href="#stores" class="nav-tab" data-tab="stores">
+                    <?php _e('Магазини', 'parfume-reviews'); ?>
+                </a>
+                <a href="#scraper" class="nav-tab" data-tab="scraper">
+                    <?php _e('Product Scraper', 'parfume-reviews'); ?>
+                </a>
+                <a href="#mobile" class="nav-tab" data-tab="mobile">
+                    <?php _e('Mobile', 'parfume-reviews'); ?>
+                </a>
+                <a href="#price" class="nav-tab" data-tab="price">
+                    <?php _e('Цени', 'parfume-reviews'); ?>
+                </a>
+                <a href="#import-export" class="nav-tab" data-tab="import-export">
+                    <?php _e('Импорт/Експорт', 'parfume-reviews'); ?>
+                </a>
+                <a href="#shortcodes" class="nav-tab" data-tab="shortcodes">
+                    <?php _e('Shortcodes', 'parfume-reviews'); ?>
+                </a>
+                <a href="#debug" class="nav-tab" data-tab="debug">
+                    <?php _e('Дебъг', 'parfume-reviews'); ?>
+                </a>
+            </nav>
             
-            <form action="options.php" method="post">
-                <?php
-                settings_fields('parfume-reviews-settings');
-                do_settings_sections('parfume-reviews-settings');
-                ?>
+            <form method="post" action="options.php">
+                <?php settings_fields('parfume-reviews-settings'); ?>
                 
                 <!-- General Tab -->
-                <div id="general" class="tab-content tab-content-active">
+                <div id="general-tab" class="tab-content tab-content-active">
                     <h2><?php _e('Общи настройки', 'parfume-reviews'); ?></h2>
-                    <p><?php _e('Основни настройки на плъгина.', 'parfume-reviews'); ?></p>
-                    <?php
-                    if (isset($this->general_settings) && method_exists($this->general_settings, 'render_section')) {
-                        $this->general_settings->render_section();
-                    } else {
-                        echo '<p class="notice notice-warning">' . __('General settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
-                    }
-                    ?>
+                    <?php if (isset($this->general_settings)): ?>
+                        <?php $this->general_settings->render_section(); ?>
+                    <?php endif; ?>
                 </div>
                 
-                <!-- URL Settings Tab -->
-                <div id="url" class="tab-content">
+                <!-- URL Tab -->
+                <div id="url-tab" class="tab-content">
                     <h2><?php _e('URL настройки', 'parfume-reviews'); ?></h2>
-                    <p><?php _e('Конфигурирайте URL структурата за различните типове страници.', 'parfume-reviews'); ?></p>
-                    <?php
-                    if (isset($this->url_settings) && method_exists($this->url_settings, 'render_section')) {
-                        $this->url_settings->render_section();
-                    } else {
-                        echo '<p class="notice notice-warning">' . __('URL settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
-                    }
-                    ?>
+                    <?php if (isset($this->url_settings)): ?>
+                        <?php $this->url_settings->render_section(); ?>
+                    <?php endif; ?>
                 </div>
                 
                 <!-- Homepage Tab -->
-                <div id="homepage" class="tab-content">
+                <div id="homepage-tab" class="tab-content">
                     <h2><?php _e('Настройки за начална страница', 'parfume-reviews'); ?></h2>
-                    <p><?php _e('Конфигурирайте как се показват парфюмите на началната страница.', 'parfume-reviews'); ?></p>
-                    <?php
-                    if (isset($this->homepage_settings) && method_exists($this->homepage_settings, 'render_section')) {
-                        $this->homepage_settings->render_section();
-                    } else {
-                        echo '<p class="notice notice-warning">' . __('Homepage settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
-                    }
-                    ?>
-                </div>
-                
-                <!-- Mobile Tab -->
-                <div id="mobile" class="tab-content">
-                    <h2><?php _e('Mobile настройки', 'parfume-reviews'); ?></h2>
-                    <p><?php _e('Настройки за мобилни устройства.', 'parfume-reviews'); ?></p>
-                    <?php
-                    if (isset($this->mobile_settings) && method_exists($this->mobile_settings, 'render_section')) {
-                        $this->mobile_settings->render_section();
-                    } else {
-                        echo '<p class="notice notice-warning">' . __('Mobile settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
-                    }
-                    ?>
+                    <?php if (isset($this->homepage_settings)): ?>
+                        <?php $this->homepage_settings->render_section(); ?>
+                    <?php endif; ?>
                 </div>
                 
                 <!-- Stores Tab -->
-                <div id="stores" class="tab-content">
+                <div id="stores-tab" class="tab-content">
                     <h2><?php _e('Управление на магазини', 'parfume-reviews'); ?></h2>
-                    <p><?php _e('Управлявайте налични магазини за парфюми.', 'parfume-reviews'); ?></p>
-                    <?php
-                    if (isset($this->stores_settings) && method_exists($this->stores_settings, 'render_section')) {
-                        $this->stores_settings->render_section();
-                    } else {
-                        echo '<p class="notice notice-warning">' . __('Stores settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
-                    }
-                    ?>
+                    <?php if (isset($this->stores_settings)): ?>
+                        <?php $this->stores_settings->render_section(); ?>
+                    <?php endif; ?>
                 </div>
                 
-                <!-- Product Scraper Tab -->
-                <div id="product-scraper" class="tab-content">
-                    <h2><?php _e('Product Scraper', 'parfume-reviews'); ?></h2>
-                    <p><?php _e('Настройки за автоматично извличане на информация за продукти.', 'parfume-reviews'); ?></p>
-                    <?php
-                    if (isset($this->scraper_settings) && method_exists($this->scraper_settings, 'render_section')) {
-                        $this->scraper_settings->render_section();
-                    } else {
-                        echo '<p class="notice notice-warning">' . __('Scraper settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
-                    }
-                    ?>
+                <!-- Scraper Tab -->
+                <div id="scraper-tab" class="tab-content">
+                    <h2><?php _e('Product Scraper настройки', 'parfume-reviews'); ?></h2>
+                    <?php if (isset($this->scraper_settings)): ?>
+                        <?php $this->scraper_settings->render_section(); ?>
+                    <?php endif; ?>
                 </div>
                 
-                <!-- Prices Tab -->
-                <div id="prices" class="tab-content">
+                <!-- Mobile Tab -->
+                <div id="mobile-tab" class="tab-content">
+                    <h2><?php _e('Mobile настройки', 'parfume-reviews'); ?></h2>
+                    <?php if (isset($this->mobile_settings)): ?>
+                        <?php $this->mobile_settings->render_section(); ?>
+                    <?php endif; ?>
+                </div>
+                
+                <!-- Price Tab -->
+                <div id="price-tab" class="tab-content">
                     <h2><?php _e('Настройки за цени', 'parfume-reviews'); ?></h2>
-                    <p><?php _e('Конфигурирайте как се показват цените.', 'parfume-reviews'); ?></p>
-                    <?php
-                    if (isset($this->price_settings) && method_exists($this->price_settings, 'render_section')) {
-                        $this->price_settings->render_section();
-                    } else {
-                        echo '<p class="notice notice-warning">' . __('Price settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
-                    }
-                    ?>
+                    <?php if (isset($this->price_settings)): ?>
+                        <?php $this->price_settings->render_section(); ?>
+                    <?php endif; ?>
                 </div>
                 
                 <!-- Import/Export Tab -->
-                <div id="import_export" class="tab-content">
-                    <h2><?php _e('Импорт и експорт', 'parfume-reviews'); ?></h2>
-                    <p><?php _e('Импортирайте и експортирайте парфюми и настройки.', 'parfume-reviews'); ?></p>
-                    <?php
-                    if (isset($this->import_export_settings) && method_exists($this->import_export_settings, 'render_section')) {
-                        $this->import_export_settings->render_section();
-                    } else {
-                        echo '<p class="notice notice-warning">' . __('Import/Export settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
-                    }
-                    ?>
+                <div id="import-export-tab" class="tab-content">
+                    <h2><?php _e('Импорт и експорт на данни', 'parfume-reviews'); ?></h2>
+                    <?php if (isset($this->import_export_settings)): ?>
+                        <?php $this->import_export_settings->render_section(); ?>
+                    <?php endif; ?>
                 </div>
                 
                 <!-- Shortcodes Tab -->
-                <div id="shortcodes" class="tab-content">
-                    <h2><?php _e('Shortcodes документация', 'parfume-reviews'); ?></h2>
-                    <p><?php _e('Информация за наличните shortcodes и тяхната употреба.', 'parfume-reviews'); ?></p>
-                    <?php
-                    if (isset($this->shortcodes_settings) && method_exists($this->shortcodes_settings, 'render_section')) {
-                        $this->shortcodes_settings->render_section();
-                    } else {
-                        echo '<p class="notice notice-warning">' . __('Shortcodes settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
-                    }
-                    ?>
+                <div id="shortcodes-tab" class="tab-content">
+                    <h2><?php _e('Shortcodes настройки', 'parfume-reviews'); ?></h2>
+                    <?php if (isset($this->shortcodes_settings)): ?>
+                        <?php $this->shortcodes_settings->render_section(); ?>
+                    <?php endif; ?>
                 </div>
                 
                 <!-- Debug Tab -->
-                <div id="debug" class="tab-content">
+                <div id="debug-tab" class="tab-content">
                     <h2><?php _e('Дебъг информация', 'parfume-reviews'); ?></h2>
-                    <p><?php _e('Инструменти за отстраняване на проблеми.', 'parfume-reviews'); ?></p>
-                    <?php
-                    if (isset($this->debug_settings) && method_exists($this->debug_settings, 'render_section')) {
-                        $this->debug_settings->render_section();
-                    } else {
-                        echo '<p class="notice notice-warning">' . __('Debug settings компонентът не е зареден.', 'parfume-reviews') . '</p>';
-                    }
-                    ?>
+                    <?php if (isset($this->debug_settings)): ?>
+                        <?php $this->debug_settings->render_section(); ?>
+                    <?php endif; ?>
                 </div>
                 
                 <?php submit_button(); ?>
             </form>
         </div>
         
-        <!-- INLINE CSS FIXES - Поправя визуалните проблеми -->
-        <style>
-        .parfume-settings-tabs {
-            background: #f8f9fa;
-            border-radius: 8px 8px 0 0;
-            margin-bottom: 0;
-        }
-        
-        .tab-content {
-            display: none;
-            background: white;
-            padding: 30px;
-            border-radius: 0 0 8px 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e1e5e9;
-            border-top: none;
-        }
-        
-        .tab-content.tab-content-active {
-            display: block;
-        }
-        
-        .url-structure-info li {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-family: monospace;
-            background: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            border-left: 3px solid #0073aa;
-        }
-        
-        .view-archive-btn {
-            margin-left: 10px;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            text-decoration: none;
-            white-space: nowrap;
-        }
-        
-        .notice {
-            margin: 15px 0;
-            padding: 12px;
-            border-left: 4px solid #ffba00;
-            background: #fff8e5;
-        }
-        </style>
-        
-        <!-- INLINE JAVASCRIPT BACKUP - В случай че външният файл не се зарежда -->
         <script type="text/javascript">
         jQuery(document).ready(function($) {
-            // Backup tab functionality ако външният JS не работи
-            if (typeof window.initTabs === 'undefined') {
-                $('.parfume-settings-tabs .nav-tab').on('click', function(e) {
-                    e.preventDefault();
-                    
-                    var $clickedTab = $(this);
-                    var targetTabId = $clickedTab.attr('href').replace('#', '');
-                    
-                    // Update active tab
-                    $('.parfume-settings-tabs .nav-tab').removeClass('nav-tab-active');
-                    $clickedTab.addClass('nav-tab-active');
-                    
-                    // Show/hide content
-                    $('.tab-content').removeClass('tab-content-active').hide();
-                    $('#' + targetTabId).addClass('tab-content-active').show();
-                });
+            // Tab switching functionality
+            $('.nav-tab').click(function(e) {
+                e.preventDefault();
                 
-                // Initialize first tab
-                $('.parfume-settings-tabs .nav-tab').first().trigger('click');
+                var tabId = $(this).data('tab');
+                
+                // Remove active class from all tabs and content
+                $('.nav-tab').removeClass('nav-tab-active');
+                $('.tab-content').removeClass('tab-content-active');
+                
+                // Add active class to clicked tab and corresponding content
+                $(this).addClass('nav-tab-active');
+                $('#' + tabId + '-tab').addClass('tab-content-active');
+                
+                // Update URL hash
+                window.location.hash = tabId;
+            });
+            
+            // Show tab based on URL hash
+            if (window.location.hash) {
+                var hash = window.location.hash.substring(1);
+                var $targetTab = $('[data-tab="' + hash + '"]');
+                if ($targetTab.length) {
+                    $targetTab.click();
+                }
             }
         });
         </script>
+        
+        <style>
+        .tab-content {
+            display: none;
+            margin-top: 20px;
+        }
+        .tab-content-active {
+            display: block;
+        }
+        .nav-tab-wrapper {
+            margin-bottom: 0;
+        }
+        .tab-content h2 {
+            margin-top: 0;
+            padding-top: 20px;
+        }
+        .stores-management .store-item {
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .stores-management .store-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .stores-management .store-logo img {
+            margin-right: 15px;
+        }
+        .stores-management .add-store-form {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+        .scraper-settings .test-results-content {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+        .mobile-preview-container {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .preview-mobile-panel {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .status-badge {
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-success { background: #d4edda; color: #155724; }
+        .status-error { background: #f8d7da; color: #721c24; }
+        .status-blocked { background: #fff3cd; color: #856404; }
+        .status-warning { background: #ffeaa7; color: #6c5500; }
+        .status-pending { background: #d1ecf1; color: #0c5460; }
+        .no-data { color: #999; font-style: italic; }
+        </style>
         <?php
     }
     
     /**
-     * Получава instance от конкретен settings компонент
+     * Получава компонент по име
      */
     public function get_component($component_name) {
         $property_name = $component_name . '_settings';
@@ -441,24 +428,231 @@ class Settings {
     }
     
     /**
-     * Debug метод - показва кои компоненти са заредени
+     * Получава всички заредени компоненти
      */
-    public function debug_loaded_components() {
-        if (!current_user_can('manage_options') || !defined('WP_DEBUG') || !WP_DEBUG) {
-            return;
-        }
-        
+    public function get_loaded_components() {
+        $loaded = array();
         $components = array(
-            'general_settings', 'url_settings', 'homepage_settings', 'mobile_settings',
-            'stores_settings', 'scraper_settings', 'price_settings', 'import_export_settings',
-            'shortcodes_settings', 'debug_settings'
+            'general', 'url', 'homepage', 'mobile', 'stores', 'scraper', 
+            'price', 'import_export', 'shortcodes', 'debug'
         );
         
-        echo '<div class="notice notice-info" style="margin: 20px 0;"><h4>Debug: Заредени компоненти</h4><ul>';
         foreach ($components as $component) {
-            $loaded = isset($this->$component) ? '✅' : '❌';
-            echo '<li>' . $loaded . ' ' . $component . '</li>';
+            if ($this->has_component($component)) {
+                $loaded[] = $component;
+            }
         }
-        echo '</ul></div>';
+        
+        return $loaded;
+    }
+    
+    /**
+     * Извиква метод на компонент
+     */
+    public function call_component_method($component_name, $method_name, $args = array()) {
+        $component = $this->get_component($component_name);
+        
+        if ($component && method_exists($component, $method_name)) {
+            return call_user_func_array(array($component, $method_name), $args);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Backup функционалност за настройки
+     */
+    public function backup_settings() {
+        $settings_backup = array(
+            'parfume_reviews_settings' => get_option('parfume_reviews_settings', array()),
+            'parfume_reviews_stores' => get_option('parfume_reviews_stores', array()),
+            'parfume_reviews_scraper_settings' => get_option('parfume_reviews_scraper_settings', array()),
+            'parfume_reviews_mobile_settings' => get_option('parfume_reviews_mobile_settings', array()),
+            'backup_date' => current_time('mysql'),
+            'backup_version' => PARFUME_REVIEWS_VERSION
+        );
+        
+        return $settings_backup;
+    }
+    
+    /**
+     * Restore функционалност за настройки
+     */
+    public function restore_settings($backup_data) {
+        if (!is_array($backup_data)) {
+            return false;
+        }
+        
+        $restored = array();
+        
+        $option_keys = array(
+            'parfume_reviews_settings',
+            'parfume_reviews_stores', 
+            'parfume_reviews_scraper_settings',
+            'parfume_reviews_mobile_settings'
+        );
+        
+        foreach ($option_keys as $key) {
+            if (isset($backup_data[$key])) {
+                update_option($key, $backup_data[$key]);
+                $restored[] = $key;
+            }
+        }
+        
+        return $restored;
+    }
+    
+    /**
+     * Валидира цялостността на настройките
+     */
+    public function validate_settings_integrity() {
+        $issues = array();
+        
+        // Проверяваме дали основните опции съществуват
+        $required_options = array(
+            'parfume_reviews_settings' => 'Основни настройки',
+            'parfume_reviews_stores' => 'Настройки за магазини'
+        );
+        
+        foreach ($required_options as $option_key => $description) {
+            $option_value = get_option($option_key);
+            if ($option_value === false) {
+                $issues[] = sprintf(__('Липсва опция: %s (%s)', 'parfume-reviews'), $option_key, $description);
+            }
+        }
+        
+        // Проверяваме дали stores са валидни
+        $stores = get_option('parfume_reviews_stores', array());
+        if (is_array($stores)) {
+            foreach ($stores as $store_id => $store_data) {
+                if (!isset($store_data['name']) || empty($store_data['name'])) {
+                    $issues[] = sprintf(__('Магазин %s няма име', 'parfume-reviews'), $store_id);
+                }
+            }
+        }
+        
+        // Проверяваме scraper настройки
+        $scraper_settings = get_option('parfume_reviews_scraper_settings', array());
+        if (is_array($scraper_settings)) {
+            $required_scraper_fields = array('batch_size', 'timeout', 'user_agent');
+            foreach ($required_scraper_fields as $field) {
+                if (!isset($scraper_settings[$field])) {
+                    $issues[] = sprintf(__('Scraper настройка липсва: %s', 'parfume-reviews'), $field);
+                }
+            }
+        }
+        
+        return $issues;
+    }
+    
+    /**
+     * Получава статистики за настройките
+     */
+    public function get_settings_stats() {
+        $stats = array();
+        
+        // Брой магазини
+        $stores = get_option('parfume_reviews_stores', array());
+        $stats['stores_count'] = is_array($stores) ? count($stores) : 0;
+        
+        // Брой постове с магазини
+        global $wpdb;
+        $posts_with_stores = $wpdb->get_var("
+            SELECT COUNT(DISTINCT post_id) 
+            FROM {$wpdb->postmeta} 
+            WHERE meta_key = '_parfume_stores' 
+            AND meta_value != ''
+        ");
+        $stats['posts_with_stores'] = intval($posts_with_stores);
+        
+        // Брой product URLs
+        $total_urls = 0;
+        $posts_stores_data = $wpdb->get_results("
+            SELECT meta_value 
+            FROM {$wpdb->postmeta} 
+            WHERE meta_key = '_parfume_stores' 
+            AND meta_value != ''
+        ");
+        
+        foreach ($posts_stores_data as $row) {
+            $stores_data = maybe_unserialize($row->meta_value);
+            if (is_array($stores_data)) {
+                foreach ($stores_data as $store_data) {
+                    if (!empty($store_data['product_url'])) {
+                        $total_urls++;
+                    }
+                }
+            }
+        }
+        $stats['total_product_urls'] = $total_urls;
+        
+        // Scraper статистики
+        $scraper_settings = get_option('parfume_reviews_scraper_settings', array());
+        $stats['scraper_enabled'] = !empty($scraper_settings);
+        $stats['scraper_interval'] = isset($scraper_settings['scrape_interval']) ? $scraper_settings['scrape_interval'] : 24;
+        
+        // Mobile настройки
+        $mobile_settings = get_option('parfume_reviews_mobile_settings', array());
+        $stats['mobile_fixed_panel'] = isset($mobile_settings['fixed_panel_enabled']) ? $mobile_settings['fixed_panel_enabled'] : 1;
+        
+        return $stats;
+    }
+    
+    /**
+     * Миграция на стари настройки (ако е необходимо)
+     */
+    public function migrate_legacy_settings() {
+        $current_version = get_option('parfume_reviews_settings_version', '1.0.0');
+        
+        if (version_compare($current_version, PARFUME_REVIEWS_VERSION, '<')) {
+            // Извършваме миграция
+            $this->perform_settings_migration($current_version);
+            
+            // Обновяваме версията
+            update_option('parfume_reviews_settings_version', PARFUME_REVIEWS_VERSION);
+            
+            // Логираме миграцията
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Parfume Reviews: Settings migrated from {$current_version} to " . PARFUME_REVIEWS_VERSION);
+            }
+        }
+    }
+    
+    /**
+     * Извършва миграция на настройки
+     */
+    private function perform_settings_migration($from_version) {
+        // Тук може да добавим специфични миграции според версията
+        
+        // Пример за миграция от версия 1.0.0 към 1.1.0
+        if (version_compare($from_version, '1.1.0', '<')) {
+            // Мигрираме стари настройки към нова структура
+            $old_settings = get_option('parfume_reviews_old_settings', array());
+            if (!empty($old_settings)) {
+                $new_settings = get_option('parfume_reviews_settings', array());
+                // Преобразуваме стари настройки към нови
+                // ... migration logic ...
+                update_option('parfume_reviews_settings', $new_settings);
+                delete_option('parfume_reviews_old_settings');
+            }
+        }
+    }
+    
+    /**
+     * Debug информация за настройките
+     */
+    public function get_debug_info() {
+        $debug_info = array(
+            'loaded_components' => $this->get_loaded_components(),
+            'settings_stats' => $this->get_settings_stats(),
+            'integrity_issues' => $this->validate_settings_integrity(),
+            'wp_version' => get_bloginfo('version'),
+            'plugin_version' => PARFUME_REVIEWS_VERSION,
+            'php_version' => PHP_VERSION,
+            'memory_limit' => ini_get('memory_limit'),
+            'max_execution_time' => ini_get('max_execution_time')
+        );
+        
+        return $debug_info;
     }
 }
