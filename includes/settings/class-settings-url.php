@@ -5,7 +5,7 @@ namespace Parfume_Reviews\Settings;
  * Settings_URL class - Управлява URL настройките и структурата
  * 
  * Файл: includes/settings/class-settings-url.php
- * Извлечен от оригинален class-settings.php
+ * FIXED VERSION: Поправени полета и правилна default blog slug
  */
 class Settings_URL {
     
@@ -72,7 +72,7 @@ class Settings_URL {
     }
     
     /**
-     * Рендерира секцията с URL настройки
+     * Рендерира секцията с URL настройки - FIXED
      */
     public function render_section() {
         ?>
@@ -130,29 +130,29 @@ class Settings_URL {
      */
     public function parfume_slug_callback() {
         $settings = get_option('parfume_reviews_settings', array());
-        $value = isset($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfume';
+        $value = isset($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
         
         echo '<input type="text" 
                      id="parfume_slug"
                      name="parfume_reviews_settings[parfume_slug]" 
                      value="' . esc_attr($value) . '" 
                      class="regular-text" />';
-        echo '<p class="description">' . __('URL slug за единични parfume постове.', 'parfume-reviews') . '</p>';
+        echo '<p class="description">' . __('URL slug за парфюми архив (напр: parfiumi)', 'parfume-reviews') . '</p>';
     }
     
     /**
-     * Callback за blog_slug настройката
+     * Callback за blog_slug настройката - FIXED: Правилен default
      */
     public function blog_slug_callback() {
         $settings = get_option('parfume_reviews_settings', array());
-        $value = isset($settings['blog_slug']) ? $settings['blog_slug'] : 'parfume-blog';
+        $value = isset($settings['blog_slug']) ? $settings['blog_slug'] : 'blog';
         
         echo '<input type="text" 
                      id="blog_slug"
                      name="parfume_reviews_settings[blog_slug]" 
                      value="' . esc_attr($value) . '" 
                      class="regular-text" />';
-        echo '<p class="description">' . __('URL slug за blog постове.', 'parfume-reviews') . '</p>';
+        echo '<p class="description">' . __('URL slug за blog архив (напр: blog)', 'parfume-reviews') . '</p>';
     }
     
     /**
@@ -167,8 +167,8 @@ class Settings_URL {
             'aroma_type_slug' => 'aroma-type',
             'season_slug' => 'season',
             'intensity_slug' => 'intensity',
-            'notes_slug' => 'notes',
-            'perfumer_slug' => 'perfumer',
+            'notes_slug' => 'notki',
+            'perfumer_slug' => 'parfumeri',
         );
         $value = isset($settings[$field]) ? $settings[$field] : $defaults[$field];
         
@@ -196,11 +196,11 @@ class Settings_URL {
             <h3><?php _e('URL структура', 'parfume-reviews'); ?></h3>
             <p><?php _e('Примерни URLs базирани на текущите настройки:', 'parfume-reviews'); ?></p>
             <ul>
-                <li><?php echo home_url('/' . (isset($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfume') . '/'); ?> - <?php _e('Архив на парфюми', 'parfume-reviews'); ?></li>
-                <li><?php echo home_url('/' . (isset($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfume') . '/sample-parfume/'); ?> - <?php _e('Единичен парфюм', 'parfume-reviews'); ?></li>
+                <li><?php echo home_url('/' . (isset($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi') . '/'); ?> - <?php _e('Архив на парфюми', 'parfume-reviews'); ?></li>
+                <li><?php echo home_url('/' . (isset($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi') . '/sample-parfume/'); ?> - <?php _e('Единичен парфюм', 'parfume-reviews'); ?></li>
+                <li><?php echo home_url('/' . (isset($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi') . '/' . (isset($settings['blog_slug']) ? $settings['blog_slug'] : 'blog') . '/'); ?> - <?php _e('Blog архив', 'parfume-reviews'); ?></li>
                 <li><?php echo home_url('/' . (isset($settings['marki_slug']) ? $settings['marki_slug'] : 'marki') . '/chanel/'); ?> - <?php _e('Парфюми от марка', 'parfume-reviews'); ?></li>
-                <li><?php echo home_url('/' . (isset($settings['perfumer_slug']) ? $settings['perfumer_slug'] : 'perfumer') . '/jean-claude-ellena/'); ?> - <?php _e('Парфюми от парфюмерист', 'parfume-reviews'); ?></li>
-                <li><?php echo home_url('/' . (isset($settings['blog_slug']) ? $settings['blog_slug'] : 'parfume-blog') . '/'); ?> - <?php _e('Blog архив', 'parfume-reviews'); ?></li>
+                <li><?php echo home_url('/' . (isset($settings['perfumer_slug']) ? $settings['perfumer_slug'] : 'parfumeri') . '/jean-claude-ellena/'); ?> - <?php _e('Парфюми от парфюмерист', 'parfume-reviews'); ?></li>
             </ul>
             <p class="description">
                 <strong><?php _e('Важно:', 'parfume-reviews'); ?></strong> 
@@ -216,17 +216,17 @@ class Settings_URL {
     public function validate_settings($input) {
         $validated = array();
         
-        // Списък на URL полетата
+        // Списък на URL полетата с правилни defaults
         $url_fields = array(
-            'parfume_slug' => 'parfume',
-            'blog_slug' => 'parfume-blog',
+            'parfume_slug' => 'parfiumi',
+            'blog_slug' => 'blog',
             'marki_slug' => 'marki',
             'gender_slug' => 'gender',
             'aroma_type_slug' => 'aroma-type',
             'season_slug' => 'season',
             'intensity_slug' => 'intensity',
-            'notes_slug' => 'notes',
-            'perfumer_slug' => 'perfumer'
+            'notes_slug' => 'notki',
+            'perfumer_slug' => 'parfumeri'
         );
         
         foreach ($url_fields as $field => $default) {
@@ -248,9 +248,11 @@ class Settings_URL {
             }
         }
         
-        // Проверка за дублирани slugs
+        // Проверка за дублирани slugs (без blog_slug защото той се комбинира с parfume_slug)
         $used_slugs = array();
         foreach ($validated as $field => $slug) {
+            if ($field === 'blog_slug') continue; // Skip blog_slug check
+            
             if (in_array($slug, $used_slugs)) {
                 add_settings_error(
                     'parfume_reviews_settings',
@@ -273,15 +275,15 @@ class Settings_URL {
         $settings = get_option('parfume_reviews_settings', array());
         
         $defaults = array(
-            'parfume_slug' => 'parfume',
-            'blog_slug' => 'parfume-blog',
+            'parfume_slug' => 'parfiumi',
+            'blog_slug' => 'blog',
             'marki_slug' => 'marki',
             'gender_slug' => 'gender',
             'aroma_type_slug' => 'aroma-type',
             'season_slug' => 'season',
             'intensity_slug' => 'intensity',
-            'notes_slug' => 'notes',
-            'perfumer_slug' => 'perfumer'
+            'notes_slug' => 'notki',
+            'perfumer_slug' => 'parfumeri'
         );
         
         if (isset($defaults[$setting_name])) {
@@ -315,15 +317,15 @@ class Settings_URL {
         $settings = get_option('parfume_reviews_settings', array());
         
         $defaults = array(
-            'parfume_slug' => 'parfume',
-            'blog_slug' => 'parfume-blog',
+            'parfume_slug' => 'parfiumi',
+            'blog_slug' => 'blog',
             'marki_slug' => 'marki',
             'gender_slug' => 'gender',
             'aroma_type_slug' => 'aroma-type',
             'season_slug' => 'season',
             'intensity_slug' => 'intensity',
-            'notes_slug' => 'notes',
-            'perfumer_slug' => 'perfumer'
+            'notes_slug' => 'notki',
+            'perfumer_slug' => 'parfumeri'
         );
         
         $url_settings = array();
@@ -339,15 +341,15 @@ class Settings_URL {
      */
     public function load_defaults() {
         $defaults = array(
-            'parfume_slug' => 'parfume',
-            'blog_slug' => 'parfume-blog',
+            'parfume_slug' => 'parfiumi',
+            'blog_slug' => 'blog',
             'marki_slug' => 'marki',
             'gender_slug' => 'gender',
             'aroma_type_slug' => 'aroma-type',
             'season_slug' => 'season',
             'intensity_slug' => 'intensity',
-            'notes_slug' => 'notes',
-            'perfumer_slug' => 'perfumer'
+            'notes_slug' => 'notki',
+            'perfumer_slug' => 'parfumeri'
         );
         
         $current_settings = get_option('parfume_reviews_settings', array());
@@ -367,20 +369,20 @@ class Settings_URL {
      */
     public function reset_to_defaults() {
         $defaults = array(
-            'parfume_slug' => 'parfume',
-            'blog_slug' => 'parfume-blog',
+            'parfume_slug' => 'parfiumi',
+            'blog_slug' => 'blog',
             'marki_slug' => 'marki',
             'gender_slug' => 'gender',
             'aroma_type_slug' => 'aroma-type',
             'season_slug' => 'season',
             'intensity_slug' => 'intensity',
-            'notes_slug' => 'notes',
-            'perfumer_slug' => 'perfumer'
+            'notes_slug' => 'notki',
+            'perfumer_slug' => 'parfumeri'
         );
         
         $current_settings = get_option('parfume_reviews_settings', array());
         
-        // Запазваме настройките от други компоненти
+        // Replace only URL settings
         foreach ($defaults as $key => $value) {
             $current_settings[$key] = $value;
         }
@@ -392,94 +394,5 @@ class Settings_URL {
         }
         
         return $result;
-    }
-    
-    /**
-     * Проверява URL структурата
-     */
-    public function test_url_structure() {
-        $settings = $this->get_all_settings();
-        $test_results = array();
-        
-        // Проверка за дублирани slugs
-        $slugs = array_values($settings);
-        $unique_slugs = array_unique($slugs);
-        $test_results['has_duplicates'] = count($slugs) !== count($unique_slugs);
-        
-        // Проверка за невалидни символи
-        $invalid_slugs = array();
-        foreach ($settings as $field => $slug) {
-            if ($slug !== sanitize_title($slug)) {
-                $invalid_slugs[] = $field;
-            }
-        }
-        $test_results['invalid_slugs'] = $invalid_slugs;
-        
-        // Проверка за заети WordPress slugs
-        $reserved_slugs = array('admin', 'wp-admin', 'wp-content', 'wp-includes', 'index', 'search');
-        $conflicts = array();
-        foreach ($settings as $field => $slug) {
-            if (in_array($slug, $reserved_slugs)) {
-                $conflicts[] = array('field' => $field, 'slug' => $slug);
-            }
-        }
-        $test_results['reserved_conflicts'] = $conflicts;
-        
-        return $test_results;
-    }
-    
-    /**
-     * Експортира URL настройките в JSON формат
-     */
-    public function export_settings() {
-        $settings = $this->get_all_settings();
-        
-        return json_encode(array(
-            'component' => 'url',
-            'version' => PARFUME_REVIEWS_VERSION,
-            'timestamp' => current_time('mysql'),
-            'settings' => $settings
-        ), JSON_PRETTY_PRINT);
-    }
-    
-    /**
-     * Импортира URL настройки от JSON данни
-     */
-    public function import_settings($json_data) {
-        $data = json_decode($json_data, true);
-        
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return new \WP_Error('invalid_json', __('Невалиден JSON формат.', 'parfume-reviews'));
-        }
-        
-        if (!isset($data['component']) || $data['component'] !== 'url') {
-            return new \WP_Error('invalid_component', __('Файлът не съдържа URL настройки.', 'parfume-reviews'));
-        }
-        
-        if (!isset($data['settings']) || !is_array($data['settings'])) {
-            return new \WP_Error('invalid_settings', __('Невалидни настройки в файла.', 'parfume-reviews'));
-        }
-        
-        // Валидираме настройките
-        $validated_settings = $this->validate_settings($data['settings']);
-        
-        // Запазваме настройките
-        $current_settings = get_option('parfume_reviews_settings', array());
-        $current_settings = array_merge($current_settings, $validated_settings);
-        
-        $result = update_option('parfume_reviews_settings', $current_settings);
-        
-        if ($result) {
-            // Flush rewrite rules след импорт
-            update_option('parfume_reviews_flush_rewrite_rules', true);
-            
-            return array(
-                'success' => true,
-                'message' => __('URL настройките са импортирани успешно.', 'parfume-reviews'),
-                'imported_count' => count($validated_settings)
-            );
-        } else {
-            return new \WP_Error('save_failed', __('Грешка при запазване на настройките.', 'parfume-reviews'));
-        }
     }
 }
