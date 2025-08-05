@@ -65,7 +65,7 @@ $seasons = get_terms(array(
                             <div class="season-header">
                                 <?php if ($season_image): ?>
                                     <div class="season-image">
-                                        <img src="<?php echo esc_url($season_image); ?>" alt="<?php echo esc_attr($season->name); ?>">
+                                        <img src="<?php echo esc_url($season_image); ?>" alt="<?php echo esc_attr($season->name); ?>" class="season-thumb">
                                     </div>
                                 <?php endif; ?>
                                 
@@ -94,17 +94,17 @@ $seasons = get_terms(array(
                                 <div class="season-parfumes">
                                     <h3 class="section-title"><?php _e('Топ парфюми за сезона', 'parfume-reviews'); ?></h3>
                                     
-                                    <div class="parfumes-preview">
+                                    <div class="parfumes-preview parfume-grid">
                                         <?php foreach ($season_posts as $post): 
                                             setup_postdata($post); ?>
                                             
-                                            <div class="parfume-mini-card">
+                                            <div class="parfume-card parfume-mini-card">
                                                 <div class="parfume-thumbnail">
                                                     <a href="<?php the_permalink(); ?>">
                                                         <?php if (has_post_thumbnail()): ?>
-                                                            <?php the_post_thumbnail('thumbnail'); ?>
+                                                            <?php the_post_thumbnail('thumbnail', array('class' => 'parfume-thumb')); ?>
                                                         <?php else: ?>
-                                                            <div class="no-image-mini">
+                                                            <div class="no-image">
                                                                 <span>?</span>
                                                             </div>
                                                         <?php endif; ?>
@@ -113,13 +113,13 @@ $seasons = get_terms(array(
                                                     <?php 
                                                     $rating = get_post_meta(get_the_ID(), '_parfume_rating', true);
                                                     if ($rating): ?>
-                                                        <div class="mini-rating">
+                                                        <div class="parfume-rating">
                                                             <span class="rating-number"><?php echo esc_html($rating); ?></span>
                                                         </div>
                                                     <?php endif; ?>
                                                 </div>
                                                 
-                                                <div class="parfume-info">
+                                                <div class="parfume-content">
                                                     <h4 class="parfume-title">
                                                         <a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
                                                     </h4>
@@ -139,7 +139,7 @@ $seasons = get_terms(array(
                                     </div>
                                     
                                     <div class="season-actions">
-                                        <a href="<?php echo esc_url(get_term_link($season)); ?>" class="view-all-button">
+                                        <a href="<?php echo esc_url(get_term_link($season)); ?>" class="view-all-button button">
                                             <?php printf(__('Всички %s парфюми', 'parfume-reviews'), esc_html($season->name)); ?>
                                             <span class="arrow">→</span>
                                         </a>
@@ -192,187 +192,6 @@ $seasons = get_terms(array(
     </div>
 </div>
 
-<style>
-/* Специфични стилове за season archive */
-.season-archive-page .seasons-grid {
-    display: grid;
-    gap: 2rem;
-    margin-bottom: 3rem;
-}
 
-.season-block {
-    border: 1px solid #e1e1e1;
-    border-radius: 8px;
-    padding: 1.5rem;
-    background: #fff;
-    transition: box-shadow 0.3s ease;
-}
-
-.season-block:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.season-header {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    align-items: flex-start;
-}
-
-.season-image img {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: 50%;
-}
-
-.season-title a {
-    color: #2c3e50;
-    text-decoration: none;
-    font-size: 1.5rem;
-    font-weight: 600;
-}
-
-.season-title a:hover {
-    color: #3498db;
-}
-
-.season-meta {
-    margin: 0.5rem 0;
-    color: #7f8c8d;
-}
-
-.parfumes-preview {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.parfume-mini-card {
-    text-align: center;
-    padding: 0.5rem;
-    border: 1px solid #eee;
-    border-radius: 4px;
-    transition: transform 0.2s ease;
-}
-
-.parfume-mini-card:hover {
-    transform: translateY(-2px);
-}
-
-.parfume-mini-card .parfume-thumbnail {
-    position: relative;
-    margin-bottom: 0.5rem;
-}
-
-.parfume-mini-card img {
-    width: 60px;
-    height: 60px;
-    object-fit: cover;
-    border-radius: 4px;
-}
-
-.no-image-mini {
-    width: 60px;
-    height: 60px;
-    background: #f8f9fa;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    margin: 0 auto;
-    font-size: 1.5rem;
-    color: #ccc;
-}
-
-.mini-rating {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: #f39c12;
-    color: white;
-    font-size: 0.7rem;
-    padding: 2px 4px;
-    border-radius: 3px;
-    font-weight: bold;
-}
-
-.parfume-mini-card .parfume-title {
-    font-size: 0.8rem;
-    margin: 0;
-    line-height: 1.2;
-}
-
-.parfume-mini-card .parfume-title a {
-    color: #2c3e50;
-    text-decoration: none;
-}
-
-.parfume-brand {
-    font-size: 0.7rem;
-    color: #7f8c8d;
-    margin-top: 0.2rem;
-}
-
-.view-all-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: #3498db;
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
-    font-weight: 500;
-    transition: background 0.3s ease;
-}
-
-.view-all-button:hover {
-    background: #2980b9;
-    color: white;
-}
-
-.seasons-guide {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1rem;
-}
-
-.season-guide-item {
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 6px;
-    border-left: 4px solid #3498db;
-}
-
-.season-guide-item h3 {
-    margin: 0 0 0.5rem 0;
-    color: #2c3e50;
-}
-
-.season-guide-item p {
-    margin: 0;
-    color: #555;
-    font-size: 0.9rem;
-    line-height: 1.5;
-}
-
-@media (max-width: 768px) {
-    .season-header {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .parfumes-preview {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .seasons-guide {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
 
 <?php get_footer(); ?>
