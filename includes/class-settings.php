@@ -292,7 +292,7 @@ class Settings {
         }
     }
     
-    /**
+/**
      * Sanitize settings input - FIXED за правилна валидация
      */
     public function sanitize_settings($input) {
@@ -301,12 +301,20 @@ class Settings {
         }
         
         $sanitized = array();
-        
+    
         // GENERAL SETTINGS
         if (isset($input['posts_per_page'])) {
             $sanitized['posts_per_page'] = absint($input['posts_per_page']);
             if ($sanitized['posts_per_page'] < 1) {
                 $sanitized['posts_per_page'] = 12;
+            }
+        }
+        
+        // НОВА НАСТРОЙКА: Featured perfumes per intensity
+        if (isset($input['featured_perfumes_per_intensity'])) {
+            $sanitized['featured_perfumes_per_intensity'] = absint($input['featured_perfumes_per_intensity']);
+            if ($sanitized['featured_perfumes_per_intensity'] < 1 || $sanitized['featured_perfumes_per_intensity'] > 5) {
+                $sanitized['featured_perfumes_per_intensity'] = 3; // Default value
             }
         }
         
