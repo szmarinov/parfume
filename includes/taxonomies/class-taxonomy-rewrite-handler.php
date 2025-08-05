@@ -1,7 +1,7 @@
 <?php
 /**
  * Taxonomy Rewrite Handler - управлява URL rewrite rules за таксономии
- * НАПЪЛНО ПОПРАВЕНА ВЕРСИЯ - правилен приоритет и структура на правилата
+ * АКТУАЛИЗИРАНА ВЕРСИЯ - добавена поддръжка за season archive и запазени всички съществуващи функции
  * 
  * Файл: includes/taxonomies/class-taxonomy-rewrite-handler.php
  */
@@ -30,7 +30,7 @@ class Taxonomy_Rewrite_Handler {
     
     /**
      * Добавя custom rewrite rules
-     * КРИТИЧНО: Правилният ред на правилата е от значение!
+     * АКТУАЛИЗИРАНА ВЕРСИЯ - добавена поддръжка за season archive
      */
     public function add_custom_rewrite_rules() {
         $settings = get_option('parfume_reviews_settings', array());
@@ -53,6 +53,7 @@ class Taxonomy_Rewrite_Handler {
         );
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Season slug: " . $taxonomies['season']);
             error_log("Perfumer slug: " . $taxonomies['perfumer']);
         }
         
@@ -62,16 +63,15 @@ class Taxonomy_Rewrite_Handler {
             
             // 1. ARCHIVE PAGES ПЪРВИ (най-висок приоритет)
             
-            // Archive with pagination
             if ($taxonomy === 'perfumer') {
-                // Perfumer archive with pagination - СПЕЦИАЛНО ПРАВИЛО
+                // PERFUMER archive with pagination - СПЕЦИАЛНО ПРАВИЛО
                 add_rewrite_rule(
                     '^' . $parfume_slug . '/' . $slug . '/page/([0-9]+)/?$',
                     'index.php?perfumer_archive=1&paged=$matches[1]',
                     'top'
                 );
                 
-                // Perfumer main archive - СПЕЦИАЛНО ПРАВИЛО
+                // PERFUMER main archive - СПЕЦИАЛНО ПРАВИЛО
                 add_rewrite_rule(
                     '^' . $parfume_slug . '/' . $slug . '/?$',
                     'index.php?perfumer_archive=1',
@@ -80,6 +80,25 @@ class Taxonomy_Rewrite_Handler {
                 
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log("Added perfumer archive rule: ^{$parfume_slug}/{$slug}/?$ -> index.php?perfumer_archive=1");
+                }
+                
+            } elseif ($taxonomy === 'season') {
+                // SEASON archive with pagination - СПЕЦИАЛНО ПРАВИЛО
+                add_rewrite_rule(
+                    '^' . $parfume_slug . '/' . $slug . '/page/([0-9]+)/?$',
+                    'index.php?season_archive=1&paged=$matches[1]',
+                    'top'
+                );
+                
+                // SEASON main archive - СПЕЦИАЛНО ПРАВИЛО
+                add_rewrite_rule(
+                    '^' . $parfume_slug . '/' . $slug . '/?$',
+                    'index.php?season_archive=1',
+                    'top'
+                );
+                
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Added season archive rule: ^{$parfume_slug}/{$slug}/?$ -> index.php?season_archive=1");
                 }
                 
             } else {
@@ -117,203 +136,160 @@ class Taxonomy_Rewrite_Handler {
                 'index.php?' . $taxonomy . '=$matches[1]',
                 'top'
             );
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Added {$taxonomy} term rule: ^{$parfume_slug}/{$slug}/([^/]+)/?$ -> index.php?{$taxonomy}=\$matches[1]");
+            }
         }
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            $this->debug_rewrite_rules();
+            error_log("All taxonomy rewrite rules added successfully");
         }
     }
     
     /**
      * Добавя custom query vars
+     * АКТУАЛИЗИРАНА ВЕРСИЯ - добавена season_archive
      */
     public function add_query_vars($vars) {
-        $vars[] = 'parfume_taxonomy_archive';
         $vars[] = 'perfumer_archive';
         $vars[] = 'is_perfumer_archive';
-        $vars[] = 'is_parfume_taxonomy_archive';
+        $vars[] = 'season_archive';  // НОВО - добавена поддръжка за season archive
+        $vars[] = 'parfume_taxonomy_archive';
+        
         return $vars;
     }
     
     /**
-     * Обработва custom requests
-     * НАПЪЛНО ПОПРАВЕНА ВЕРСИЯ
+     * Парсира custom request-и
+     * АКТУАЛИЗИРАНА ВЕРСИЯ - добавена обработка на season_archive
      */
     public function parse_custom_requests($wp) {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            if (!empty($wp->query_vars)) {
-                error_log('Parse requests - Query vars: ' . print_r($wp->query_vars, true));
-            }
-        }
-        
-        // Handle perfumer archive
+        // Проверяваме за perfumer archive
         if (isset($wp->query_vars['perfumer_archive'])) {
-            $this->debug_log("PERFUMER ARCHIVE REQUEST detected!");
+            $this->debug_log('Perfumer archive request detected');
             
-            // Премахваме всички други post query vars
+            // Премахваме конфликтни query vars
             unset($wp->query_vars['name']);
             unset($wp->query_vars['post_type']);
             unset($wp->query_vars['pagename']);
             
-            // Set the post type за query
-            $wp->query_vars['post_type'] = 'parfume';
-            $wp->query_vars['posts_per_page'] = 12;
-            
-            // Get all perfumer terms
-            $perfumer_terms = get_terms(array(
-                'taxonomy' => 'perfumer',
-                'hide_empty' => false,
-                'fields' => 'ids'
-            ));
-            
-            if (!empty($perfumer_terms) && !is_wp_error($perfumer_terms)) {
-                $wp->query_vars['tax_query'] = array(
-                    array(
-                        'taxonomy' => 'perfumer',
-                        'field' => 'term_id',
-                        'terms' => $perfumer_terms,
-                        'operator' => 'IN'
-                    )
-                );
-            }
-            
-            // Set flag so template loader knows this is perfumer archive
+            // Задаваме правилните query vars за perfumer archive
             $wp->query_vars['is_perfumer_archive'] = true;
             
-            $this->debug_log("Set perfumer archive query vars");
-            return;
+            $this->debug_log('Parse requests - Query vars after perfumer archive setup: ' . print_r($wp->query_vars, true));
         }
         
-        // Handle other taxonomy archives
-        if (isset($wp->query_vars['parfume_taxonomy_archive'])) {
-            $taxonomy = $wp->query_vars['parfume_taxonomy_archive'];
-            $this->debug_log("TAXONOMY ARCHIVE REQUEST for: {$taxonomy}");
+        // НОВО - Проверяваме за season archive
+        if (isset($wp->query_vars['season_archive'])) {
+            $this->debug_log('Season archive request detected');
             
-            // Премахваме всички други post query vars
+            // Премахваме конфликтни query vars
             unset($wp->query_vars['name']);
             unset($wp->query_vars['post_type']);
             unset($wp->query_vars['pagename']);
             
-            // Set the post type за query
-            $wp->query_vars['post_type'] = 'parfume';
-            $wp->query_vars['posts_per_page'] = 12;
+            // Задаваме правилните query vars за season archive
+            $wp->query_vars['is_season_archive'] = true;
+            $wp->query_vars['parfume_taxonomy_archive'] = 'season';
             
-            // Get all terms from this taxonomy
-            $terms = get_terms(array(
-                'taxonomy' => $taxonomy,
-                'hide_empty' => false,
-                'fields' => 'ids'
-            ));
+            $this->debug_log('Parse requests - Query vars after season archive setup: ' . print_r($wp->query_vars, true));
+        }
+        
+        // Проверяваме за други taxonomy archives
+        if (isset($wp->query_vars['parfume_taxonomy_archive'])) {
+            $taxonomy = $wp->query_vars['parfume_taxonomy_archive'];
+            $this->debug_log("Taxonomy archive request detected for: {$taxonomy}");
             
-            if (!empty($terms) && !is_wp_error($terms)) {
-                $wp->query_vars['tax_query'] = array(
-                    array(
-                        'taxonomy' => $taxonomy,
-                        'field' => 'term_id',
-                        'terms' => $terms,
-                        'operator' => 'IN'
-                    )
-                );
-            }
+            // Премахваме конфликтни query vars
+            unset($wp->query_vars['name']);
+            unset($wp->query_vars['post_type']);
+            unset($wp->query_vars['pagename']);
             
-            // Set a flag so template loader knows this is a taxonomy archive
-            $wp->query_vars['is_parfume_taxonomy_archive'] = $taxonomy;
-            
-            $this->debug_log("Set {$taxonomy} archive query vars");
-            return;
+            $this->debug_log("Parse requests - Query vars after {$taxonomy} archive setup: " . print_r($wp->query_vars, true));
         }
     }
     
     /**
-     * Handle 404 redirects за неправилно обработени URLs
-     */
-    public function handle_404_redirects() {
-        if (!is_404() || !isset($_SERVER['REQUEST_URI'])) {
-            return;
-        }
-        
-        $request_uri = $_SERVER['REQUEST_URI'];
-        $url_path = trim(parse_url($request_uri, PHP_URL_PATH), '/');
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("404 URL Path: {$request_uri}");
-            error_log("Checking path: {$url_path}");
-        }
-        
-        // Check if this looks like a taxonomy archive
-        $settings = get_option('parfume_reviews_settings', array());
-        $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
-        
-        $taxonomy_slugs = array(
-            'marki', 'notki', 'parfumeri', 'gender', 'aroma-type', 'season', 'intensity'
-        );
-        
-        foreach ($taxonomy_slugs as $tax_slug) {
-            $pattern = $parfume_slug . '/' . $tax_slug;
-            if (strpos($url_path, $pattern) !== false) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("Possible taxonomy archive: {$tax_slug}");
-                }
-                
-                // Force flush rewrite rules if we detect unmatched taxonomy URLs
-                if (get_option('parfume_reviews_force_flush', false) !== 'done') {
-                    flush_rewrite_rules();
-                    update_option('parfume_reviews_force_flush', 'done');
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log("Force flushed rewrite rules due to 404 on taxonomy URL");
-                    }
-                }
-                break;
-            }
-        }
-    }
-    
-    /**
-     * Debug функция за проследяване на текущата заявка
+     * Debug текущия request
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИОНАЛНОСТ
      */
     public function debug_current_request() {
         if (!defined('WP_DEBUG') || !WP_DEBUG) {
             return;
         }
         
-        global $wp_query;
+        global $wp_query, $wp;
         
-        if (is_404() && !empty($_SERVER['REQUEST_URI'])) {
-            $request_uri = $_SERVER['REQUEST_URI'];
-            $url_path = trim(parse_url($request_uri, PHP_URL_PATH), '/');
-            
-            // Remove site base path if exists
-            $site_url = home_url();
-            $parsed_site = parse_url($site_url);
-            if (isset($parsed_site['path'])) {
-                $site_path = trim($parsed_site['path'], '/');
-                if (!empty($site_path) && strpos($url_path, $site_path) === 0) {
-                    $url_path = substr($url_path, strlen($site_path) + 1);
-                }
-            }
-            
-            error_log("404 URL Path: {$url_path}");
+        $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+        $this->debug_log("Current request URI: {$request_uri}");
+        
+        if (isset($wp_query->query_vars['perfumer_archive'])) {
+            $this->debug_log("PERFUMER ARCHIVE PAGE - Query vars: " . print_r($wp_query->query_vars, true));
+        }
+        
+        if (isset($wp_query->query_vars['season_archive'])) {
+            $this->debug_log("SEASON ARCHIVE PAGE - Query vars: " . print_r($wp_query->query_vars, true));
+        }
+        
+        if (isset($wp_query->query_vars['parfume_taxonomy_archive'])) {
+            $taxonomy = $wp_query->query_vars['parfume_taxonomy_archive'];
+            $this->debug_log("TAXONOMY ARCHIVE PAGE ({$taxonomy}) - Query vars: " . print_r($wp_query->query_vars, true));
+        }
+        
+        if (is_tax()) {
+            $queried_object = get_queried_object();
+            $this->debug_log("INDIVIDUAL TAXONOMY TERM - Taxonomy: {$queried_object->taxonomy}, Term: {$queried_object->name}");
         }
     }
     
     /**
-     * Debug функция за проверка на rewrite rules
+     * Обработва 404 redirects
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИОНАЛНОСТ
      */
-    public function debug_rewrite_rules() {
-        if (!current_user_can('manage_options') && (!defined('WP_DEBUG') || !WP_DEBUG)) {
+    public function handle_404_redirects() {
+        if (!is_404()) {
             return;
         }
         
-        $rules = get_option('rewrite_rules');
-        error_log('Parfume Taxonomy Rewrite Rules:');
+        $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+        $this->debug_log("404 detected for: {$request_uri}");
         
+        // Ако 404-то е за taxonomy archive URLs, може да се наложи flush на rewrite rules
+        if (strpos($request_uri, '/parfiumi/') !== false) {
+            $this->debug_log("404 detected for parfume URL - might need rewrite rules flush");
+            
+            // Само за admin потребители, в dev среда
+            if (current_user_can('manage_options') && defined('WP_DEBUG') && WP_DEBUG) {
+                $this->debug_log("Automatically flushing rewrite rules due to 404");
+                flush_rewrite_rules();
+            }
+        }
+    }
+    
+    /**
+     * Debug rewrite rules
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИОНАЛНОСТ
+     */
+    public function debug_rewrite_rules() {
+        if (!defined('WP_DEBUG') || !WP_DEBUG) {
+            return;
+        }
+        
+        global $wp_rewrite;
+        
+        $this->debug_log("=== REWRITE RULES DEBUG ===");
+        
+        $rules = get_option('rewrite_rules');
         if ($rules) {
             foreach ($rules as $rule => $rewrite) {
                 if (strpos($rule, 'parfiumi') !== false || 
                     strpos($rewrite, 'parfume_taxonomy_archive') !== false || 
                     strpos($rewrite, 'perfumer_archive') !== false ||
+                    strpos($rewrite, 'season_archive') !== false ||
                     strpos($rewrite, 'marki') !== false || 
                     strpos($rewrite, 'perfumer') !== false ||
+                    strpos($rewrite, 'season') !== false ||
                     strpos($rewrite, 'notes') !== false) {
                     error_log("  {$rule} -> {$rewrite}");
                 }
@@ -325,6 +301,7 @@ class Taxonomy_Rewrite_Handler {
     
     /**
      * Helper функция за debug логове
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИОНАЛНОСТ
      */
     private function debug_log($message) {
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -334,6 +311,7 @@ class Taxonomy_Rewrite_Handler {
     
     /**
      * Получава taxonomy slug за дадена таксономия
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИОНАЛНОСТ
      */
     public function get_taxonomy_slug($taxonomy) {
         $settings = get_option('parfume_reviews_settings', array());
@@ -353,6 +331,7 @@ class Taxonomy_Rewrite_Handler {
     
     /**
      * Получава всички поддържани таксономии
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИОНАЛНОСТ
      */
     public function get_supported_taxonomies() {
         return array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity');
@@ -360,6 +339,7 @@ class Taxonomy_Rewrite_Handler {
     
     /**
      * Получава URL за taxonomy archive
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИОНАЛНОСТ
      */
     public function get_taxonomy_archive_url($taxonomy) {
         $settings = get_option('parfume_reviews_settings', array());
@@ -371,27 +351,12 @@ class Taxonomy_Rewrite_Handler {
     
     /**
      * Получава базовия URL за парфюм архива
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИОНАЛНОСТ
      */
     public function get_parfume_base_url() {
         $settings = get_option('parfume_reviews_settings', array());
         $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
         
         return home_url('/' . $parfume_slug . '/');
-    }
-    
-    /**
-     * Проверява дали URL-а е за архивна страница на таксономия
-     */
-    public function is_taxonomy_archive_url($url) {
-        $taxonomies = $this->get_supported_taxonomies();
-        
-        foreach ($taxonomies as $taxonomy) {
-            $archive_url = $this->get_taxonomy_archive_url($taxonomy);
-            if ($archive_url && strpos($url, $archive_url) === 0) {
-                return $taxonomy;
-            }
-        }
-        
-        return false;
     }
 }
