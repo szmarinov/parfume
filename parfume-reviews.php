@@ -195,10 +195,10 @@ function parfume_reviews_activate() {
             'season_slug' => 'season',
             'intensity_slug' => 'intensity',
             'posts_per_page' => 12, // GENERAL SETTINGS
-            'featured_perfumes_per_intensity' => 3, // НОВА НАСТРОЙКА: парфюми за интензивност
             'price_update_interval' => 24,
             'show_archive_sidebar' => 1,
             'archive_posts_per_page' => 12,
+            'featured_perfumes_per_intensity' => 3, // НОВА НАСТРОЙКА: парфюми за интензивност
             'archive_grid_columns' => 3,
             'homepage_description' => '',
             'homepage_blog_count' => 6,
