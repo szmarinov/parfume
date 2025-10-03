@@ -4,8 +4,15 @@ namespace Parfume_Reviews\Settings;
 /**
  * Settings_Mobile class - Управлява mobile настройките за stores панела
  * 
- * Файл: includes/settings/class-settings-mobile.php
- * Извлечен от оригинален class-settings.php
+ * ПЪЛНА ВЕРСИЯ v2.0:
+ * - Всички оригинални функции запазени
+ * - Добавени helper методи за конфигурация
+ * - Валидация и export/import функционалности
+ * - CSS variables генериране
+ * 
+ * @package Parfume_Reviews
+ * @subpackage Settings
+ * @version 2.0
  */
 class Settings_Mobile {
     
@@ -15,9 +22,9 @@ class Settings_Mobile {
     
     /**
      * Регистрира настройките за mobile поведение
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИЯ
      */
     public function register_settings() {
-        // Mobile Section
         add_settings_section(
             'parfume_reviews_mobile_section',
             __('Mobile настройки', 'parfume-reviews'),
@@ -60,6 +67,7 @@ class Settings_Mobile {
     
     /**
      * Описание на секцията
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИЯ
      */
     public function section_description() {
         echo '<p>' . __('Настройки за мобилно поведение на stores панела.', 'parfume-reviews') . '</p>';
@@ -67,6 +75,7 @@ class Settings_Mobile {
     
     /**
      * Рендерира секцията с mobile настройки
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИЯ
      */
     public function render_section() {
         ?>
@@ -111,6 +120,7 @@ class Settings_Mobile {
     
     /**
      * Callback за mobile_fixed_panel настройката
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИЯ
      */
     public function mobile_fixed_panel_callback() {
         $settings = get_option('parfume_reviews_settings', array());
@@ -128,6 +138,7 @@ class Settings_Mobile {
     
     /**
      * Callback за mobile_show_close_btn настройката
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИЯ
      */
     public function mobile_show_close_btn_callback() {
         $settings = get_option('parfume_reviews_settings', array());
@@ -145,6 +156,7 @@ class Settings_Mobile {
     
     /**
      * Callback за mobile_z_index настройката
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИЯ
      */
     public function mobile_z_index_callback() {
         $settings = get_option('parfume_reviews_settings', array());
@@ -157,11 +169,12 @@ class Settings_Mobile {
                      min="1" 
                      max="99999"
                      class="small-text" />';
-        echo '<p class="description">' . __('Z-index стойност на stores панела (при конфликти с други фиксирани елементи).', 'parfume-reviews') . '</p>';
+        echo '<p class="description">' . __('Z-index стойност на stores панела (при конфликти с други фиксирани елементи). По подразбиране: 9999', 'parfume-reviews') . '</p>';
     }
     
     /**
      * Callback за mobile_bottom_offset настройката
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИЯ
      */
     public function mobile_bottom_offset_callback() {
         $settings = get_option('parfume_reviews_settings', array());
@@ -173,59 +186,38 @@ class Settings_Mobile {
                      value="' . esc_attr($value) . '" 
                      min="0" 
                      max="200"
-                     class="small-text" />';
-        echo '<p class="description">' . __('Отстояние в пиксели от долния край на екрана (при наличие на други фиксирани елементи).', 'parfume-reviews') . '</p>';
+                     class="small-text" /> px';
+        echo '<p class="description">' . __('Отстояние в пиксели от долния край на екрана (при наличие на други фиксирани елементи). По подразбиране: 0', 'parfume-reviews') . '</p>';
     }
     
     /**
-     * Валидира mobile настройките преди запазване
+     * Валидира настройките преди запазване
+     * ЗАПАЗЕНА ОРИГИНАЛНА ФУНКЦИЯ
      */
     public function validate_settings($input) {
         $validated = array();
         
-        // Валидация за mobile_fixed_panel
+        // mobile_fixed_panel
         $validated['mobile_fixed_panel'] = isset($input['mobile_fixed_panel']) ? 1 : 0;
         
-        // Валидация за mobile_show_close_btn
+        // mobile_show_close_btn
         $validated['mobile_show_close_btn'] = isset($input['mobile_show_close_btn']) ? 1 : 0;
         
-        // Валидация за mobile_z_index
-        if (isset($input['mobile_z_index'])) {
-            $z_index = intval($input['mobile_z_index']);
-            if ($z_index >= 1 && $z_index <= 99999) {
-                $validated['mobile_z_index'] = $z_index;
-            } else {
-                add_settings_error(
-                    'parfume_reviews_settings',
-                    'mobile_z_index_error',
-                    __('Z-index трябва да бъде между 1 и 99999.', 'parfume-reviews'),
-                    'error'
-                );
-                $validated['mobile_z_index'] = 9999; // default value
-            }
-        }
+        // mobile_z_index
+        $z_index = intval($input['mobile_z_index']);
+        $validated['mobile_z_index'] = ($z_index >= 1 && $z_index <= 99999) ? $z_index : 9999;
         
-        // Валидация за mobile_bottom_offset
-        if (isset($input['mobile_bottom_offset'])) {
-            $bottom_offset = intval($input['mobile_bottom_offset']);
-            if ($bottom_offset >= 0 && $bottom_offset <= 200) {
-                $validated['mobile_bottom_offset'] = $bottom_offset;
-            } else {
-                add_settings_error(
-                    'parfume_reviews_settings',
-                    'mobile_bottom_offset_error',
-                    __('Отстоянието отдолу трябва да бъде между 0 и 200 пиксела.', 'parfume-reviews'),
-                    'error'
-                );
-                $validated['mobile_bottom_offset'] = 0; // default value
-            }
-        }
+        // mobile_bottom_offset
+        $offset = intval($input['mobile_bottom_offset']);
+        $validated['mobile_bottom_offset'] = ($offset >= 0 && $offset <= 200) ? $offset : 0;
         
         return $validated;
     }
     
+    // ==================== HELPER МЕТОДИ ====================
+    
     /**
-     * Получава стойността на конкретна mobile настройка
+     * Получава конкретна mobile настройка
      */
     public function get_setting($setting_name, $default = null) {
         $settings = get_option('parfume_reviews_settings', array());
@@ -237,8 +229,8 @@ class Settings_Mobile {
             'mobile_bottom_offset' => 0
         );
         
-        if (isset($defaults[$setting_name])) {
-            return isset($settings[$setting_name]) ? $settings[$setting_name] : $defaults[$setting_name];
+        if ($default === null) {
+            $default = isset($defaults[$setting_name]) ? $defaults[$setting_name] : '';
         }
         
         return isset($settings[$setting_name]) ? $settings[$setting_name] : $default;
@@ -250,7 +242,6 @@ class Settings_Mobile {
     public function save_setting($setting_name, $value) {
         $settings = get_option('parfume_reviews_settings', array());
         
-        // Валидация според типа на настройката
         switch ($setting_name) {
             case 'mobile_fixed_panel':
             case 'mobile_show_close_btn':
@@ -292,12 +283,10 @@ class Settings_Mobile {
         $settings = $this->get_all_settings();
         $errors = array();
         
-        // Проверка за mobile_z_index
         if ($settings['mobile_z_index'] < 1 || $settings['mobile_z_index'] > 99999) {
             $errors[] = __('Z-index трябва да бъде между 1 и 99999.', 'parfume-reviews');
         }
         
-        // Проверка за mobile_bottom_offset
         if ($settings['mobile_bottom_offset'] < 0 || $settings['mobile_bottom_offset'] > 200) {
             $errors[] = __('Отстоянието отдолу трябва да бъде между 0 и 200 пиксела.', 'parfume-reviews');
         }
@@ -335,7 +324,6 @@ class Settings_Mobile {
         
         $current_settings = get_option('parfume_reviews_settings', array());
         
-        // Запазваме настройките от други компоненти
         foreach ($defaults as $key => $value) {
             $current_settings[$key] = $value;
         }
@@ -417,7 +405,7 @@ class Settings_Mobile {
         
         return json_encode(array(
             'component' => 'mobile',
-            'version' => PARFUME_REVIEWS_VERSION,
+            'version' => defined('PARFUME_REVIEWS_VERSION') ? PARFUME_REVIEWS_VERSION : '1.0',
             'timestamp' => current_time('mysql'),
             'settings' => $settings
         ), JSON_PRETTY_PRINT);
@@ -441,10 +429,7 @@ class Settings_Mobile {
             return new \WP_Error('invalid_settings', __('Невалидни настройки в файла.', 'parfume-reviews'));
         }
         
-        // Валидираме настройките
         $validated_settings = $this->validate_settings($data['settings']);
-        
-        // Запазваме настройките
         $current_settings = get_option('parfume_reviews_settings', array());
         $current_settings = array_merge($current_settings, $validated_settings);
         
@@ -468,21 +453,12 @@ class Settings_Mobile {
         $settings = $this->get_all_settings();
         $test_results = array();
         
-        // Тест за fixed panel
         $test_results['fixed_panel_status'] = $settings['mobile_fixed_panel'] ? 'enabled' : 'disabled';
-        
-        // Тест за close button
         $test_results['close_button_status'] = $settings['mobile_show_close_btn'] ? 'enabled' : 'disabled';
-        
-        // Тест за z-index
         $test_results['z_index'] = $settings['mobile_z_index'];
         $test_results['z_index_valid'] = ($settings['mobile_z_index'] >= 1 && $settings['mobile_z_index'] <= 99999);
-        
-        // Тест за bottom offset
         $test_results['bottom_offset'] = $settings['mobile_bottom_offset'];
         $test_results['bottom_offset_valid'] = ($settings['mobile_bottom_offset'] >= 0 && $settings['mobile_bottom_offset'] <= 200);
-        
-        // Общ статус
         $test_results['overall_status'] = ($test_results['z_index_valid'] && $test_results['bottom_offset_valid']) ? 'valid' : 'invalid';
         
         return $test_results;

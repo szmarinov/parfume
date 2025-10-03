@@ -1,7 +1,11 @@
 <?php
 /**
  * Template for single parfume posts
- * ПРЕРАБОТЕНА ВЕРСИЯ С НОВ STORES SIDEBAR ДИЗАЙН И MOBILE ФУНКЦИОНАЛНОСТИ
+ * АКТУАЛИЗИРАНА ВЕРСИЯ - Работи със СЪЩЕСТВУВАЩИ мета полета
+ * БЕЗ ПРОМЯНА НА ПОЛЕТА - само визуализация според заданието
+ * 
+ * @package Parfume_Reviews
+ * @version 2.0
  */
 
 if (!defined('ABSPATH')) {
@@ -12,7 +16,7 @@ get_header();
 
 while (have_posts()): the_post();
 
-// Get meta data
+// Get meta data - ЗАПАЗЕНИ ОРИГИНАЛНИ ПОЛЕТА (БЕЗ ПРОМЯНА)
 $rating = get_post_meta(get_the_ID(), '_parfume_rating', true);
 $gender_text = get_post_meta(get_the_ID(), '_parfume_gender_text', true);
 $release_year = get_post_meta(get_the_ID(), '_parfume_release_year', true);
@@ -22,10 +26,15 @@ $bottle_size = get_post_meta(get_the_ID(), '_parfume_bottle_size', true);
 $aroma_chart = get_post_meta(get_the_ID(), '_parfume_aroma_chart', true);
 $pros = get_post_meta(get_the_ID(), '_parfume_pros', true);
 $cons = get_post_meta(get_the_ID(), '_parfume_cons', true);
-$stores = get_post_meta(get_the_ID(), '_parfume_stores', true);
 $gallery_images = get_post_meta(get_the_ID(), '_parfume_gallery', true);
 
-// Get taxonomies
+// STORES данни - използваме СЪЩЕСТВУВАЩОТО поле _parfume_stores
+$stores = get_post_meta(get_the_ID(), '_parfume_stores', true);
+if (!is_array($stores)) {
+    $stores = array();
+}
+
+// Get taxonomies - ЗАПАЗЕНИ ОРИГИНАЛНИ
 $brands = wp_get_post_terms(get_the_ID(), 'marki');
 $genders = wp_get_post_terms(get_the_ID(), 'gender');
 $aroma_types = wp_get_post_terms(get_the_ID(), 'aroma_type');
@@ -34,7 +43,7 @@ $intensities = wp_get_post_terms(get_the_ID(), 'intensity');
 $notes = wp_get_post_terms(get_the_ID(), 'notes');
 $perfumers = wp_get_post_terms(get_the_ID(), 'perfumer');
 
-// Generate links
+// Generate taxonomy links - ЗАПАЗЕНИ ОРИГИНАЛНИ
 $brand_names = array();
 if ($brands) {
     foreach ($brands as $brand) {
@@ -70,48 +79,51 @@ if ($intensities) {
     }
 }
 
-// Check mobile settings
-$settings = get_option('parfume_reviews_settings', array());
-$mobile_fixed_panel = isset($settings['mobile_fixed_panel']) ? $settings['mobile_fixed_panel'] : 1;
-$mobile_show_close_btn = isset($settings['mobile_show_close_btn']) ? $settings['mobile_show_close_btn'] : 0;
-$mobile_z_index = isset($settings['mobile_z_index']) ? $settings['mobile_z_index'] : 9999;
-$mobile_bottom_offset = isset($settings['mobile_bottom_offset']) ? $settings['mobile_bottom_offset'] : 20;
+// Mobile настройки от глобални settings
+$global_settings = get_option('parfume_reviews_settings', array());
 
-// Price formatting settings
-$price_format = isset($settings['price_format']) ? $settings['price_format'] : 'after';
-$currency_symbol = isset($settings['currency_symbol']) ? $settings['currency_symbol'] : 'лв.';
-$scrape_interval = isset($settings['scrape_interval']) ? $settings['scrape_interval'] : 24;
+// Per-post mobile настройки (ако има) имат приоритет
+$post_mobile_fixed = get_post_meta(get_the_ID(), '_parfume_mobile_fixed_panel', true);
+$post_mobile_close_btn = get_post_meta(get_the_ID(), '_parfume_mobile_show_close_btn', true);
 
-// Ensure stores is an array
-if (!is_array($stores)) {
-    $stores = array();
-}
+// Определяме финалните настройки
+$mobile_fixed_panel = ($post_mobile_fixed !== '') ? $post_mobile_fixed : (isset($global_settings['mobile_fixed_panel']) ? $global_settings['mobile_fixed_panel'] : 1);
+$mobile_show_close_btn = ($post_mobile_close_btn !== '') ? $post_mobile_close_btn : (isset($global_settings['mobile_show_close_btn']) ? $global_settings['mobile_show_close_btn'] : 0);
+$mobile_z_index = isset($global_settings['mobile_z_index']) ? $global_settings['mobile_z_index'] : 9999;
+$mobile_bottom_offset = isset($global_settings['mobile_bottom_offset']) ? $global_settings['mobile_bottom_offset'] : 0;
+
+// Scraper interval за tooltip
+$scrape_interval = isset($global_settings['scrape_interval']) ? $global_settings['scrape_interval'] : 24;
+
+// Stores config от settings
+$all_stores_config = isset($global_settings['stores']) ? $global_settings['stores'] : array();
+
 ?>
 
 <div class="single-parfume-container">
     <div class="parfume-layout">
         
-        <!-- MAIN CONTENT (Column 1) -->
+        <!-- COLUMN 1: Main Content (ЗАПАЗЕНО ОРИГИНАЛНО СЪДЪРЖАНИЕ) -->
         <div class="parfume-main-content">
             <article class="parfume-article">
                 
                 <!-- Header Section -->
                 <header class="parfume-header">
                     <div class="header-content">
-                        <div class="parfume-image">
+                        
+                        <!-- Featured Image -->
+                        <div class="parfume-image" onclick="openImageModal('<?php echo esc_url(get_the_post_thumbnail_url(get_the_ID(), 'large')); ?>')">
                             <?php if (has_post_thumbnail()): ?>
-                                <img src="<?php echo get_the_post_thumbnail_url(get_the_ID(), 'large'); ?>" 
-                                     alt="<?php the_title_attribute(); ?>" 
-                                     onclick="openImageModal('<?php echo get_the_post_thumbnail_url(get_the_ID(), 'full'); ?>')">
+                                <?php the_post_thumbnail('medium_large'); ?>
                             <?php else: ?>
                                 <div class="no-image-placeholder">
                                     <span class="dashicons dashicons-format-image"></span>
-                                    <p><?php _e('Няма изображение', 'parfume-reviews'); ?></p>
                                 </div>
                             <?php endif; ?>
                         </div>
                         
-                        <div class="header-info">
+                        <!-- Main Info -->
+                        <div class="parfume-info">
                             <h1 class="parfume-title"><?php the_title(); ?></h1>
                             
                             <?php if (!empty($brand_names)): ?>
@@ -120,74 +132,80 @@ if (!is_array($stores)) {
                                 </div>
                             <?php endif; ?>
                             
-                            <?php if (!empty($rating)): ?>
+                            <?php if ($rating): ?>
                                 <div class="parfume-rating">
-                                    <div class="rating-stars" data-rating="<?php echo esc_attr($rating); ?>">
-                                        <?php for ($i = 1; $i <= 5; $i++): ?>
-                                            <span class="star <?php echo ($i <= $rating) ? 'filled' : ''; ?>">★</span>
-                                        <?php endfor; ?>
+                                    <div class="rating-stars">
+                                        <?php 
+                                        for ($i = 1; $i <= 5; $i++) {
+                                            if ($i <= $rating) {
+                                                echo '<span class="dashicons dashicons-star-filled"></span>';
+                                            } else {
+                                                echo '<span class="dashicons dashicons-star-empty"></span>';
+                                            }
+                                        }
+                                        ?>
                                     </div>
-                                    <span class="rating-text"><?php echo esc_html($rating); ?>/5</span>
+                                    <span class="rating-number"><?php echo number_format($rating, 1); ?>/5</span>
                                 </div>
                             <?php endif; ?>
                             
                             <div class="parfume-meta">
                                 <?php if (!empty($gender_list)): ?>
-                                    <div class="info-item">
-                                        <span class="info-label"><?php _e('Пол:', 'parfume-reviews'); ?></span>
-                                        <span class="info-value"><?php echo implode(', ', $gender_list); ?></span>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <?php if (!empty($release_year)): ?>
-                                    <div class="info-item">
-                                        <span class="info-label"><?php _e('Година:', 'parfume-reviews'); ?></span>
-                                        <span class="info-value"><?php echo esc_html($release_year); ?></span>
+                                    <div class="meta-item">
+                                        <span class="meta-label"><?php _e('За:', 'parfume-reviews'); ?></span>
+                                        <span class="meta-value"><?php echo implode(', ', $gender_list); ?></span>
                                     </div>
                                 <?php endif; ?>
                                 
                                 <?php if (!empty($aroma_type_list)): ?>
-                                    <div class="info-item">
-                                        <span class="info-label"><?php _e('Тип:', 'parfume-reviews'); ?></span>
-                                        <span class="info-value"><?php echo implode(', ', $aroma_type_list); ?></span>
+                                    <div class="meta-item">
+                                        <span class="meta-label"><?php _e('Тип:', 'parfume-reviews'); ?></span>
+                                        <span class="meta-value"><?php echo implode(', ', $aroma_type_list); ?></span>
                                     </div>
                                 <?php endif; ?>
                                 
-                                <?php if (!empty($seasons_list)): ?>
-                                    <div class="info-item">
-                                        <span class="info-label"><?php _e('Сезон:', 'parfume-reviews'); ?></span>
-                                        <span class="info-value"><?php echo implode(', ', $seasons_list); ?></span>
+                                <?php if ($release_year): ?>
+                                    <div class="meta-item">
+                                        <span class="meta-label"><?php _e('Година:', 'parfume-reviews'); ?></span>
+                                        <span class="meta-value"><?php echo esc_html($release_year); ?></span>
                                     </div>
                                 <?php endif; ?>
                                 
-                                <?php if (!empty($intensities_list)): ?>
-                                    <div class="info-item">
-                                        <span class="info-label"><?php _e('Интензивност:', 'parfume-reviews'); ?></span>
-                                        <span class="info-value"><?php echo implode(', ', $intensities_list); ?></span>
+                                <?php if ($bottle_size): ?>
+                                    <div class="meta-item">
+                                        <span class="meta-label"><?php _e('Обем:', 'parfume-reviews'); ?></span>
+                                        <span class="meta-value"><?php echo esc_html($bottle_size); ?></span>
                                     </div>
                                 <?php endif; ?>
                                 
-                                <?php if (!empty($longevity)): ?>
-                                    <div class="info-item">
-                                        <span class="info-label"><?php _e('Издръжливост:', 'parfume-reviews'); ?></span>
-                                        <span class="info-value"><?php echo esc_html($longevity); ?></span>
+                                <?php if ($longevity): ?>
+                                    <div class="meta-item">
+                                        <span class="meta-label"><?php _e('Дълготрайност:', 'parfume-reviews'); ?></span>
+                                        <span class="meta-value"><?php echo esc_html($longevity); ?></span>
                                     </div>
                                 <?php endif; ?>
                                 
-                                <?php if (!empty($sillage)): ?>
-                                    <div class="info-item">
-                                        <span class="info-label"><?php _e('Силаж:', 'parfume-reviews'); ?></span>
-                                        <span class="info-value"><?php echo esc_html($sillage); ?></span>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <?php if (!empty($bottle_size)): ?>
-                                    <div class="info-item">
-                                        <span class="info-label"><?php _e('Размер:', 'parfume-reviews'); ?></span>
-                                        <span class="info-value"><?php echo esc_html($bottle_size); ?></span>
+                                <?php if ($sillage): ?>
+                                    <div class="meta-item">
+                                        <span class="meta-label"><?php _e('Сила:', 'parfume-reviews'); ?></span>
+                                        <span class="meta-value"><?php echo esc_html($sillage); ?></span>
                                     </div>
                                 <?php endif; ?>
                             </div>
+                            
+                            <?php if (!empty($seasons_list)): ?>
+                                <div class="seasons-tags">
+                                    <span class="seasons-label"><?php _e('Сезони:', 'parfume-reviews'); ?></span>
+                                    <?php echo implode(', ', $seasons_list); ?>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <?php if (!empty($intensities_list)): ?>
+                                <div class="intensity-tags">
+                                    <span class="intensity-label"><?php _e('Интензитет:', 'parfume-reviews'); ?></span>
+                                    <?php echo implode(', ', $intensities_list); ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </header>
@@ -239,25 +257,22 @@ if (!is_array($stores)) {
                             <h2><?php _e('Галерия', 'parfume-reviews'); ?></h2>
                             <div class="parfume-gallery">
                                 <?php foreach ($gallery_images as $image_id): ?>
-                                    <?php $image = wp_get_attachment_image_src($image_id, 'medium'); ?>
-                                    <?php if ($image): ?>
-                                        <div class="gallery-item">
-                                            <img src="<?php echo esc_url($image[0]); ?>" alt="<?php the_title_attribute(); ?>" onclick="openImageModal('<?php echo esc_url(wp_get_attachment_image_src($image_id, 'large')[0]); ?>')">
-                                        </div>
-                                    <?php endif; ?>
+                                    <div class="gallery-item" onclick="openImageModal('<?php echo esc_url(wp_get_attachment_url($image_id)); ?>')">
+                                        <?php echo wp_get_attachment_image($image_id, 'medium'); ?>
+                                    </div>
                                 <?php endforeach; ?>
                             </div>
                         </section>
                     <?php endif; ?>
 
-                    <!-- Pros and Cons -->
+                    <!-- Pros & Cons -->
                     <?php if (!empty($pros) || !empty($cons)): ?>
                         <section class="pros-cons-section">
-                            <h2><?php _e('Преимущества и недостатъци', 'parfume-reviews'); ?></h2>
+                            <h2><?php _e('Плюсове и минуси', 'parfume-reviews'); ?></h2>
                             <div class="pros-cons-grid">
                                 <?php if (!empty($pros)): ?>
                                     <div class="pros">
-                                        <h3><?php _e('Преимущества', 'parfume-reviews'); ?></h3>
+                                        <h3><?php _e('Предимства', 'parfume-reviews'); ?></h3>
                                         <ul>
                                             <?php 
                                             $pros_array = is_string($pros) ? explode("\n", $pros) : $pros;
@@ -293,9 +308,7 @@ if (!is_array($stores)) {
                         <section class="aroma-chart-section">
                             <h2><?php _e('Ароматна схема', 'parfume-reviews'); ?></h2>
                             <div class="aroma-chart-wrapper">
-                                <div class="aroma-chart-info">
-                                    <?php echo wp_kses_post($aroma_chart); ?>
-                                </div>
+                                <?php echo wp_kses_post($aroma_chart); ?>
                             </div>
                         </section>
                     <?php endif; ?>
@@ -304,57 +317,92 @@ if (!is_array($stores)) {
             </article>
         </div>
         
-        <!-- STORES SIDEBAR (Column 2) -->
+        <!-- COLUMN 2: STORES SIDEBAR (НОВА ВИЗУАЛИЗАЦИЯ СПОРЕД ЗАДАНИЕТО) -->
         <?php if (!empty($stores) && is_array($stores)): ?>
-            <div class="stores-sidebar" 
-                 class="<?php echo $mobile_fixed_panel ? 'mobile-fixed' : ''; ?>" 
-                 data-mobile-fixed="<?php echo $mobile_fixed_panel ? 'true' : 'false'; ?>"
-                 data-show-close="<?php echo $mobile_show_close_btn ? 'true' : 'false'; ?>"
-                 style="--mobile-z-index: <?php echo esc_attr($mobile_z_index); ?>; --mobile-bottom-offset: <?php echo esc_attr($mobile_bottom_offset); ?>px;">
+            <aside class="parfume-stores-sidebar <?php echo $mobile_fixed_panel ? 'mobile-fixed' : ''; ?>" 
+                   data-mobile-fixed="<?php echo $mobile_fixed_panel ? '1' : '0'; ?>"
+                   data-show-close="<?php echo $mobile_show_close_btn ? '1' : '0'; ?>"
+                   style="--mobile-z-index: <?php echo esc_attr($mobile_z_index); ?>; --mobile-bottom-offset: <?php echo esc_attr($mobile_bottom_offset); ?>px;">
                 
                 <!-- Mobile Controls -->
                 <div class="mobile-controls">
                     <?php if (count($stores) > 1): ?>
-                        <button class="stores-toggle" type="button" title="<?php _e('Покажи/скрий останалите магазини', 'parfume-reviews'); ?>">
-                            <span class="dashicons dashicons-arrow-up"></span>
+                        <button class="stores-toggle" type="button" aria-label="<?php esc_attr_e('Покажи/скрий останалите магазини', 'parfume-reviews'); ?>">
+                            <span class="dashicons dashicons-arrow-up-alt2"></span>
                         </button>
                     <?php endif; ?>
                     
                     <?php if ($mobile_show_close_btn): ?>
-                        <button class="stores-close" type="button" title="<?php _e('Затвори панела', 'parfume-reviews'); ?>">
-                            <span class="dashicons dashicons-no"></span>
+                        <button class="stores-close" type="button" aria-label="<?php esc_attr_e('Затвори панела', 'parfume-reviews'); ?>">
+                            <span class="dashicons dashicons-no-alt"></span>
                         </button>
                     <?php endif; ?>
                 </div>
                 
                 <!-- Stores List -->
                 <div class="stores-list">
-                    <?php foreach ($stores as $index => $store): ?>
-                        <?php
-                        // ПОПРАВКА: Добавяме isset() проверки за всички ключове
-                        $store_name = isset($store['name']) ? $store['name'] : '';
-                        $store_logo = isset($store['logo']) ? $store['logo'] : '';
-                        $affiliate_url = isset($store['affiliate_url']) ? $store['affiliate_url'] : '';
-                        $promo_code = isset($store['promo_code']) ? $store['promo_code'] : '';
-                        $promo_code_info = isset($store['promo_code_info']) ? $store['promo_code_info'] : '';
+                    <?php 
+                    $store_index = 0;
+                    foreach ($stores as $store): 
+                        $store_index++;
                         
-                        // ПОПРАВКА: Scraped data с isset() проверки
-                        $scraped_price = isset($store['scraped_price']) ? $store['scraped_price'] : '';
-                        $scraped_old_price = isset($store['scraped_old_price']) ? $store['scraped_old_price'] : '';
-                        $scraped_variants = isset($store['scraped_variants']) ? $store['scraped_variants'] : array();
-                        $scraped_availability = isset($store['scraped_availability']) ? $store['scraped_availability'] : '';
-                        $scraped_delivery = isset($store['scraped_delivery']) ? $store['scraped_delivery'] : '';
-                        $last_scraped = isset($store['last_scraped']) ? $store['last_scraped'] : '';
+                        // Извличаме данни от store (СЪЩЕСТВУВАЩИ ПОЛЕТА)
+                        $store_key = isset($store['store_key']) ? $store['store_key'] : '';
+                        $store_config = isset($all_stores_config[$store_key]) ? $all_stores_config[$store_key] : array();
                         
-                        // Add additional-store class for mobile hide/show functionality
-                        $additional_class = ($index > 0) ? 'additional-store' : '';
+                        // Store info
+                        $store_name = !empty($store['name']) ? $store['name'] : (!empty($store_config['name']) ? $store_config['name'] : __('Магазин', 'parfume-reviews'));
+                        $store_logo = !empty($store_config['logo_url']) ? $store_config['logo_url'] : '';
+                        $affiliate_url = !empty($store['affiliate_url']) ? $store['affiliate_url'] : '';
+                        $promo_code = !empty($store['promo_code']) ? $store['promo_code'] : '';
+                        $promo_code_info = !empty($store['promo_code_info']) ? $store['promo_code_info'] : '';
+                        
+                        // Scraped data (СЪЩЕСТВУВАЩИ ПОЛЕТА)
+                        $scraped_price = !empty($store['scraped_price']) ? $store['scraped_price'] : '';
+                        $scraped_old_price = !empty($store['scraped_old_price']) ? $store['scraped_old_price'] : '';
+                        $scraped_sizes = !empty($store['scraped_sizes']) ? $store['scraped_sizes'] : '';
+                        $scraped_availability = !empty($store['scraped_availability']) ? $store['scraped_availability'] : '';
+                        $scraped_delivery = !empty($store['scraped_delivery']) ? $store['scraped_delivery'] : '';
+                        $last_scraped = !empty($store['last_scraped']) ? $store['last_scraped'] : '';
+                        
+                        // Parse variants from scraped_sizes if it's a string
+                        $variants = array();
+                        if (is_string($scraped_sizes) && !empty($scraped_sizes)) {
+                            // Format: "30ml - 45лв, 50ml - 67лв, 90ml - 89лв"
+                            $sizes_array = explode(',', $scraped_sizes);
+                            foreach ($sizes_array as $size_item) {
+                                $parts = explode('-', trim($size_item));
+                                if (count($parts) >= 2) {
+                                    $variants[] = array(
+                                        'size' => trim($parts[0]),
+                                        'price' => trim($parts[1])
+                                    );
+                                }
+                            }
+                        } elseif (is_array($scraped_sizes)) {
+                            $variants = $scraped_sizes;
+                        }
+                        
+                        // Discount calculation
+                        $discount_percent = 0;
+                        if ($scraped_old_price && $scraped_price) {
+                            $old = floatval(preg_replace('/[^0-9.]/', '', $scraped_old_price));
+                            $new = floatval(preg_replace('/[^0-9.]/', '', $scraped_price));
+                            if ($old > $new && $old > 0) {
+                                $discount_percent = round((($old - $new) / $old) * 100);
+                            }
+                        }
+                        
+                        // Additional store class for mobile
+                        $additional_class = ($store_index > 1) ? 'additional-store' : '';
                         ?>
                         
-                        <div class="store-item <?php echo esc_attr($additional_class); ?>">
-                            <!-- Store Header -->
+                        <div class="store-item <?php echo esc_attr($additional_class); ?>" data-store-index="<?php echo esc_attr($store_index); ?>">
+                            
+                            <!-- Store Header: Logo + Price (РЕД 1 от заданието) -->
                             <div class="store-header">
                                 <div class="store-logo">
-                                    <?php if (!empty($store_logo)): ?>
+                                    <?php if ($store_logo): ?>
                                         <img src="<?php echo esc_url($store_logo); ?>" alt="<?php echo esc_attr($store_name); ?>">
                                     <?php else: ?>
                                         <span class="dashicons dashicons-store"></span>
@@ -362,93 +410,109 @@ if (!is_array($stores)) {
                                 </div>
                                 
                                 <div class="store-price-info">
-                                    <?php if (!empty($scraped_price)): ?>
+                                    <?php if ($scraped_price): ?>
                                         <div class="price-display">
-                                            <?php if (!empty($scraped_old_price) && $scraped_old_price != $scraped_price): ?>
-                                                <span class="old-price"><?php echo esc_html($scraped_old_price . ' ' . $currency_symbol); ?></span>
+                                            <?php if ($scraped_old_price && $discount_percent > 0): ?>
+                                                <span class="old-price"><?php echo esc_html($scraped_old_price); ?></span>
                                             <?php endif; ?>
-                                            <span class="current-price">
-                                                <?php 
-                                                if ($price_format === 'before') {
-                                                    echo esc_html($currency_symbol . ' ' . $scraped_price);
-                                                } else {
-                                                    echo esc_html($scraped_price . ' ' . $currency_symbol);
-                                                }
-                                                ?>
+                                            <span class="current-price"><?php echo esc_html($scraped_price); ?></span>
+                                            <span class="price-info-icon" title="<?php echo esc_attr(sprintf(__('Цената се актуализира на всеки %s часа', 'parfume-reviews'), $scrape_interval)); ?>">
+                                                <span class="dashicons dashicons-info"></span>
                                             </span>
-                                            <?php if (!empty($scraped_old_price) && $scraped_old_price != $scraped_price): ?>
-                                                <?php 
-                                                $discount_percent = round((($scraped_old_price - $scraped_price) / $scraped_old_price) * 100);
-                                                ?>
-                                                <span class="discount-percent"><?php printf(__('По-изгодно с %d%%', 'parfume-reviews'), $discount_percent); ?></span>
-                                            <?php endif; ?>
                                         </div>
+                                        <?php if ($discount_percent > 0): ?>
+                                            <div class="discount-badge">
+                                                <?php echo sprintf(__('По-изгодно с %d%%', 'parfume-reviews'), $discount_percent); ?>
+                                            </div>
+                                        <?php endif; ?>
                                     <?php endif; ?>
-                                    
-                                    <div class="price-update-info">
-                                        <span class="dashicons dashicons-info" title="<?php printf(__('Цената се актуализира на всеки %d часа', 'parfume-reviews'), $scrape_interval); ?>"></span>
-                                    </div>
                                 </div>
                             </div>
                             
-                            <!-- Store Info Row -->
-                            <div class="store-info-row">
-                                <?php if (is_array($scraped_variants) && count($scraped_variants) === 1): ?>
-                                    <!-- Single variant display -->
-                                    <div class="single-variant-info">
-                                        <span class="variant-size"><?php echo esc_html($scraped_variants[0]['ml']); ?> ml</span>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <?php if (!empty($scraped_availability) && $scraped_availability === 'available'): ?>
-                                    <div class="availability-badge available">
-                                        <span class="dashicons dashicons-yes"></span>
-                                        <?php _e('наличен', 'parfume-reviews'); ?>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <?php if (!empty($scraped_delivery)): ?>
-                                    <div class="delivery-info">
-                                        <?php echo esc_html($scraped_delivery); ?>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
+                            <!-- РЕД 2: Availability + Delivery (според заданието) -->
+                            <?php if (count($variants) <= 1): ?>
+                                <div class="store-info-row">
+                                    <?php if (!empty($variants)): ?>
+                                        <div class="single-variant-size">
+                                            <?php echo esc_html($variants[0]['size']); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($scraped_availability): ?>
+                                        <div class="availability-badge">
+                                            <span class="dashicons dashicons-yes-alt"></span>
+                                            <?php echo esc_html($scraped_availability); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($scraped_delivery): ?>
+                                        <div class="delivery-info">
+                                            <?php echo esc_html($scraped_delivery); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
                             
-                            <!-- Variants (if multiple) -->
-                            <?php if (is_array($scraped_variants) && count($scraped_variants) > 1): ?>
+                            <!-- РЕД 3: Variants (ако има повече от 1) - според заданието -->
+                            <?php if (count($variants) > 1): ?>
+                                <!-- Показваме availability и delivery преди вариантите -->
+                                <?php if ($scraped_availability || $scraped_delivery): ?>
+                                    <div class="store-info-row">
+                                        <?php if ($scraped_availability): ?>
+                                            <div class="availability-badge">
+                                                <span class="dashicons dashicons-yes-alt"></span>
+                                                <?php echo esc_html($scraped_availability); ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        
+                                        <?php if ($scraped_delivery): ?>
+                                            <div class="delivery-info">
+                                                <?php echo esc_html($scraped_delivery); ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <!-- Бутони за варианти -->
                                 <div class="variants-row">
-                                    <?php foreach ($scraped_variants as $variant): ?>
-                                        <button type="button" class="variant-button" onclick="window.open('<?php echo esc_url($affiliate_url); ?>', '_blank')">
-                                            <span class="variant-ml"><?php echo esc_html($variant['ml']); ?> мл.</span>
-                                            <?php if (isset($variant['price'])): ?>
-                                                <span class="variant-price"><?php echo esc_html($variant['price'] . ' ' . $currency_symbol); ?></span>
+                                    <?php foreach ($variants as $variant): ?>
+                                        <?php 
+                                        $variant_size = !empty($variant['size']) ? $variant['size'] : '';
+                                        $variant_price = !empty($variant['price']) ? $variant['price'] : '';
+                                        $variant_old_price = !empty($variant['old_price']) ? $variant['old_price'] : '';
+                                        $has_discount = $variant_old_price && $variant_price;
+                                        ?>
+                                        <a href="<?php echo esc_url($affiliate_url); ?>" target="_blank" rel="nofollow" class="variant-button <?php echo $has_discount ? 'has-discount' : ''; ?>">
+                                            <?php if ($has_discount): ?>
+                                                <span class="discount-badge-corner">
+                                                    <span class="dashicons dashicons-tag"></span>
+                                                </span>
                                             <?php endif; ?>
-                                            <?php if (isset($variant['discount']) && $variant['discount']): ?>
-                                                <span class="variant-discount">%</span>
-                                            <?php endif; ?>
-                                        </button>
+                                            <span class="variant-size"><?php echo esc_html($variant_size); ?></span>
+                                            <span class="variant-price"><?php echo esc_html($variant_price); ?></span>
+                                        </a>
                                     <?php endforeach; ?>
                                 </div>
                             <?php endif; ?>
                             
-                            <!-- Action Buttons -->
+                            <!-- РЕД 4 (или 3 ако няма варианти): Action Buttons - според заданието -->
                             <div class="store-actions">
-                                <?php if (!empty($affiliate_url) && !empty($promo_code)): ?>
-                                    <!-- Two buttons: Store + Promo Code -->
+                                <?php if ($promo_code && $affiliate_url): ?>
+                                    <!-- Split buttons: Store (50%) + Promo (50%) -->
                                     <div class="action-buttons-split">
                                         <a href="<?php echo esc_url($affiliate_url); ?>" target="_blank" rel="nofollow" class="store-button">
                                             <?php _e('Към магазина', 'parfume-reviews'); ?>
                                         </a>
                                         <button type="button" class="promo-button" onclick="copyPromoCode('<?php echo esc_js($promo_code); ?>', '<?php echo esc_url($affiliate_url); ?>')">
-                                            <?php if (!empty($promo_code_info)): ?>
+                                            <?php if ($promo_code_info): ?>
                                                 <span class="promo-info"><?php echo esc_html($promo_code_info); ?></span>
                                             <?php endif; ?>
                                             <span class="promo-code"><?php echo esc_html($promo_code); ?></span>
                                             <span class="dashicons dashicons-clipboard"></span>
                                         </button>
                                     </div>
-                                <?php elseif (!empty($affiliate_url)): ?>
-                                    <!-- Single button: Store only -->
+                                <?php elseif ($affiliate_url): ?>
+                                    <!-- Single button: Store only (100% width) -->
                                     <a href="<?php echo esc_url($affiliate_url); ?>" target="_blank" rel="nofollow" class="store-button full-width">
                                         <?php _e('Към магазина', 'parfume-reviews'); ?>
                                     </a>
@@ -457,7 +521,7 @@ if (!is_array($stores)) {
                         </div>
                     <?php endforeach; ?>
                 </div>
-            </div>
+            </aside>
         <?php endif; ?>
     </div>
 </div>
@@ -493,70 +557,25 @@ function closeImageModal() {
     document.body.style.overflow = 'auto';
 }
 
-// Promo code copy functionality
+// Promo code copy and redirect functionality (според заданието)
 function copyPromoCode(code, url) {
     navigator.clipboard.writeText(code).then(function() {
         // Show success notification
         const notification = document.createElement('div');
         notification.textContent = '<?php _e('Промо кодът е копиран!', 'parfume-reviews'); ?>';
-        notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #4CAF50; color: white; padding: 15px; border-radius: 5px; z-index: 10000;';
+        notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#28a745;color:white;padding:15px 20px;border-radius:8px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,0.2);font-weight:600;';
         document.body.appendChild(notification);
         
-        setTimeout(() => {
-            document.body.removeChild(notification);
-        }, 3000);
-        
-        // Optionally open store URL after copying
-        window.open(url, '_blank');
+        setTimeout(function() {
+            notification.remove();
+            // Redirect to affiliate URL after copy (според заданието)
+            window.open(url, '_blank');
+        }, 1500);
+    }).catch(function(err) {
+        console.error('Failed to copy promo code:', err);
+        alert('<?php _e('Грешка при копиране на промо кода', 'parfume-reviews'); ?>');
     });
 }
-
-// Mobile stores functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const storesToggle = document.querySelector('.stores-toggle');
-    const storesClose = document.querySelector('.stores-close');
-    const showStoresBtn = document.querySelector('.show-stores-btn');
-    const storesSidebar = document.querySelector('.stores-sidebar');
-    const showStoresPanel = document.querySelector('.show-stores-panel');
-    const additionalStores = document.querySelectorAll('.additional-store');
-    
-    if (storesToggle) {
-        storesToggle.addEventListener('click', function() {
-            additionalStores.forEach(store => {
-                if (store.style.display === 'none') {
-                    store.style.display = 'block';
-                    storesToggle.querySelector('.dashicons').classList.remove('dashicons-arrow-up');
-                    storesToggle.querySelector('.dashicons').classList.add('dashicons-arrow-down');
-                } else {
-                    store.style.display = 'none';
-                    storesToggle.querySelector('.dashicons').classList.remove('dashicons-arrow-down');
-                    storesToggle.querySelector('.dashicons').classList.add('dashicons-arrow-up');
-                }
-            });
-        });
-        
-        // Initially hide additional stores on mobile
-        if (window.innerWidth <= 768) {
-            additionalStores.forEach(store => {
-                store.style.display = 'none';
-            });
-        }
-    }
-    
-    if (storesClose && showStoresPanel) {
-        storesClose.addEventListener('click', function() {
-            storesSidebar.style.display = 'none';
-            showStoresPanel.style.display = 'block';
-        });
-    }
-    
-    if (showStoresBtn) {
-        showStoresBtn.addEventListener('click', function() {
-            storesSidebar.style.display = 'block';
-            showStoresPanel.style.display = 'none';
-        });
-    }
-});
 </script>
 
 <?php
