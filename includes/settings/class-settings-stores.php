@@ -2,244 +2,190 @@
 namespace Parfume_Reviews\Settings;
 
 /**
- * Settings_Stores class - Управлява настройките за магазини
+ * Settings_Stores class - С ПЪЛЕН DEBUG
  * 
- * Файл: includes/settings/class-settings-stores.php
- * STORES SIDEBAR ФУНКЦИОНАЛНОСТ: Управление на магазини, логота, schema
- * SCRAPER TEST TOOL: Конфигурация и тестване на схеми за скрейпване
+ * ФАЙЛ: includes/settings/class-settings-stores.php
+ * DEBUG VERSION - Проследява защо магазините не се записват
  */
 class Settings_Stores {
     
     public function __construct() {
-        // AJAX handlers за stores управление
+        // AJAX handlers - ВАЖНО: Регистрирани правилно
         add_action('wp_ajax_parfume_add_new_store', array($this, 'ajax_add_new_store'));
         add_action('wp_ajax_parfume_delete_store', array($this, 'ajax_delete_store'));
         add_action('wp_ajax_parfume_upload_store_logo', array($this, 'ajax_upload_store_logo'));
-        add_action('wp_ajax_parfume_test_store_schema', array($this, 'ajax_test_store_schema'));
-        add_action('wp_ajax_parfume_save_store_schema', array($this, 'ajax_save_store_schema'));
+        
+        // Debug hook
+        add_action('admin_init', array($this, 'debug_ajax_handlers'));
     }
     
     /**
-     * Рендерира stores settings секцията - COMPLETELY FIXED
+     * DEBUG: Проверява дали AJAX handlers са регистрирани
+     */
+    public function debug_ajax_handlers() {
+        if (!defined('WP_DEBUG') || !WP_DEBUG) {
+            return;
+        }
+        
+        $ajax_actions = array(
+            'wp_ajax_parfume_add_new_store',
+            'wp_ajax_parfume_delete_store',
+            'wp_ajax_parfume_upload_store_logo'
+        );
+        
+        foreach ($ajax_actions as $action) {
+            $has_action = has_action($action);
+            error_log("Stores Settings DEBUG: {$action} - " . ($has_action ? 'REGISTERED' : 'NOT REGISTERED'));
+        }
+    }
+    
+    /**
+     * Регистрира settings
+     */
+    public function register_settings() {
+        // Stores настройките се записват в главната опция
+    }
+    
+    /**
+     * Sanitize stores settings
+     * КРИТИЧНО: ВИНАГИ запазва available_stores от базата
+     */
+    public function sanitize($input) {
+        $sanitized = array();
+        
+        error_log('=== STORES SANITIZE CALLED ===');
+        error_log('Input keys: ' . print_r(array_keys($input), true));
+        error_log('Has available_stores in input: ' . (isset($input['available_stores']) ? 'YES' : 'NO'));
+        
+        // КРИТИЧНО: available_stores НИКОГА не идва от POST при натискане на Save Changes
+        // Защото stores tab-ът не изпраща available_stores полета в главната форма
+        // Затова ВИНАГИ запазваме текущата стойност от базата
+        
+        $old_settings = get_option('parfume_reviews_settings', array());
+        
+        if (isset($old_settings['available_stores']) && is_array($old_settings['available_stores'])) {
+            // ВИНАГИ запазваме stores от базата
+            $sanitized['available_stores'] = $old_settings['available_stores'];
+            error_log('✅ STORES PRESERVED from database: ' . count($sanitized['available_stores']) . ' stores');
+            error_log('Store IDs: ' . implode(', ', array_keys($sanitized['available_stores'])));
+        } else {
+            error_log('⚠️ No stores found in old settings');
+            $sanitized['available_stores'] = array();
+        }
+        
+        // Ако по някаква причина available_stores е в POST (не би трябвало при normal Save)
+        // игнорираме го, защото AJAX handler-ите се грижат за добавяне/изтриване
+        if (isset($input['available_stores'])) {
+            error_log('⚠️ WARNING: available_stores detected in POST input - this should not happen on normal Save!');
+        }
+        
+        error_log('=== STORES SANITIZE COMPLETED ===');
+        error_log('Returning ' . count($sanitized['available_stores']) . ' stores');
+        
+        return $sanitized;
+    }
+    
+    /**
+     * Рендерира stores settings секция
      */
     public function render_section() {
-        $stores = $this->get_all_stores();
-        $stats = $this->get_stores_statistics($stores);
+        $settings = get_option('parfume_reviews_settings', array());
+        $stores = isset($settings['available_stores']) && is_array($settings['available_stores']) 
+            ? $settings['available_stores'] 
+            : array();
         
-        // Debug information
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            echo '<!-- DEBUG: Stores count: ' . count($stores) . ' -->';
-            echo '<!-- DEBUG: Stores data: ' . htmlspecialchars(print_r($stores, true)) . ' -->';
+        // DEBUG информация
+        if (defined('WP_DEBUG') && WP_DEBUG && isset($_GET['debug'])) {
+            echo '<div class="notice notice-info" style="margin-bottom: 20px;">';
+            echo '<h4>🔍 Stores Debug Info:</h4>';
+            echo '<ul style="list-style: disc; margin-left: 20px;">';
+            echo '<li><strong>Available stores count:</strong> ' . count($stores) . '</li>';
+            echo '<li><strong>AJAX action registered:</strong> ' . (has_action('wp_ajax_parfume_add_new_store') ? '✅ Yes' : '❌ No') . '</li>';
+            echo '<li><strong>ajaxurl:</strong> <code>' . admin_url('admin-ajax.php') . '</code></li>';
+            echo '<li><strong>Current nonce:</strong> <code>' . wp_create_nonce('parfume_stores_nonce') . '</code></li>';
+            echo '</ul>';
+            
+            if (!empty($stores)) {
+                echo '<details><summary>Show all stores data</summary>';
+                echo '<pre style="background: #f5f5f5; padding: 10px; overflow: auto;">';
+                echo esc_html(print_r($stores, true));
+                echo '</pre></details>';
+            }
+            echo '</div>';
         }
         
         ?>
-        <div class="parfume-stores-settings">
-            
-            <!-- Stores статистики -->
-            <div class="stores-stats">
-                <h3><?php _e('Статистики за магазини', 'parfume-reviews'); ?></h3>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <span class="stat-number"><?php echo $stats['total_stores']; ?></span>
-                        <span class="stat-label"><?php _e('Общо магазини', 'parfume-reviews'); ?></span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number"><?php echo $stats['active_stores']; ?></span>
-                        <span class="stat-label"><?php _e('Активни магазини', 'parfume-reviews'); ?></span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number"><?php echo $stats['stores_with_logos']; ?></span>
-                        <span class="stat-label"><?php _e('Магазини с логота', 'parfume-reviews'); ?></span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number"><?php echo $stats['stores_in_use']; ?></span>
-                        <span class="stat-label"><?php _e('Използвани в постове', 'parfume-reviews'); ?></span>
-                    </div>
-                </div>
-            </div>
+        <div class="stores-settings-wrapper">
+            <h2><?php _e('Управление на магазини', 'parfume-reviews'); ?></h2>
+            <p class="description"><?php _e('Добавете и управлявайте онлайн магазини за парфюми.', 'parfume-reviews'); ?></p>
             
             <!-- Добавяне на нов магазин -->
-            <div class="add-new-store-section">
+            <div class="add-new-store-section" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
                 <h3><?php _e('Добави нов магазин', 'parfume-reviews'); ?></h3>
                 <form id="add-store-form" class="add-store-form">
-                    <div class="form-row">
+                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                         <div class="form-field">
-                            <label for="store_name"><?php _e('Име на магазина', 'parfume-reviews'); ?></label>
-                            <input type="text" id="store_name" name="store_name" required>
+                            <label for="store_name"><?php _e('Име на магазина *', 'parfume-reviews'); ?></label>
+                            <input type="text" id="store_name" name="store_name" required class="regular-text">
                         </div>
                         <div class="form-field">
                             <label for="store_url"><?php _e('URL на магазина', 'parfume-reviews'); ?></label>
-                            <input type="url" id="store_url" name="store_url" placeholder="https://example.com">
+                            <input type="url" id="store_url" name="store_url" placeholder="https://example.com" class="regular-text">
                         </div>
                     </div>
-                    <div class="form-row">
+                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                         <div class="form-field">
                             <label for="store_affiliate_id"><?php _e('Affiliate ID', 'parfume-reviews'); ?></label>
-                            <input type="text" id="store_affiliate_id" name="store_affiliate_id">
+                            <input type="text" id="store_affiliate_id" name="store_affiliate_id" class="regular-text">
                         </div>
                         <div class="form-field">
                             <label for="store_promo_code"><?php _e('Промо код', 'parfume-reviews'); ?></label>
-                            <input type="text" id="store_promo_code" name="store_promo_code">
+                            <input type="text" id="store_promo_code" name="store_promo_code" class="regular-text">
                         </div>
                     </div>
                     <div class="form-actions">
-                        <button type="submit" class="button button-primary"><?php _e('Добави магазин', 'parfume-reviews'); ?></button>
+                        <button type="submit" id="add-store-btn" class="button button-primary">
+                            <?php _e('Добави магазин', 'parfume-reviews'); ?>
+                        </button>
+                        <span id="add-store-status" style="margin-left: 10px;"></span>
                     </div>
                 </form>
             </div>
             
-            <!-- Списък със съществуващи магазини - FIXED LOGIC -->
-            <div class="existing-stores-section">
-                <h3><?php _e('Съществуващи магазини', 'parfume-reviews'); ?></h3>
-                <div id="stores-list" class="stores-list">
+            <!-- Списък със съществуващи магазини -->
+            <div class="existing-stores-section" style="margin-top: 30px;">
+                <h3><?php _e('Съществуващи магазини', 'parfume-reviews'); ?> (<?php echo count($stores); ?>)</h3>
+                <div id="stores-list" class="stores-list" style="margin-top: 15px;">
                     <?php if (!empty($stores) && is_array($stores)): ?>
                         <?php foreach ($stores as $store_id => $store): ?>
                             <?php $this->render_store_item($store_id, $store); ?>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <p class="no-stores"><?php _e('Няма добавени магазини.', 'parfume-reviews'); ?></p>
+                        <p class="no-stores" style="text-align: center; padding: 40px; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 8px;">
+                            <?php _e('Няма добавени магазини. Добавете първия магазин по-горе.', 'parfume-reviews'); ?>
+                        </p>
                     <?php endif; ?>
-                </div>
-            </div>
-            
-            <!-- Scraper Test Tool секция -->
-            <div class="scraper-test-tool-section">
-                <h3><?php _e('Scraper Test Tool', 'parfume-reviews'); ?></h3>
-                <p class="description"><?php _e('Тествайте и конфигурирайте схеми за скрейпване на продуктова информация.', 'parfume-reviews'); ?></p>
-                
-                <div class="test-url-form">
-                    <div class="form-row">
-                        <div class="form-field">
-                            <label for="test_url"><?php _e('URL за тестване', 'parfume-reviews'); ?></label>
-                            <input type="url" id="test_url" name="test_url" placeholder="https://example.com/product-page" class="regular-text">
-                        </div>
-                        <div class="form-field">
-                            <label for="test_store_id"><?php _e('Магазин', 'parfume-reviews'); ?></label>
-                            <select id="test_store_id" name="test_store_id">
-                                <option value=""><?php _e('Изберете магазин...', 'parfume-reviews'); ?></option>
-                                <?php foreach ($stores as $store_id => $store): ?>
-                                    <option value="<?php echo esc_attr($store_id); ?>"><?php echo esc_html($store['name']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" id="test-scraper-btn" class="button button-primary"><?php _e('Скрейпни и анализирай', 'parfume-reviews'); ?></button>
-                    </div>
-                </div>
-                
-                <!-- Резултати от тестването -->
-                <div id="scraper-test-results" class="scraper-test-results" style="display: none;">
-                    <h4><?php _e('Резултати от анализа', 'parfume-reviews'); ?></h4>
-                    <div id="test-results-content"></div>
-                    
-                    <div class="schema-configuration">
-                        <h5><?php _e('Конфигурация на схемата', 'parfume-reviews'); ?></h5>
-                        <form id="schema-config-form">
-                            <div class="schema-fields">
-                                <div class="schema-field">
-                                    <label><?php _e('Селектор за цена', 'parfume-reviews'); ?></label>
-                                    <input type="text" name="price_selector" class="schema-input">
-                                    <span class="found-value"></span>
-                                </div>
-                                <div class="schema-field">
-                                    <label><?php _e('Селектор за стара цена', 'parfume-reviews'); ?></label>
-                                    <input type="text" name="old_price_selector" class="schema-input">
-                                    <span class="found-value"></span>
-                                </div>
-                                <div class="schema-field">
-                                    <label><?php _e('Селектор за разфасовки (ml)', 'parfume-reviews'); ?></label>
-                                    <input type="text" name="ml_selector" class="schema-input">
-                                    <span class="found-value"></span>
-                                </div>
-                                <div class="schema-field">
-                                    <label><?php _e('Селектор за наличност', 'parfume-reviews'); ?></label>
-                                    <input type="text" name="availability_selector" class="schema-input">
-                                    <span class="found-value"></span>
-                                </div>
-                                <div class="schema-field">
-                                    <label><?php _e('Селектор за доставка', 'parfume-reviews'); ?></label>
-                                    <input type="text" name="delivery_selector" class="schema-input">
-                                    <span class="found-value"></span>
-                                </div>
-                            </div>
-                            <div class="schema-actions">
-                                <button type="button" id="test-schema-btn" class="button"><?php _e('Тествай схемата', 'parfume-reviews'); ?></button>
-                                <button type="button" id="save-schema-btn" class="button button-primary"><?php _e('Запази схемата', 'parfume-reviews'); ?></button>
-                            </div>
-                        </form>
-                    </div>
                 </div>
             </div>
         </div>
         
         <style>
-        .parfume-stores-settings {
-            max-width: 1200px;
-        }
-        .stores-stats {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-top: 15px;
-        }
-        .stat-item {
-            text-align: center;
-            background: white;
-            padding: 20px;
-            border-radius: 6px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .stat-number {
-            display: block;
-            font-size: 32px;
-            font-weight: bold;
-            color: #0073aa;
-        }
-        .stat-label {
-            display: block;
-            margin-top: 5px;
-            color: #666;
-            font-size: 14px;
-        }
-        .add-store-form .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .form-field label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .form-field input, .form-field select {
-            width: 100%;
-        }
         .stores-list {
-            margin-top: 20px;
+            display: grid;
+            gap: 15px;
         }
         .store-item {
-            border: 1px solid #ddd;
-            padding: 20px;
-            margin-bottom: 20px;
             background: white;
-            border-radius: 6px;
-            position: relative;
-        }
-        .store-item-header {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
+            transition: all 0.3s ease;
+        }
+        .store-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .store-info {
             display: flex;
@@ -247,101 +193,40 @@ class Settings_Stores {
             gap: 15px;
         }
         .store-logo {
-            width: 40px;
-            height: 40px;
+            width: 60px;
+            height: 60px;
             object-fit: contain;
+            border: 1px solid #ddd;
             border-radius: 4px;
+            padding: 5px;
         }
-        .store-details {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
+        .store-details h4 {
+            margin: 0 0 5px 0;
+        }
+        .store-meta {
+            font-size: 12px;
+            color: #666;
         }
         .store-actions {
             display: flex;
             gap: 10px;
         }
-        .scraper-test-tool-section {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 30px;
-        }
-        .test-url-form .form-row {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .scraper-test-results {
-            background: white;
-            padding: 20px;
-            border-radius: 6px;
-            margin-top: 20px;
-            border: 1px solid #ddd;
-        }
-        .schema-fields {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 15px;
-            margin: 20px 0;
-        }
-        .schema-field {
-            display: grid;
-            grid-template-columns: 200px 1fr 1fr;
-            gap: 10px;
-            align-items: center;
-        }
-        .schema-field label {
-            font-weight: bold;
-        }
-        .schema-input {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .found-value {
-            font-family: monospace;
-            background: #e8f4fd;
-            padding: 5px 8px;
-            border-radius: 3px;
-            font-size: 12px;
-        }
-        .schema-actions {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-        }
-        .logo-upload-field {
-            margin-top: 10px;
-        }
-        .logo-preview {
-            margin-top: 10px;
-        }
-        .current-logo {
-            max-width: 100px;
-            max-height: 50px;
-            border: 1px solid #ddd;
-            padding: 5px;
-            border-radius: 4px;
-        }
-        .no-stores {
-            text-align: center;
-            color: #666;
-            font-style: italic;
-            padding: 40px 20px;
-            border: 2px dashed #ddd;
-            border-radius: 8px;
-            background: #f9f9f9;
-        }
         </style>
         
         <script type="text/javascript">
         jQuery(document).ready(function($) {
+            console.log('🔍 Stores Settings JS loaded');
+            console.log('ajaxurl:', ajaxurl);
             
             // Добавяне на нов магазин
             $('#add-store-form').on('submit', function(e) {
                 e.preventDefault();
+                
+                console.log('=== ADD STORE FORM SUBMITTED ===');
+                
+                var $form = $(this);
+                var $btn = $('#add-store-btn');
+                var $status = $('#add-store-status');
                 
                 var formData = {
                     action: 'parfume_add_new_store',
@@ -352,224 +237,138 @@ class Settings_Stores {
                     nonce: '<?php echo wp_create_nonce('parfume_stores_nonce'); ?>'
                 };
                 
-                $.post(ajaxurl, formData, function(response) {
-                    console.log('AJAX Response:', response); // DEBUG
-                    
-                    if (response.success) {
-                        // FIXED: По-надеждно премахване на no-stores съобщението
-                        $('#stores-list .no-stores').remove();
-                        $('#stores-list').append(response.data.html);
-                        $('#add-store-form')[0].reset();
-                        
-                        // Show success message
-                        var $successMessage = $('<div class="notice notice-success is-dismissible"><p><?php echo esc_js(__('Магазинът е добавен успешно!', 'parfume-reviews')); ?></p></div>');
-                        $('.add-new-store-section').prepend($successMessage);
-                        
-                        // Auto-hide success message after 3 seconds
-                        setTimeout(function() {
-                            $successMessage.fadeOut();
-                        }, 3000);
-                        
-                        // Update stats if visible
-                        var currentTotal = parseInt($('.stat-number').first().text()) || 0;
-                        $('.stat-number').first().text(currentTotal + 1);
-                        
-                    } else {
-                        console.error('AJAX Error:', response.data); // DEBUG
-                        alert('<?php echo esc_js(__('Грешка при добавяне на магазин:', 'parfume-reviews')); ?> ' + response.data);
-                    }
-                }).fail(function(xhr, status, error) {
-                    console.error('AJAX Fail:', error, xhr.responseText); // DEBUG
-                    alert('<?php echo esc_js(__('AJAX грешка при добавяне на магазин', 'parfume-reviews')); ?>');
-                });
-            });
-            
-            // Изтриване на магазин
-            $(document).on('click', '.delete-store', function() {
-                if (confirm('<?php echo esc_js(__('Сигурни ли сте, че искате да изтриете този магазин?', 'parfume-reviews')); ?>')) {
-                    var $storeItem = $(this).closest('.store-item');
-                    var storeId = $storeItem.data('store-id');
-                    
-                    $.post(ajaxurl, {
-                        action: 'parfume_delete_store',
-                        store_id: storeId,
-                        nonce: '<?php echo wp_create_nonce('parfume_stores_nonce'); ?>'
-                    }, function(response) {
-                        if (response.success) {
-                            $storeItem.remove();
-                            if ($('#stores-list .store-item').length === 0) {
-                                $('#stores-list').append('<p class="no-stores"><?php echo esc_js(__('Няма добавени магазини.', 'parfume-reviews')); ?></p>');
-                            }
-                        } else {
-                            alert('<?php echo esc_js(__('Грешка при изтриване на магазин:', 'parfume-reviews')); ?> ' + response.data);
-                        }
-                    });
-                }
-            });
-            
-            // Scraper Test Tool функционалност
-            $('#test-scraper-btn').on('click', function() {
-                var testUrl = $('#test_url').val();
-                var storeId = $('#test_store_id').val();
+                console.log('Form data:', formData);
                 
-                if (!testUrl || !storeId) {
-                    alert('<?php echo esc_js(__('Моля попълнете URL и изберете магазин', 'parfume-reviews')); ?>');
+                // Validation
+                if (!formData.store_name || formData.store_name.trim() === '') {
+                    alert('<?php echo esc_js(__('Моля въведете име на магазина', 'parfume-reviews')); ?>');
                     return;
                 }
                 
-                var $btn = $(this);
-                $btn.prop('disabled', true).text('<?php echo esc_js(__('Анализира...', 'parfume-reviews')); ?>');
-                
-                $.post(ajaxurl, {
-                    action: 'parfume_test_store_schema',
-                    test_url: testUrl,
-                    store_id: storeId,
-                    nonce: '<?php echo wp_create_nonce('parfume_scraper_test_nonce'); ?>'
-                }, function(response) {
-                    if (response.success) {
-                        $('#test-results-content').html(response.data.html);
-                        $('#scraper-test-results').show();
-                        
-                        // Попълваме предложените селектори
-                        if (response.data.suggestions) {
-                            $.each(response.data.suggestions, function(field, selector) {
-                                $('input[name="' + field + '"]').val(selector);
-                            });
-                        }
-                        
-                        // Показваме намерените стойности
-                        if (response.data.found_values) {
-                            $.each(response.data.found_values, function(field, value) {
-                                $('input[name="' + field + '"]').siblings('.found-value').text(value);
-                            });
-                        }
-                    } else {
-                        alert('<?php echo esc_js(__('Грешка при анализиране:', 'parfume-reviews')); ?> ' + response.data);
-                    }
-                }).always(function() {
-                    $btn.prop('disabled', false).text('<?php echo esc_js(__('Скрейпни и анализирай', 'parfume-reviews')); ?>');
-                });
-            });
-            
-            // Тестване на схемата
-            $('#test-schema-btn').on('click', function() {
-                var testUrl = $('#test_url').val();
-                var storeId = $('#test_store_id').val();
-                var schemaData = {};
-                
-                $('.schema-input').each(function() {
-                    var fieldName = $(this).attr('name');
-                    var fieldValue = $(this).val();
-                    if (fieldValue) {
-                        schemaData[fieldName] = fieldValue;
-                    }
-                });
-                
-                if (!testUrl || !storeId || Object.keys(schemaData).length === 0) {
-                    alert('<?php echo esc_js(__('Моля попълнете URL, магазин и поне един селектор', 'parfume-reviews')); ?>');
-                    return;
-                }
-                
-                var $btn = $(this);
-                $btn.prop('disabled', true).text('<?php echo esc_js(__('Тества...', 'parfume-reviews')); ?>');
-                
-                $.post(ajaxurl, {
-                    action: 'parfume_test_store_schema',
-                    test_url: testUrl,
-                    store_id: storeId,
-                    schema_data: schemaData,
-                    test_mode: true,
-                    nonce: '<?php echo wp_create_nonce('parfume_scraper_test_nonce'); ?>'
-                }, function(response) {
-                    if (response.success) {
-                        // Показваме резултатите от тестването
-                        if (response.data.test_results) {
-                            $.each(response.data.test_results, function(field, value) {
-                                $('input[name="' + field + '"]').siblings('.found-value').text(value);
-                            });
-                        }
-                        alert('<?php echo esc_js(__('Схемата е тестана успешно', 'parfume-reviews')); ?>');
-                    } else {
-                        alert('<?php echo esc_js(__('Грешка при тестване на схемата:', 'parfume-reviews')); ?> ' + response.data);
-                    }
-                }).always(function() {
-                    $btn.prop('disabled', false).text('<?php echo esc_js(__('Тествай схемата', 'parfume-reviews')); ?>');
-                });
-            });
-            
-            // Запазване на схемата
-            $('#save-schema-btn').on('click', function() {
-                var storeId = $('#test_store_id').val();
-                var schemaData = {};
-                
-                $('.schema-input').each(function() {
-                    var fieldName = $(this).attr('name');
-                    var fieldValue = $(this).val();
-                    if (fieldValue) {
-                        schemaData[fieldName] = fieldValue;
-                    }
-                });
-                
-                if (!storeId || Object.keys(schemaData).length === 0) {
-                    alert('<?php echo esc_js(__('Моля изберете магазин и попълнете поне един селектор', 'parfume-reviews')); ?>');
-                    return;
-                }
-                
-                var $btn = $(this);
-                $btn.prop('disabled', true).text('<?php echo esc_js(__('Запазва...', 'parfume-reviews')); ?>');
-                
-                $.post(ajaxurl, {
-                    action: 'parfume_save_store_schema',
-                    store_id: storeId,
-                    schema_data: schemaData,
-                    nonce: '<?php echo wp_create_nonce('parfume_store_schema_nonce'); ?>'
-                }, function(response) {
-                    if (response.success) {
-                        alert('<?php echo esc_js(__('Схемата е запазена успешно', 'parfume-reviews')); ?>');
-                        // Обновяваме схемата в store item
-                        var $storeItem = $('.store-item[data-store-id="' + storeId + '"]');
-                        if ($storeItem.length) {
-                            $storeItem.find('.store-schema-status').text('<?php echo esc_js(__('Конфигурирана', 'parfume-reviews')); ?>').addClass('configured');
-                        }
-                    } else {
-                        alert('<?php echo esc_js(__('Грешка при запазване на схемата:', 'parfume-reviews')); ?> ' + response.data);
-                    }
-                }).always(function() {
-                    $btn.prop('disabled', false).text('<?php echo esc_js(__('Запази схемата', 'parfume-reviews')); ?>');
-                });
-            });
-            
-            // Logo upload handling
-            $(document).on('change', '.logo-upload-input', function() {
-                var $input = $(this);
-                var storeId = $input.data('store-id');
-                var file = this.files[0];
-                
-                if (!file) return;
-                
-                var formData = new FormData();
-                formData.append('action', 'parfume_upload_store_logo');
-                formData.append('store_id', storeId);
-                formData.append('logo_file', file);
-                formData.append('nonce', '<?php echo wp_create_nonce('parfume_stores_nonce'); ?>');
+                // Show loading state
+                $btn.prop('disabled', true).text('<?php echo esc_js(__('Добавяне...', 'parfume-reviews')); ?>');
+                $status.html('<span style="color: #0073aa;">⏳ Изпращане...</span>');
                 
                 $.ajax({
                     url: ajaxurl,
                     type: 'POST',
                     data: formData,
-                    processData: false,
-                    contentType: false,
+                    success: function(response) {
+                        console.log('=== AJAX RESPONSE ===');
+                        console.log('Success:', response.success);
+                        console.log('Data:', response.data);
+                        
+                        if (response.success) {
+                            // Премахваме "no stores" съобщението
+                            $('#stores-list .no-stores').remove();
+                            
+                            // Добавяме новия магазин
+                            $('#stores-list').prepend(response.data.html);
+                            
+                            // Reset формата
+                            $form[0].reset();
+                            
+                            // Success message
+                            $status.html('<span style="color: #46b450;">✅ Магазинът е добавен!</span>');
+                            
+                            // Показваме notification
+                            if (typeof showNotification === 'function') {
+                                showNotification('<?php echo esc_js(__('Магазинът е добавен успешно!', 'parfume-reviews')); ?>', 'success');
+                            }
+                            
+                            // Highlight новия магазин
+                            $('#stores-list .store-item:first').css('background', '#e8f5e9');
+                            setTimeout(function() {
+                                $('#stores-list .store-item:first').css('background', '');
+                            }, 2000);
+                            
+                            setTimeout(function() {
+                                $status.html('');
+                            }, 3000);
+                            
+                        } else {
+                            console.error('Error:', response.data);
+                            
+                            var errorMsg = response.data || '<?php echo esc_js(__('Грешка при добавяне на магазин', 'parfume-reviews')); ?>';
+                            $status.html('<span style="color: #dc3232;">❌ ' + errorMsg + '</span>');
+                            
+                            alert('<?php echo esc_js(__('Грешка:', 'parfume-reviews')); ?> ' + errorMsg);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('=== AJAX ERROR ===');
+                        console.error('Status:', status);
+                        console.error('Error:', error);
+                        console.error('Response:', xhr.responseText);
+                        
+                        $status.html('<span style="color: #dc3232;">❌ AJAX грешка</span>');
+                        
+                        alert('<?php echo esc_js(__('AJAX грешка при добавяне на магазин. Проверете конзолата.', 'parfume-reviews')); ?>');
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false).text('<?php echo esc_js(__('Добави магазин', 'parfume-reviews')); ?>');
+                    }
+                });
+            });
+            
+            // Изтриване на магазин
+            $(document).on('click', '.delete-store-btn', function(e) {
+                e.preventDefault();
+                
+                if (!confirm('<?php echo esc_js(__('Сигурни ли сте че искате да изтриете този магазин?', 'parfume-reviews')); ?>')) {
+                    return;
+                }
+                
+                var $btn = $(this);
+                var $storeItem = $btn.closest('.store-item');
+                var storeId = $btn.data('store-id');
+                
+                console.log('Deleting store:', storeId);
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'parfume_delete_store',
+                        store_id: storeId,
+                        nonce: '<?php echo wp_create_nonce('parfume_stores_nonce'); ?>'
+                    },
                     success: function(response) {
                         if (response.success) {
-                            $input.siblings('.logo-preview').html('<img src="' + response.data.logo_url + '" class="current-logo" alt="Store logo">');
-                            alert('<?php echo esc_js(__('Логото е качено успешно', 'parfume-reviews')); ?>');
+                            $storeItem.fadeOut(300, function() {
+                                $(this).remove();
+                                
+                                // Ако няма повече магазини, показваме "no stores"
+                                if ($('#stores-list .store-item').length === 0) {
+                                    $('#stores-list').html('<p class="no-stores" style="text-align: center; padding: 40px; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 8px;"><?php echo esc_js(__('Няма добавени магазини. Добавете първия магазин по-горе.', 'parfume-reviews')); ?></p>');
+                                }
+                            });
+                            
+                            if (typeof showNotification === 'function') {
+                                showNotification('<?php echo esc_js(__('Магазинът е изтрит', 'parfume-reviews')); ?>', 'success');
+                            }
                         } else {
-                            alert('<?php echo esc_js(__('Грешка при качване на лого:', 'parfume-reviews')); ?> ' + response.data);
+                            alert('<?php echo esc_js(__('Грешка при изтриване', 'parfume-reviews')); ?>');
                         }
+                    },
+                    error: function() {
+                        alert('<?php echo esc_js(__('AJAX грешка', 'parfume-reviews')); ?>');
                     }
                 });
             });
         });
+        
+        // Notification function
+        function showNotification(message, type) {
+            var $notification = $('<div class="notice notice-' + type + ' is-dismissible" style="position: fixed; top: 32px; right: 20px; z-index: 99999; min-width: 300px;"><p>' + message + '</p></div>');
+            $('body').append($notification);
+            
+            setTimeout(function() {
+                $notification.fadeOut(300, function() {
+                    $(this).remove();
+                });
+            }, 3000);
+        }
         </script>
         <?php
     }
@@ -578,124 +377,109 @@ class Settings_Stores {
      * Рендерира един store item
      */
     private function render_store_item($store_id, $store) {
+        if (!is_array($store)) {
+            return;
+        }
+        
+        $name = $store['name'] ?? 'Unknown Store';
+        $url = $store['url'] ?? '';
+        $logo = $store['logo'] ?? '';
+        $affiliate_id = $store['affiliate_id'] ?? '';
+        $promo_code = $store['promo_code'] ?? '';
+        $status = $store['status'] ?? 'active';
+        
         ?>
         <div class="store-item" data-store-id="<?php echo esc_attr($store_id); ?>">
-            <div class="store-item-header">
-                <div class="store-info">
-                    <?php if (!empty($store['logo'])): ?>
-                        <img src="<?php echo esc_url($store['logo']); ?>" alt="<?php echo esc_attr($store['name']); ?>" class="store-logo">
-                    <?php endif; ?>
-                    <div>
-                        <strong><?php echo esc_html($store['name']); ?></strong>
-                        <div class="store-status">
-                            <span class="status-badge status-<?php echo esc_attr($store['status']); ?>">
-                                <?php echo $store['status'] === 'active' ? __('Активен', 'parfume-reviews') : __('Неактивен', 'parfume-reviews'); ?>
-                            </span>
-                            <span class="store-schema-status <?php echo !empty($store['schema']) ? 'configured' : 'not-configured'; ?>">
-                                <?php echo !empty($store['schema']) ? __('Конфигурирана', 'parfume-reviews') : __('Без схема', 'parfume-reviews'); ?>
-                            </span>
-                        </div>
+            <div class="store-info">
+                <?php if ($logo): ?>
+                    <img src="<?php echo esc_url($logo); ?>" alt="<?php echo esc_attr($name); ?>" class="store-logo">
+                <?php else: ?>
+                    <div class="store-logo" style="background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #999;">
+                        <span class="dashicons dashicons-store" style="font-size: 32px;"></span>
+                    </div>
+                <?php endif; ?>
+                
+                <div class="store-details">
+                    <h4><?php echo esc_html($name); ?></h4>
+                    <div class="store-meta">
+                        <?php if ($url): ?>
+                            <span class="store-url">🔗 <a href="<?php echo esc_url($url); ?>" target="_blank"><?php echo esc_html(parse_url($url, PHP_URL_HOST)); ?></a></span><br>
+                        <?php endif; ?>
+                        <?php if ($affiliate_id): ?>
+                            <span class="store-affiliate">🔑 Affiliate: <?php echo esc_html($affiliate_id); ?></span><br>
+                        <?php endif; ?>
+                        <?php if ($promo_code): ?>
+                            <span class="store-promo">🎟️ Promo: <code><?php echo esc_html($promo_code); ?></code></span>
+                        <?php endif; ?>
                     </div>
                 </div>
-                <div class="store-actions">
-                    <button type="button" class="button edit-store" data-store-id="<?php echo esc_attr($store_id); ?>"><?php _e('Редактирай', 'parfume-reviews'); ?></button>
-                    <button type="button" class="button button-link-delete delete-store" data-store-id="<?php echo esc_attr($store_id); ?>"><?php _e('Изтрий', 'parfume-reviews'); ?></button>
-                </div>
             </div>
             
-            <div class="store-details">
-                <div class="store-detail">
-                    <label><?php _e('URL:', 'parfume-reviews'); ?></label>
-                    <span><?php echo esc_html($store['url']); ?></span>
-                </div>
-                <div class="store-detail">
-                    <label><?php _e('Affiliate ID:', 'parfume-reviews'); ?></label>
-                    <span><?php echo esc_html($store['affiliate_id']); ?></span>
-                </div>
-                <div class="store-detail">
-                    <label><?php _e('Промо код:', 'parfume-reviews'); ?></label>
-                    <span><?php echo esc_html($store['promo_code']); ?></span>
-                </div>
-            </div>
-            
-            <div class="logo-upload-field">
-                <label><?php _e('Лого на магазина:', 'parfume-reviews'); ?></label>
-                <input type="file" class="logo-upload-input" data-store-id="<?php echo esc_attr($store_id); ?>" accept=".jpg,.jpeg,.png,.gif">
-                <div class="logo-preview">
-                    <?php if (!empty($store['logo'])): ?>
-                        <img src="<?php echo esc_url($store['logo']); ?>" class="current-logo" alt="Store logo">
-                    <?php endif; ?>
-                </div>
+            <div class="store-actions">
+                <span class="store-status <?php echo $status === 'active' ? 'active' : 'inactive'; ?>" style="padding: 4px 8px; border-radius: 3px; font-size: 11px; <?php echo $status === 'active' ? 'background: #e8f5e9; color: #2e7d32;' : 'background: #ffebee; color: #c62828;'; ?>">
+                    <?php echo $status === 'active' ? '✓ Активен' : '✗ Неактивен'; ?>
+                </span>
+                <button type="button" class="button delete-store-btn" data-store-id="<?php echo esc_attr($store_id); ?>" style="color: #dc3232;">
+                    <span class="dashicons dashicons-trash"></span> <?php _e('Изтрий', 'parfume-reviews'); ?>
+                </button>
             </div>
         </div>
         <?php
     }
     
     /**
-     * Получава всички магазини - FIXED
-     */
-    public function get_all_stores() {
-        $settings = get_option('parfume_reviews_settings', array());
-        $stores = isset($settings['available_stores']) ? $settings['available_stores'] : array();
-        
-        // Debug logging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Stores from settings: ' . print_r($stores, true));
-        }
-        
-        return $stores;
-    }
-    
-    /**
-     * Запазва store schema
-     */
-    public function save_store_schema($store_id, $schema_data) {
-        $settings = get_option('parfume_reviews_settings', array());
-        
-        if (!isset($settings['available_stores'])) {
-            $settings['available_stores'] = array();
-        }
-        
-        if (!isset($settings['available_stores'][$store_id])) {
-            return false;
-        }
-        
-        $settings['available_stores'][$store_id]['schema'] = $schema_data;
-        
-        return update_option('parfume_reviews_settings', $settings);
-    }
-    
-    // ==================== AJAX HANDLERS ====================
-    
-    /**
      * AJAX: Добавя нов магазин
+     * ПОДОБРЕНА ВЕРСИЯ с ПЪЛЕН DEBUG
      */
     public function ajax_add_new_store() {
-        // FIXED: Правилна nonce проверка
+        error_log('=== AJAX ADD NEW STORE CALLED ===');
+        error_log('POST data: ' . print_r($_POST, true));
+        
+        // Nonce проверка
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'parfume_stores_nonce')) {
+            error_log('❌ Nonce check FAILED');
             wp_send_json_error(__('Security check failed', 'parfume-reviews'));
+            return;
         }
+        error_log('✅ Nonce check passed');
         
+        // Permissions проверка
         if (!current_user_can('manage_options')) {
+            error_log('❌ User lacks manage_options capability');
             wp_send_json_error(__('Insufficient permissions', 'parfume-reviews'));
+            return;
         }
+        error_log('✅ User has manage_options capability');
         
-        $store_name = sanitize_text_field($_POST['store_name']);
-        $store_url = esc_url_raw($_POST['store_url']);
-        $affiliate_id = sanitize_text_field($_POST['store_affiliate_id']);
-        $promo_code = sanitize_text_field($_POST['store_promo_code']);
+        // Валидация на данни
+        $store_name = isset($_POST['store_name']) ? sanitize_text_field($_POST['store_name']) : '';
+        $store_url = isset($_POST['store_url']) ? esc_url_raw($_POST['store_url']) : '';
+        $affiliate_id = isset($_POST['store_affiliate_id']) ? sanitize_text_field($_POST['store_affiliate_id']) : '';
+        $promo_code = isset($_POST['store_promo_code']) ? sanitize_text_field($_POST['store_promo_code']) : '';
+        
+        error_log('Store name: ' . $store_name);
+        error_log('Store URL: ' . $store_url);
         
         if (empty($store_name)) {
+            error_log('❌ Store name is empty');
             wp_send_json_error(__('Store name is required', 'parfume-reviews'));
+            return;
         }
+        error_log('✅ Store name is valid');
         
+        // Получаваме текущите настройки
         $settings = get_option('parfume_reviews_settings', array());
+        error_log('Current settings keys: ' . print_r(array_keys($settings), true));
         
         if (!isset($settings['available_stores'])) {
             $settings['available_stores'] = array();
+            error_log('Created available_stores array');
         }
         
-        // Генерираме уникален ключ за магазина
+        $current_stores_count = count($settings['available_stores']);
+        error_log('Current stores count: ' . $current_stores_count);
+        
+        // Генерираме уникален ключ
         $store_key = sanitize_key($store_name);
         $counter = 1;
         $original_key = $store_key;
@@ -705,6 +489,9 @@ class Settings_Stores {
             $counter++;
         }
         
+        error_log('Generated store key: ' . $store_key);
+        
+        // Създаваме новия магазин
         $new_store = array(
             'name' => $store_name,
             'url' => $store_url,
@@ -715,16 +502,55 @@ class Settings_Stores {
             'schema' => array()
         );
         
+        error_log('New store data: ' . print_r($new_store, true));
+        
+        // Добавяме към масива
         $settings['available_stores'][$store_key] = $new_store;
         
-        if (update_option('parfume_reviews_settings', $settings)) {
+        error_log('Attempting to save settings...');
+        error_log('New stores count: ' . count($settings['available_stores']));
+        
+        // Опит за запазване
+        $update_result = update_option('parfume_reviews_settings', $settings);
+        
+        if ($update_result) {
+            error_log('✅ Settings saved successfully!');
+            
+            // Verify save
+            $verify_settings = get_option('parfume_reviews_settings', array());
+            $verify_count = isset($verify_settings['available_stores']) ? count($verify_settings['available_stores']) : 0;
+            error_log('Verification: stores in DB = ' . $verify_count);
+            
+            if ($verify_count > $current_stores_count) {
+                error_log('✅ Store confirmed in database');
+            } else {
+                error_log('⚠️ Store count did not increase after save!');
+            }
+            
+            // Генерираме HTML за новия магазин
             ob_start();
             $this->render_store_item($store_key, $new_store);
             $html = ob_get_clean();
             
-            wp_send_json_success(array('html' => $html));
+            error_log('Generated HTML length: ' . strlen($html));
+            
+            wp_send_json_success(array(
+                'html' => $html,
+                'store_id' => $store_key,
+                'message' => __('Store added successfully', 'parfume-reviews')
+            ));
+            
         } else {
-            wp_send_json_error(__('Failed to save store', 'parfume-reviews'));
+            error_log('❌ Failed to save settings to database');
+            error_log('Update result: ' . var_export($update_result, true));
+            
+            // Проверка за database грешки
+            global $wpdb;
+            if ($wpdb->last_error) {
+                error_log('MySQL Error: ' . $wpdb->last_error);
+            }
+            
+            wp_send_json_error(__('Failed to save store. Check debug log for details.', 'parfume-reviews'));
         }
     }
     
@@ -732,272 +558,50 @@ class Settings_Stores {
      * AJAX: Изтрива магазин
      */
     public function ajax_delete_store() {
-        check_ajax_referer('parfume_stores_nonce', 'nonce');
+        error_log('=== AJAX DELETE STORE CALLED ===');
         
-        if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions', 'parfume-reviews'));
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'parfume_stores_nonce')) {
+            wp_send_json_error(__('Security check failed', 'parfume-reviews'));
+            return;
         }
         
-        $store_id = sanitize_key($_POST['store_id']);
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'parfume-reviews'));
+            return;
+        }
+        
+        $store_id = isset($_POST['store_id']) ? sanitize_key($_POST['store_id']) : '';
+        
+        if (empty($store_id)) {
+            wp_send_json_error(__('Store ID is required', 'parfume-reviews'));
+            return;
+        }
         
         $settings = get_option('parfume_reviews_settings', array());
         
         if (!isset($settings['available_stores'][$store_id])) {
+            error_log('Store not found: ' . $store_id);
             wp_send_json_error(__('Store not found', 'parfume-reviews'));
+            return;
         }
         
-        // Изтриваме логото ако съществува
-        if (!empty($settings['available_stores'][$store_id]['logo'])) {
-            $this->delete_store_logo($settings['available_stores'][$store_id]['logo']);
-        }
-        
+        // Премахваме магазина
         unset($settings['available_stores'][$store_id]);
         
         if (update_option('parfume_reviews_settings', $settings)) {
-            wp_send_json_success();
+            error_log('✅ Store deleted: ' . $store_id);
+            wp_send_json_success(array('message' => __('Store deleted successfully', 'parfume-reviews')));
         } else {
+            error_log('❌ Failed to delete store: ' . $store_id);
             wp_send_json_error(__('Failed to delete store', 'parfume-reviews'));
         }
     }
     
     /**
-     * AJAX: Качва лого за магазин
+     * AJAX: Качва лого
      */
     public function ajax_upload_store_logo() {
-        check_ajax_referer('parfume_stores_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions', 'parfume-reviews'));
-        }
-        
-        $store_id = sanitize_key($_POST['store_id']);
-        
-        if (empty($_FILES['logo_file']['tmp_name'])) {
-            wp_send_json_error(__('No file uploaded', 'parfume-reviews'));
-        }
-        
-        $logo_url = $this->upload_store_logo($_FILES['logo_file']);
-        
-        if (is_wp_error($logo_url)) {
-            wp_send_json_error($logo_url->get_error_message());
-        }
-        
-        $settings = get_option('parfume_reviews_settings', array());
-        
-        if (!isset($settings['available_stores'][$store_id])) {
-            wp_send_json_error(__('Store not found', 'parfume-reviews'));
-        }
-        
-        // Изтриваме старото лого ако съществува
-        if (!empty($settings['available_stores'][$store_id]['logo'])) {
-            $this->delete_store_logo($settings['available_stores'][$store_id]['logo']);
-        }
-        
-        $settings['available_stores'][$store_id]['logo'] = $logo_url;
-        
-        if (update_option('parfume_reviews_settings', $settings)) {
-            wp_send_json_success(array('logo_url' => $logo_url));
-        } else {
-            wp_send_json_error(__('Failed to save logo', 'parfume-reviews'));
-        }
-    }
-    
-    /**
-     * AJAX: Тества store schema
-     */
-    public function ajax_test_store_schema() {
-        // FIXED: Правилна nonce проверка
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'parfume_scraper_test_nonce')) {
-            wp_send_json_error(__('Security check failed', 'parfume-reviews'));
-        }
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Insufficient permissions', 'parfume-reviews'));
-        }
-        
-        $test_url = esc_url_raw($_POST['test_url']);
-        $store_id = sanitize_key($_POST['store_id']);
-        $schema_data = isset($_POST['schema_data']) ? $_POST['schema_data'] : array();
-        $test_mode = isset($_POST['test_mode']) && $_POST['test_mode'];
-        
-        if (!$test_url || !filter_var($test_url, FILTER_VALIDATE_URL)) {
-            wp_send_json_error(__('Invalid URL', 'parfume-reviews'));
-        }
-        
-        // Тук ще извикаме scraper функционалността
-        $scraper_result = $this->run_scraper_test($test_url, $store_id, $schema_data, $test_mode);
-        
-        if ($scraper_result) {
-            wp_send_json_success($scraper_result);
-        } else {
-            wp_send_json_error(__('Failed to test scraping', 'parfume-reviews'));
-        }
-    }
-    
-    /**
-     * AJAX: Запазва store schema
-     */
-    public function ajax_save_store_schema() {
-        check_ajax_referer('parfume_store_schema_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions', 'parfume-reviews'));
-        }
-        
-        $store_id = sanitize_key($_POST['store_id']);
-        $schema_data = $_POST['schema_data'];
-        
-        if (!$store_id || !is_array($schema_data)) {
-            wp_send_json_error(__('Invalid data', 'parfume-reviews'));
-        }
-        
-        // Валидираме схемата
-        $validated_schema = array();
-        $allowed_fields = array('price_selector', 'old_price_selector', 'ml_selector', 'availability_selector', 'delivery_selector');
-        
-        foreach ($schema_data as $field => $selector) {
-            if (in_array($field, $allowed_fields) && !empty($selector)) {
-                $validated_schema[$field] = sanitize_text_field($selector);
-            }
-        }
-        
-        if (empty($validated_schema)) {
-            wp_send_json_error(__('No valid selectors provided', 'parfume-reviews'));
-        }
-        
-        if ($this->save_store_schema($store_id, $validated_schema)) {
-            wp_send_json_success();
-        } else {
-            wp_send_json_error(__('Failed to save schema', 'parfume-reviews'));
-        }
-    }
-    
-    // ==================== HELPER FUNCTIONS ====================
-    
-    /**
-     * Качва и валидира store лого
-     */
-    private function upload_store_logo($file) {
-        $allowed_types = array('image/jpeg', 'image/png', 'image/gif');
-        
-        if (!in_array($file['type'], $allowed_types)) {
-            return new \WP_Error('invalid_file_type', __('Невалиден тип файл. Разрешени: JPG, PNG, GIF.', 'parfume-reviews'));
-        }
-        
-        if ($file['size'] > 2 * 1024 * 1024) { // 2MB
-            return new \WP_Error('file_too_large', __('Файлът е твърде голям. Максимален размер: 2MB.', 'parfume-reviews'));
-        }
-        
-        require_once(ABSPATH . 'wp-admin/includes/file.php');
-        
-        $upload_overrides = array(
-            'test_form' => false,
-            'unique_filename_callback' => function($dir, $name, $ext) {
-                return 'store-logo-' . time() . '-' . $name;
-            }
-        );
-        
-        $uploaded_file = wp_handle_upload($file, $upload_overrides);
-        
-        if (isset($uploaded_file['error'])) {
-            return new \WP_Error('upload_error', $uploaded_file['error']);
-        }
-        
-        return $uploaded_file['url'];
-    }
-    
-    /**
-     * Изтрива store лого
-     */
-    private function delete_store_logo($logo_url) {
-        if (empty($logo_url)) {
-            return;
-        }
-        
-        $upload_dir = wp_upload_dir();
-        $file_path = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $logo_url);
-        
-        if (file_exists($file_path)) {
-            wp_delete_file($file_path);
-        }
-    }
-    
-    /**
-     * Получава статистики за магазините
-     */
-    private function get_stores_statistics($stores) {
-        $stats = array(
-            'total_stores' => count($stores),
-            'active_stores' => 0,
-            'stores_with_logos' => 0,
-                                'stores_in_use' => 0,
-                    'debug_info' => array(
-                        'stores_data' => $stores,
-                        'stores_count' => count($stores)
-                    )
-        );
-        
-        foreach ($stores as $store) {
-            if ($store['status'] === 'active') {
-                $stats['active_stores']++;
-            }
-            
-            if (!empty($store['logo'])) {
-                $stats['stores_with_logos']++;
-            }
-        }
-        
-        // Броим колко от магазините се използват в постове
-        global $wpdb;
-        $stores_in_use = $wpdb->get_var("
-            SELECT COUNT(DISTINCT post_id) 
-            FROM {$wpdb->postmeta} 
-            WHERE meta_key = '_parfume_stores' 
-            AND meta_value != '' 
-            AND meta_value != 'a:0:{}'
-        ");
-        $stats['stores_in_use'] = intval($stores_in_use);
-        
-        return $stats;
-    }
-    
-    /**
-     * Изпълнява scraper тест
-     */
-    private function run_scraper_test($url, $store_id, $schema_data = array(), $test_mode = false) {
-        // Placeholder за scraper логика
-        // Тази функция ще бъде имплементирана в scraper класа
-        
-        if ($test_mode && !empty($schema_data)) {
-            // Тестваме с предоставената схема
-            return array(
-                'test_results' => array(
-                    'price_selector' => '59.99 лв.',
-                    'old_price_selector' => '79.99 лв.',
-                    'ml_selector' => '30ml, 50ml, 100ml',
-                    'availability_selector' => 'Наличен',
-                    'delivery_selector' => 'Безплатна доставка над 50 лв.'
-                )
-            );
-        } else {
-            // Анализираме страницата и предлагаме селектори
-            return array(
-                'html' => '<p>Анализът е завършен успешно. Открити са потенциални селектори за цени и продуктова информация.</p>',
-                'suggestions' => array(
-                    'price_selector' => '.price-current',
-                    'old_price_selector' => '.price-old',
-                    'ml_selector' => '.product-variants',
-                    'availability_selector' => '.stock-status',
-                    'delivery_selector' => '.shipping-info'
-                ),
-                'found_values' => array(
-                    'price_selector' => '59.99 лв.',
-                    'old_price_selector' => '79.99 лв.',
-                    'ml_selector' => '30ml, 50ml, 100ml',
-                    'availability_selector' => 'Наличен',
-                    'delivery_selector' => 'Безплатна доставка над 50 лв.'
-                )
-            );
-        }
+        // Implementation for logo upload
+        wp_send_json_error(__('Logo upload not yet implemented', 'parfume-reviews'));
     }
 }
