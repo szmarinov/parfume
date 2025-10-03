@@ -1,0 +1,602 @@
+/* ==========================================================================
+   Parfume Reviews Plugin - Filters Styles
+   CSS стилове за филтърната система с множествен избор
+   ========================================================================== */
+
+/* Filters Wrapper */
+.parfume-filters-wrapper {
+    background: #fff;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.parfume-filters {
+    position: relative;
+}
+
+.parfume-filters.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.parfume-filters.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 10;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Filter Sections */
+.filter-section {
+    margin-bottom: 25px;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 20px;
+}
+
+.filter-section:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.filter-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding: 12px 0;
+    margin: 0 0 15px;
+    font-weight: 600;
+    font-size: 16px;
+    color: #333;
+    border-bottom: 1px solid #e1e5e9;
+    transition: color 0.3s ease;
+}
+
+.filter-title:hover {
+    color: #0073aa;
+}
+
+.filter-title.collapsed {
+    margin-bottom: 0;
+}
+
+.toggle-arrow {
+    font-size: 12px;
+    transition: transform 0.3s ease;
+    color: #666;
+}
+
+.filter-title.collapsed .toggle-arrow {
+    transform: rotate(-90deg);
+}
+
+/* Filter Options */
+.filter-options {
+    display: block;
+    transition: all 0.3s ease;
+}
+
+.filter-section .collapsed + .filter-options {
+    display: none;
+}
+
+.filter-option {
+    margin-bottom: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.filter-option:hover {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.filter-option label {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.4;
+    transition: all 0.2s ease;
+}
+
+.filter-option label:hover {
+    color: #0073aa;
+}
+
+.filter-option input[type="checkbox"] {
+    margin-right: 8px;
+    accent-color: #0073aa;
+}
+
+.filter-count {
+    margin-left: auto;
+    color: #666;
+    font-size: 12px;
+    font-weight: normal;
+}
+
+/* Scrollable Options для дълги списъци */
+.scrollable-options {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #e1e5e9;
+    border-radius: 4px;
+    padding: 5px;
+    background: #fafafa;
+}
+
+.scrollable-options::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scrollable-options::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.scrollable-options::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.scrollable-options::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Filter Search */
+.filter-search {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    background: #fff;
+    transition: border-color 0.3s ease;
+}
+
+.filter-search:focus {
+    outline: none;
+    border-color: #0073aa;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.1);
+}
+
+/* Price Inputs */
+.price-inputs {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.price-inputs input[type="number"] {
+    flex: 1;
+    min-width: 100px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.price-separator {
+    color: #666;
+    font-weight: bold;
+}
+
+/* Filter Submit */
+.filter-submit {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.filter-button {
+    background: linear-gradient(135deg, #0073aa, #005a87);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 115, 170, 0.3);
+    min-width: 120px;
+}
+
+.filter-button:hover {
+    background: linear-gradient(135deg, #005a87, #004466);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.4);
+}
+
+.reset-button {
+    background: #6c757d;
+    color: white;
+}
+
+.reset-button:hover {
+    background: #565e64;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
+
+/* Active Filters Display */
+.active-filters {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.active-filters.has-filters {
+    display: block;
+}
+
+.active-filters h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #1976d2;
+    font-weight: 600;
+}
+
+.filter-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.filter-tag {
+    background: #1976d2;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.filter-tag:hover {
+    background: #1565c0;
+    text-decoration: none;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.filter-tag .remove {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.filter-tag .remove:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Loading State */
+.filters-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Sorting Section */
+.sort-section {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.sort-section select {
+    min-width: 150px;
+}
+
+/* Results Info */
+.results-info {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #495057;
+}
+
+.results-count {
+    font-weight: 600;
+    color: #0073aa;
+}
+
+/* ==========================================================================
+   FILTER PREVIEW STYLES - Професионални стилове за избраните филтри
+   ========================================================================== */
+
+/* Filter Preview Container */
+.filter-preview {
+    display: none;
+    margin: 20px 0 15px 0;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #f8fafb 0%, #f1f3f4 100%);
+    border: 1px solid #e1e5e9;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.filter-preview::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #0073aa, #005a87, #667eea);
+    border-radius: 12px 12px 0 0;
+}
+
+.filter-preview:not(:empty) {
+    display: block;
+}
+
+/* Preview Tags */
+.preview-tag {
+    display: inline-flex;
+    align-items: center;
+    margin: 4px 8px 4px 0;
+    padding: 8px 14px;
+    background: #ffffff;
+    color: #2c3e50;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.preview-tag::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #0073aa, #005a87);
+}
+
+.preview-tag:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    border-color: #0073aa;
+}
+
+.preview-tag:last-child {
+    margin-right: 0;
+}
+
+/* Filter Preview Header */
+.filter-preview::after {
+    content: "Избрани филтри:";
+    position: absolute;
+    top: -8px;
+    left: 20px;
+    background: linear-gradient(135deg, #f8fafb 0%, #f1f3f4 100%);
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Animation for when tags are added */
+@keyframes fadeInScale {
+    0% {
+        opacity: 0;
+        transform: scale(0.8) translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.preview-tag {
+    animation: fadeInScale 0.3s ease-out;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 768px) {
+    .parfume-filters-wrapper {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .filter-title {
+        font-size: 15px;
+        padding: 10px 0;
+    }
+    
+    .filter-submit {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .filter-button,
+    .reset-button {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .sort-section {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    
+    .sort-section select {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .price-inputs {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .price-separator {
+        display: none;
+    }
+    
+    .scrollable-options {
+        max-height: 150px;
+    }
+    
+    .filter-tags {
+        justify-content: center;
+    }
+    
+    /* Filter Preview Responsive */
+    .filter-preview {
+        margin: 15px 0 12px 0;
+        padding: 12px 16px;
+        border-radius: 10px;
+    }
+    
+    .preview-tag {
+        margin: 3px 6px 3px 0;
+        padding: 6px 12px;
+        font-size: 12px;
+        border-radius: 16px;
+    }
+    
+    .filter-preview::after {
+        font-size: 10px;
+        left: 16px;
+        top: -7px;
+    }
+}
+
+@media (max-width: 480px) {
+    .parfume-filters-wrapper {
+        padding: 10px;
+    }
+    
+    .filter-title {
+        font-size: 14px;
+        padding: 8px 0;
+    }
+    
+    .filter-option label {
+        font-size: 13px;
+        padding: 4px 6px;
+    }
+    
+    .filter-search,
+    .filter-section select,
+    .price-inputs input[type="number"] {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+    
+    .filter-button,
+    .reset-button {
+        padding: 10px 20px;
+        font-size: 13px;
+        min-width: 100px;
+    }
+    
+    /* Filter Preview Mobile */
+    .filter-preview {
+        margin: 12px 0 10px 0;
+        padding: 10px 14px;
+        border-radius: 8px;
+    }
+    
+    .preview-tag {
+        margin: 2px 4px 2px 0;
+        padding: 5px 10px;
+        font-size: 11px;
+        border-radius: 14px;
+    }
+    
+    .preview-tag::before {
+        width: 2px;
+    }
+    
+    .filter-preview::after {
+        font-size: 9px;
+        left: 14px;
+        top: -6px;
+        padding: 0 6px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .filter-preview {
+        background: linear-gradient(135deg, #2a2d32 0%, #1e2025 100%);
+        border-color: #3a3d42;
+        color: #e1e5e9;
+    }
+    
+    .preview-tag {
+        background: #3a3d42;
+        color: #e1e5e9;
+        border-color: #4a4d52;
+    }
+    
+    .filter-preview::after {
+        color: #a0a4a8;
+        background: linear-gradient(135deg, #2a2d32 0%, #1e2025 100%);
+    }
+}
+
+/* Print Styles */
+@media print {
+    .parfume-filters-wrapper,
+    .active-filters,
+    .filter-preview {
+        display: none !important;
+    }
+}
