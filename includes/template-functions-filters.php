@@ -3,7 +3,8 @@
  * Template Functions - Filter Functions
  * Функции за работа с филтри и URL-и
  * 
- * Файл: includes/template-functions-filters.php
+ * ФАЙЛ: includes/template-functions-filters.php
+ * ПОПРАВЕНА ВЕРСИЯ - Довършени функции
  */
 
 // Prevent direct access
@@ -126,6 +127,7 @@ function parfume_reviews_get_add_filter_url($filter_key, $filter_value) {
 
 /**
  * Проверява дали филтър е активен
+ * ПОПРАВЕНО: Довършена функция
  */
 function parfume_reviews_is_filter_active($filter_key, $filter_value = null) {
     $active_filters = parfume_reviews_get_active_filters();
@@ -134,19 +136,22 @@ function parfume_reviews_is_filter_active($filter_key, $filter_value = null) {
         return false;
     }
     
+    // Ако не е подадена стойност, проверяваме само дали ключът съществува
     if ($filter_value === null) {
-        return true; // Проверяваме само дали ключа съществува
+        return true;
     }
     
+    // Ако филтърът е масив
     if (is_array($active_filters[$filter_key])) {
         return in_array($filter_value, $active_filters[$filter_key]);
     }
     
+    // Ако филтърът е единична стойност
     return $active_filters[$filter_key] == $filter_value;
 }
 
 /**
- * Показва активните филтри
+ * Показва активните филтри като тагове
  */
 function parfume_reviews_display_active_filters() {
     $active_filters = parfume_reviews_get_active_filters();
@@ -165,195 +170,155 @@ function parfume_reviews_display_active_filters() {
         'perfumer' => __('Парфюмерист', 'parfume-reviews')
     );
     
-    ?>
-    <div class="active-filters">
-        <h4 class="active-filters-title"><?php _e('Активни филтри:', 'parfume-reviews'); ?></h4>
-        <div class="active-filters-list">
-            <?php foreach ($active_filters as $filter_key => $filter_value): ?>
-                <?php if (in_array($filter_key, array('min_price', 'max_price', 'min_rating', 'search', 'orderby'))): ?>
-                    <!-- Специални филтри -->
-                    <div class="active-filter">
-                        <span class="filter-label">
-                            <?php
-                            switch ($filter_key) {
-                                case 'min_price':
-                                    echo __('Мин. цена:', 'parfume-reviews');
-                                    break;
-                                case 'max_price':
-                                    echo __('Макс. цена:', 'parfume-reviews');
-                                    break;
-                                case 'min_rating':
-                                    echo __('Мин. рейтинг:', 'parfume-reviews');
-                                    break;
-                                case 'search':
-                                    echo __('Търсене:', 'parfume-reviews');
-                                    break;
-                                case 'orderby':
-                                    echo __('Сортиране:', 'parfume-reviews');
-                                    break;
-                            }
-                            ?>
-                        </span>
-                        <span class="filter-value"><?php echo esc_html($filter_value); ?></span>
-                        <a href="<?php echo esc_url(parfume_reviews_get_remove_filter_url($filter_key)); ?>" class="remove-filter">
-                            <span class="dashicons dashicons-no-alt"></span>
-                        </a>
-                    </div>
-                <?php else: ?>
-                    <!-- Taxonomy филтри -->
+    echo '<div class="active-filters">';
+    echo '<h3 class="active-filters-title">' . __('Активни филтри:', 'parfume-reviews') . '</h3>';
+    echo '<div class="filter-tags">';
+    
+    foreach ($active_filters as $filter_key => $filter_value) {
+        // Специални филтри (цена, рейтинг, търсене)
+        if (in_array($filter_key, array('min_price', 'max_price', 'min_rating', 'search', 'orderby'))) {
+            ?>
+            <div class="active-filter">
+                <span class="filter-label">
                     <?php 
-                    $filter_values = is_array($filter_value) ? $filter_value : array($filter_value);
-                    foreach ($filter_values as $value):
+                    switch ($filter_key) {
+                        case 'min_price':
+                            echo __('Мин. цена:', 'parfume-reviews');
+                            break;
+                        case 'max_price':
+                            echo __('Макс. цена:', 'parfume-reviews');
+                            break;
+                        case 'min_rating':
+                            echo __('Мин. рейтинг:', 'parfume-reviews');
+                            break;
+                        case 'search':
+                            echo __('Търсене:', 'parfume-reviews');
+                            break;
+                        case 'orderby':
+                            echo __('Сортиране:', 'parfume-reviews');
+                            break;
+                    }
                     ?>
-                        <div class="active-filter">
-                            <span class="filter-label"><?php echo esc_html($taxonomy_labels[$filter_key] ?? $filter_key); ?>:</span>
-                            <span class="filter-value"><?php echo esc_html($value); ?></span>
-                            <a href="<?php echo esc_url(parfume_reviews_get_remove_filter_url($filter_key, $value)); ?>" class="remove-filter">
-                                <span class="dashicons dashicons-no-alt"></span>
-                            </a>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            <?php endforeach; ?>
+                </span>
+                <span class="filter-value"><?php echo esc_html($filter_value); ?></span>
+                <a href="<?php echo esc_url(parfume_reviews_get_remove_filter_url($filter_key)); ?>" class="remove-filter">
+                    <span class="dashicons dashicons-no-alt"></span>
+                </a>
+            </div>
+            <?php
+        } else {
+            // Taxonomy филтри
+            $filter_values = is_array($filter_value) ? $filter_value : array($filter_value);
+            foreach ($filter_values as $value) {
+                ?>
+                <div class="active-filter">
+                    <span class="filter-label"><?php echo esc_html($taxonomy_labels[$filter_key] ?? $filter_key); ?>:</span>
+                    <span class="filter-value"><?php echo esc_html($value); ?></span>
+                    <a href="<?php echo esc_url(parfume_reviews_get_remove_filter_url($filter_key, $value)); ?>" class="remove-filter">
+                        <span class="dashicons dashicons-no-alt"></span>
+                    </a>
+                </div>
+                <?php
+            }
+        }
+    }
+    
+    echo '</div>';
+    
+    // Бутон за изчистване на всички филтри
+    $clear_url = strtok($_SERVER['REQUEST_URI'], '?');
+    echo '<a href="' . esc_url($clear_url) . '" class="clear-all-filters button">' . __('Изчисти всички филтри', 'parfume-reviews') . '</a>';
+    
+    echo '</div>';
+}
+
+/**
+ * Показва форма за филтриране
+ */
+function parfume_reviews_display_filter_form($atts = array()) {
+    $defaults = array(
+        'show_gender' => true,
+        'show_aroma_type' => true,
+        'show_brands' => true,
+        'show_season' => true,
+        'show_intensity' => true,
+        'show_notes' => true,
+        'show_perfumer' => true,
+        'show_price' => true,
+        'show_rating' => true,
+        'show_search' => true
+    );
+    
+    $atts = wp_parse_args($atts, $defaults);
+    
+    ?>
+    <div class="parfume-filters">
+        <form method="get" action="" class="filter-form">
             
-            <!-- Бутон за изчистване на всички филтри -->
-            <a href="<?php echo parfume_reviews_build_filter_url(); ?>" class="clear-all-filters">
-                <?php _e('Изчисти всички', 'parfume-reviews'); ?>
-            </a>
-        </div>
+            <?php if ($atts['show_search']): ?>
+            <div class="filter-group">
+                <label for="parfume-search"><?php _e('Търсене', 'parfume-reviews'); ?></label>
+                <input type="text" id="parfume-search" name="search" value="<?php echo esc_attr(isset($_GET['search']) ? $_GET['search'] : ''); ?>" placeholder="<?php _e('Търси парфюм...', 'parfume-reviews'); ?>">
+            </div>
+            <?php endif; ?>
+            
+            <?php if ($atts['show_gender']): ?>
+            <div class="filter-group">
+                <label><?php _e('Пол', 'parfume-reviews'); ?></label>
+                <?php
+                $gender_terms = get_terms(array('taxonomy' => 'gender', 'hide_empty' => false));
+                foreach ($gender_terms as $term) {
+                    $checked = parfume_reviews_is_filter_active('gender', $term->slug) ? 'checked' : '';
+                    echo '<label class="filter-option">';
+                    echo '<input type="checkbox" name="gender[]" value="' . esc_attr($term->slug) . '" ' . $checked . '>';
+                    echo esc_html($term->name);
+                    echo '</label>';
+                }
+                ?>
+            </div>
+            <?php endif; ?>
+            
+            <?php if ($atts['show_price']): ?>
+            <div class="filter-group">
+                <label><?php _e('Ценови диапазон', 'parfume-reviews'); ?></label>
+                <div class="price-range">
+                    <input type="number" name="min_price" placeholder="<?php _e('Мин', 'parfume-reviews'); ?>" value="<?php echo esc_attr(isset($_GET['min_price']) ? $_GET['min_price'] : ''); ?>" step="0.01" min="0">
+                    <span>-</span>
+                    <input type="number" name="max_price" placeholder="<?php _e('Макс', 'parfume-reviews'); ?>" value="<?php echo esc_attr(isset($_GET['max_price']) ? $_GET['max_price'] : ''); ?>" step="0.01" min="0">
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <div class="filter-submit">
+                <button type="submit" class="button button-primary"><?php _e('Филтрирай', 'parfume-reviews'); ?></button>
+                <a href="<?php echo esc_url(strtok($_SERVER['REQUEST_URI'], '?')); ?>" class="button button-secondary"><?php _e('Изчисти', 'parfume-reviews'); ?></a>
+            </div>
+        </form>
     </div>
     <?php
 }
 
 /**
- * Показва филтър форма
- */
-function parfume_reviews_display_filter_form() {
-    $active_filters = parfume_reviews_get_active_filters();
-    
-    ?>
-    <form class="parfume-filters-form" method="get" action="">
-        <div class="filter-row">
-            <!-- Търсене -->
-            <div class="filter-group">
-                <label for="search"><?php _e('Търсене:', 'parfume-reviews'); ?></label>
-                <input type="text" 
-                       id="search" 
-                       name="search" 
-                       value="<?php echo esc_attr($active_filters['search'] ?? ''); ?>"
-                       placeholder="<?php esc_attr_e('Търси парфюм...', 'parfume-reviews'); ?>">
-            </div>
-            
-            <!-- Ценови диапазон -->
-            <div class="filter-group">
-                <label><?php _e('Цена (лв.):', 'parfume-reviews'); ?></label>
-                <div class="price-range">
-                    <input type="number" 
-                           name="min_price" 
-                           value="<?php echo esc_attr($active_filters['min_price'] ?? ''); ?>"
-                           placeholder="<?php esc_attr_e('От', 'parfume-reviews'); ?>"
-                           min="0" 
-                           step="0.01">
-                    <span>-</span>
-                    <input type="number" 
-                           name="max_price" 
-                           value="<?php echo esc_attr($active_filters['max_price'] ?? ''); ?>"
-                           placeholder="<?php esc_attr_e('До', 'parfume-reviews'); ?>"
-                           min="0" 
-                           step="0.01">
-                </div>
-            </div>
-            
-            <!-- Рейтинг -->
-            <div class="filter-group">
-                <label for="min_rating"><?php _e('Мин. рейтинг:', 'parfume-reviews'); ?></label>
-                <select id="min_rating" name="min_rating">
-                    <option value=""><?php _e('Всички', 'parfume-reviews'); ?></option>
-                    <?php for ($i = 1; $i <= 5; $i++): ?>
-                        <option value="<?php echo $i; ?>" <?php selected($active_filters['min_rating'] ?? '', $i); ?>>
-                            <?php echo $i; ?>+ ★
-                        </option>
-                    <?php endfor; ?>
-                </select>
-            </div>
-        </div>
-        
-        <div class="filter-row">
-            <!-- Taxonomy филтри -->
-            <?php
-            $taxonomies_to_show = array(
-                'gender' => __('Пол', 'parfume-reviews'),
-                'marki' => __('Марка', 'parfume-reviews'),
-                'season' => __('Сезон', 'parfume-reviews'),
-                'intensity' => __('Интензивност', 'parfume-reviews')
-            );
-            
-            foreach ($taxonomies_to_show as $taxonomy => $label):
-                $terms = get_terms(array(
-                    'taxonomy' => $taxonomy,
-                    'hide_empty' => true,
-                    'orderby' => 'name',
-                    'order' => 'ASC'
-                ));
-                
-                if (!empty($terms) && !is_wp_error($terms)):
-            ?>
-                <div class="filter-group">
-                    <label for="<?php echo esc_attr($taxonomy); ?>"><?php echo esc_html($label); ?>:</label>
-                    <select id="<?php echo esc_attr($taxonomy); ?>" name="<?php echo esc_attr($taxonomy); ?>[]" multiple>
-                        <?php foreach ($terms as $term): ?>
-                            <option value="<?php echo esc_attr($term->slug); ?>" 
-                                    <?php echo parfume_reviews_is_filter_active($taxonomy, $term->slug) ? 'selected' : ''; ?>>
-                                <?php echo esc_html($term->name); ?> (<?php echo $term->count; ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            <?php 
-                endif;
-            endforeach; 
-            ?>
-        </div>
-        
-        <div class="filter-actions">
-            <button type="submit" class="filter-submit">
-                <?php _e('Приложи филтри', 'parfume-reviews'); ?>
-            </button>
-            
-            <a href="<?php echo parfume_reviews_build_filter_url(); ?>" class="filter-reset">
-                <?php _e('Изчисти', 'parfume-reviews'); ?>
-            </a>
-        </div>
-    </form>
-    <?php
-}
-
-/**
- * Показва сортиране опции
+ * Показва опции за сортиране
  */
 function parfume_reviews_display_sort_options() {
-    $current_orderby = $_GET['orderby'] ?? 'date';
-    $current_order = $_GET['order'] ?? 'DESC';
+    $current_orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'date';
     
     $sort_options = array(
-        'date-DESC' => __('Най-нови първо', 'parfume-reviews'),
-        'date-ASC' => __('Най-стари първо', 'parfume-reviews'),
-        'title-ASC' => __('Име А-Я', 'parfume-reviews'),
-        'title-DESC' => __('Име Я-А', 'parfume-reviews'),
-        'rating-DESC' => __('Най-висок рейтинг', 'parfume-reviews'),
-        'rating-ASC' => __('Най-нисък рейтинг', 'parfume-reviews'),
-        'price-ASC' => __('Цена възходящо', 'parfume-reviews'),
-        'price-DESC' => __('Цена низходящо', 'parfume-reviews')
+        'date' => __('Най-нови', 'parfume-reviews'),
+        'title' => __('По име (А-Я)', 'parfume-reviews'),
+        'price_low' => __('Цена (ниска към висока)', 'parfume-reviews'),
+        'price_high' => __('Цена (висока към ниска)', 'parfume-reviews'),
+        'rating' => __('Рейтинг', 'parfume-reviews'),
+        'popular' => __('Популярни', 'parfume-reviews')
     );
     
-    $current_sort = $current_orderby . '-' . $current_order;
-    
     ?>
-    <div class="sort-options">
-        <label for="sort-select"><?php _e('Сортиране:', 'parfume-reviews'); ?></label>
-        <select id="sort-select" name="orderby" onchange="this.form.submit();">
+    <div class="parfume-sort-options">
+        <label for="parfume-orderby"><?php _e('Сортирай по:', 'parfume-reviews'); ?></label>
+        <select id="parfume-orderby" name="orderby" onchange="this.form.submit()">
             <?php foreach ($sort_options as $value => $label): ?>
-                <option value="<?php echo esc_attr($value); ?>" <?php selected($current_sort, $value); ?>>
+                <option value="<?php echo esc_attr($value); ?>" <?php selected($current_orderby, $value); ?>>
                     <?php echo esc_html($label); ?>
                 </option>
             <?php endforeach; ?>

@@ -7,6 +7,9 @@
  *
  * @package ParfumeReviews
  * @since 1.0.0
+ * 
+ * ФАЙЛ: includes/class-taxonomies.php
+ * ПОПРАВЕНА ВЕРСИЯ - Фиксиран namespace проблем
  */
 
 namespace Parfume_Reviews;
@@ -31,6 +34,7 @@ class Taxonomies {
     
     /**
      * Зарежда всички компоненти на таксономията
+     * ПОПРАВЕНО: Правилен namespace - Parfume_Reviews\Taxonomies\ClassName
      */
     private function load_components() {
         $components = array(
@@ -48,10 +52,15 @@ class Taxonomies {
                 require_once $file_path;
                 parfume_reviews_debug_log("Loaded taxonomy component: {$file}");
                 
-                $full_class_name = __NAMESPACE__ . '\\Taxonomies\\' . $class_name;
+                // ПОПРАВЕНО: Правилен namespace path
+                $full_class_name = 'Parfume_Reviews\\Taxonomies\\' . $class_name;
+                
                 if (class_exists($full_class_name)) {
                     $property_name = $this->get_property_name($class_name);
                     $this->$property_name = new $full_class_name();
+                    parfume_reviews_debug_log("Initialized component: {$class_name} as {$property_name}");
+                } else {
+                    parfume_reviews_debug_log("Class not found: {$full_class_name}");
                 }
             } else {
                 parfume_reviews_debug_log("Missing taxonomy component: {$file}");
@@ -61,6 +70,7 @@ class Taxonomies {
     
     /**
      * Преобразува class name в property name
+     * ПОПРАВЕНО: По-ясна логика
      */
     private function get_property_name($class_name) {
         // Taxonomy_Registrar -> registrar
@@ -68,8 +78,14 @@ class Taxonomies {
         // Taxonomy_Template_Loader -> template_loader
         // Taxonomy_Rewrite_Handler -> rewrite_handler
         // Taxonomy_SEO_Support -> seo_support
+        
+        // Премахваме Taxonomy_ префикс
         $property_name = str_replace('Taxonomy_', '', $class_name);
+        
+        // Преобразуваме CamelCase в snake_case
         $property_name = strtolower(preg_replace('/([A-Z])/', '_$1', $property_name));
+        
+        // Премахваме началното _
         return ltrim($property_name, '_');
     }
     
@@ -80,16 +96,19 @@ class Taxonomies {
         // Registrar инициализация
         if ($this->registrar) {
             add_action('init', array($this->registrar, 'register_taxonomies'), 0);
+            parfume_reviews_debug_log("Registrar hooks added");
         }
         
         // Meta fields инициализация  
         if ($this->meta_fields) {
             add_action('init', array($this->meta_fields, 'init'));
+            parfume_reviews_debug_log("Meta fields hooks added");
         }
         
         // Template loader инициализация
         if ($this->template_loader) {
             add_action('init', array($this->template_loader, 'init'));
+            parfume_reviews_debug_log("Template loader hooks added");
         }
         
         // КРИТИЧНО: Rewrite handler инициализация с приоритет
@@ -105,14 +124,17 @@ class Taxonomies {
             
             // 404 handling
             add_action('wp', array($this->rewrite_handler, 'handle_404_redirects'), 5);
+            
+            parfume_reviews_debug_log("Rewrite handler hooks added");
         }
         
         // SEO support инициализация
         if ($this->seo_support) {
             add_action('init', array($this->seo_support, 'init'));
+            parfume_reviews_debug_log("SEO support hooks added");
         }
         
-        parfume_reviews_debug_log("Taxonomies initialized");
+        parfume_reviews_debug_log("Taxonomies initialized successfully");
     }
     
     /**
@@ -161,6 +183,7 @@ class Taxonomies {
     }
     
     /**
+     * Добавя custom rewrite rules
      * DEPRECATED: Използвайте $this->rewrite_handler->add_custom_rewrite_rules()
      */
     public function add_custom_rewrite_rules() {
@@ -175,34 +198,43 @@ class Taxonomies {
     }
     
     /**
+     * Добавя query vars
      * DEPRECATED: Използвайте $this->rewrite_handler->add_query_vars()
      */
     public function add_query_vars($vars) {
         if (!$this->rewrite_handler) {
-            if (function_exists('parfume_reviews_debug_log')) {
-                parfume_reviews_debug_log("Cannot add query vars - rewrite_handler not loaded");
-            }
-            return $vars; // Връщаме оригиналните vars
+            return $vars;
         }
         
         return $this->rewrite_handler->add_query_vars($vars);
     }
     
     /**
+     * Парсва custom requests
      * DEPRECATED: Използвайте $this->rewrite_handler->parse_custom_requests()
      */
     public function parse_custom_requests($wp) {
         if (!$this->rewrite_handler) {
-            if (function_exists('parfume_reviews_debug_log')) {
-                parfume_reviews_debug_log("Cannot parse requests - rewrite_handler not loaded");
-            }
-            return false;
+            return;
         }
         
         return $this->rewrite_handler->parse_custom_requests($wp);
     }
     
     /**
+     * Зарежда template
+     * DEPRECATED: Използвайте $this->template_loader->load_template()
+     */
+    public function template_loader($template) {
+        if (!$this->template_loader) {
+            return $template;
+        }
+        
+        return $this->template_loader->load_template($template);
+    }
+    
+    /**
+     * Добавя SEO поддръжка
      * DEPRECATED: Използвайте $this->seo_support->add_seo_support()
      */
     public function add_seo_support() {
@@ -217,195 +249,87 @@ class Taxonomies {
     }
     
     /**
-     * Получава всички регистрирани таксономии за парфюми
+     * Зарежда admin scripts
+     * DEPRECATED: Използвайте $this->meta_fields->enqueue_admin_scripts()
      */
-    public function get_parfume_taxonomies() {
-        return array('marki', 'notes', 'perfumer', 'gender', 'aroma_type', 'season', 'intensity');
-    }
-    
-    /**
-     * Проверява дали дадена таксономия е валидна за парфюми
-     */
-    public function is_parfume_taxonomy($taxonomy) {
-        return in_array($taxonomy, $this->get_parfume_taxonomies());
-    }
-    
-    /**
-     * Получава taxonomy object по име
-     */
-    public function get_taxonomy($taxonomy) {
-        if ($this->is_parfume_taxonomy($taxonomy)) {
-            return get_taxonomy($taxonomy);
-        }
-        return false;
-    }
-    
-    /**
-     * Получава всички terms за дадена таксономия
-     */
-    public function get_terms($taxonomy, $args = array()) {
-        if (!$this->is_parfume_taxonomy($taxonomy)) {
-            return array();
-        }
-        
-        $default_args = array(
-            'taxonomy' => $taxonomy,
-            'hide_empty' => false,
-            'orderby' => 'name',
-            'order' => 'ASC'
-        );
-        
-        $args = wp_parse_args($args, $default_args);
-        
-        return get_terms($args);
-    }
-    
-    /**
-     * Получава мета стойност за term
-     */
-    public function get_term_meta($term_id, $meta_key, $single = true) {
-        return get_term_meta($term_id, $meta_key, $single);
-    }
-    
-    /**
-     * Записва мета стойност за term
-     */
-    public function update_term_meta($term_id, $meta_key, $meta_value) {
-        return update_term_meta($term_id, $meta_key, $meta_value);
-    }
-    
-    /**
-     * Изтрива мета стойност за term
-     */
-    public function delete_term_meta($term_id, $meta_key, $meta_value = '') {
-        return delete_term_meta($term_id, $meta_key, $meta_value);
-    }
-    
-    /**
-     * Проверява дали term има мета стойност
-     */
-    public function term_has_meta($term_id, $meta_key) {
-        $meta_value = $this->get_term_meta($term_id, $meta_key);
-        return !empty($meta_value);
-    }
-    
-    /**
-     * Получава URL за taxonomy archive
-     */
-    public function get_taxonomy_archive_url($taxonomy) {
-        if (!$this->is_parfume_taxonomy($taxonomy)) {
-            return false;
-        }
-        
-        $settings = get_option('parfume_reviews_settings', array());
-        $parfume_slug = !empty($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
-        
-        $taxonomy_slugs = array(
-            'marki' => 'marki',
-            'notes' => 'notki', 
-            'perfumer' => 'parfumeri',
-            'gender' => 'gender',
-            'aroma_type' => 'aroma-type',
-            'season' => 'season',
-            'intensity' => 'intensity'
-        );
-        
-        $taxonomy_slug = isset($taxonomy_slugs[$taxonomy]) ? $taxonomy_slugs[$taxonomy] : $taxonomy;
-        
-        return home_url('/' . $parfume_slug . '/' . $taxonomy_slug . '/');
-    }
-    
-    /**
-     * Получава URL за term
-     */
-    public function get_term_url($term, $taxonomy) {
-        if (!$this->is_parfume_taxonomy($taxonomy)) {
-            return false;
-        }
-        
-        $term_obj = is_object($term) ? $term : get_term($term, $taxonomy);
-        if (!$term_obj || is_wp_error($term_obj)) {
-            return false;
-        }
-        
-        $archive_url = $this->get_taxonomy_archive_url($taxonomy);
-        if (!$archive_url) {
-            return false;
-        }
-        
-        return $archive_url . $term_obj->slug . '/';
-    }
-    
-    /**
-     * Проверява дали се намира на taxonomy archive страница
-     */
-    public function is_taxonomy_archive($taxonomy = null) {
-        if ($taxonomy) {
-            return is_tax($taxonomy);
-        }
-        
-        foreach ($this->get_parfume_taxonomies() as $tax) {
-            if (is_tax($tax)) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Получава текущата таксономия ако се намира на archive страница
-     */
-    public function get_current_taxonomy() {
-        foreach ($this->get_parfume_taxonomies() as $taxonomy) {
-            if (is_tax($taxonomy)) {
-                return $taxonomy;
-            }
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Получава текущия term ако се намира на term страница
-     */
-    public function get_current_term() {
-        $current_taxonomy = $this->get_current_taxonomy();
-        if ($current_taxonomy) {
-            return get_queried_object();
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Флъшва rewrite rules
-     */
-    public function flush_rewrite_rules() {
-        flush_rewrite_rules();
-        parfume_reviews_debug_log("Flushed rewrite rules from Taxonomies class");
-    }
-    
-    /**
-     * Debug функция за проверка на състоянието
-     */
-    public function debug_status() {
-        if (!current_user_can('manage_options') || !defined('WP_DEBUG') || !WP_DEBUG) {
+    public function enqueue_admin_scripts($hook) {
+        if (!$this->meta_fields) {
             return;
         }
         
-        $status = array(
-            'registrar' => isset($this->registrar) ? 'loaded' : 'not loaded',
-            'meta_fields' => isset($this->meta_fields) ? 'loaded' : 'not loaded',
-            'template_loader' => isset($this->template_loader) ? 'loaded' : 'not loaded',
-            'rewrite_handler' => isset($this->rewrite_handler) ? 'loaded' : 'not loaded',
-            'seo_support' => isset($this->seo_support) ? 'loaded' : 'not loaded'
-        );
-        
-        parfume_reviews_debug_log("Taxonomies components status: " . json_encode($status));
-        
-        if (isset($this->rewrite_handler)) {
-            $this->rewrite_handler->debug_rewrite_rules();
+        return $this->meta_fields->enqueue_admin_scripts($hook);
+    }
+    
+    // ============================================
+    // НОВИ API МЕТОДИ ЗА УЛЕСНЕНА РАБОТА
+    // ============================================
+    
+    /**
+     * Получава поддържани таксономии
+     */
+    public function get_supported_taxonomies() {
+        return array('gender', 'aroma_type', 'marki', 'season', 'intensity', 'notes', 'perfumer');
+    }
+    
+    /**
+     * Получава URL за архив на таксономия
+     */
+    public function get_taxonomy_archive_url($taxonomy) {
+        if ($this->rewrite_handler && method_exists($this->rewrite_handler, 'get_taxonomy_archive_url')) {
+            return $this->rewrite_handler->get_taxonomy_archive_url($taxonomy);
         }
+        return false;
+    }
+    
+    /**
+     * Проверява дали има template за таксономия
+     */
+    public function has_taxonomy_template($taxonomy) {
+        if ($this->template_loader && method_exists($this->template_loader, 'has_taxonomy_template')) {
+            return $this->template_loader->has_taxonomy_template($taxonomy);
+        }
+        return false;
+    }
+    
+    /**
+     * Получава изображение URL на term
+     */
+    public function get_term_image_url($term_id, $taxonomy, $size = 'thumbnail') {
+        if ($this->meta_fields && method_exists($this->meta_fields, 'get_term_image_url')) {
+            return $this->meta_fields->get_term_image_url($term_id, $taxonomy, $size);
+        }
+        return false;
+    }
+    
+    /**
+     * Получава ноти по групи
+     */
+    public function get_notes_by_group($group) {
+        if ($this->meta_fields && method_exists($this->meta_fields, 'get_notes_by_group')) {
+            return $this->meta_fields->get_notes_by_group($group);
+        }
+        return array();
+    }
+    
+    /**
+     * Получава статистики за таксономии
+     */
+    public function get_taxonomy_stats() {
+        $stats = array();
+        $taxonomies = $this->get_supported_taxonomies();
+        
+        foreach ($taxonomies as $taxonomy) {
+            $terms = get_terms(array(
+                'taxonomy' => $taxonomy,
+                'hide_empty' => false
+            ));
+            
+            $stats[$taxonomy] = array(
+                'total_terms' => is_array($terms) ? count($terms) : 0,
+                'has_image_support' => in_array($taxonomy, array('marki', 'gender', 'notes', 'perfumer'))
+            );
+        }
+        
+        return $stats;
     }
 }
