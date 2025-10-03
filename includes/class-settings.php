@@ -310,13 +310,13 @@ class Settings {
             }
         }
         
-        // НОВА НАСТРОЙКА: Featured perfumes per intensity
-        if (isset($input['featured_perfumes_per_intensity'])) {
-            $sanitized['featured_perfumes_per_intensity'] = absint($input['featured_perfumes_per_intensity']);
-            if ($sanitized['featured_perfumes_per_intensity'] < 1 || $sanitized['featured_perfumes_per_intensity'] > 5) {
-                $sanitized['featured_perfumes_per_intensity'] = 3; // Default value
-            }
-        }
+		// НОВА НАСТРОЙКА: Featured perfumes per intensity
+		if (isset($input['featured_perfumes_per_intensity'])) {
+			$sanitized['featured_perfumes_per_intensity'] = absint($input['featured_perfumes_per_intensity']);
+			if ($sanitized['featured_perfumes_per_intensity'] < 1 || $sanitized['featured_perfumes_per_intensity'] > 5) {
+				$sanitized['featured_perfumes_per_intensity'] = 3; // Default value
+			}
+		}
         
         // URL SETTINGS
         $url_fields = array('parfume_slug', 'blog_slug', 'marki_slug', 'gender_slug', 'aroma_type_slug', 'season_slug', 'intensity_slug', 'notes_slug', 'perfumer_slug');
@@ -722,9 +722,10 @@ class Settings {
      * Fallback settings rendering за случаи когато компонентите не са заредени
      */
     private function render_fallback_general_settings() {
-        $settings = get_option('parfume_reviews_settings', array());
-        $posts_per_page = isset($settings['posts_per_page']) ? $settings['posts_per_page'] : 12;
-        ?>
+		$settings = get_option('parfume_reviews_settings', array());
+		$posts_per_page = isset($settings['posts_per_page']) ? $settings['posts_per_page'] : 12;
+		$featured_perfumes_per_intensity = isset($settings['featured_perfumes_per_intensity']) ? $settings['featured_perfumes_per_intensity'] : 3; // ДОБАВЕТЕ ТОЗИ РЕД
+		?>
         <table class="form-table">
             <tr>
                 <th scope="row"><label for="posts_per_page"><?php _e('Постове на страница', 'parfume-reviews'); ?></label></th>
@@ -733,6 +734,13 @@ class Settings {
                     <p class="description"><?php _e('Брой постове за показване на страница в архивите.', 'parfume-reviews'); ?></p>
                 </td>
             </tr>
+			<tr>
+				<th scope="row"><label for="featured_perfumes_per_intensity"><?php _e('Парфюми за интензивност', 'parfume-reviews'); ?></label></th>
+				<td>
+					<input type="number" id="featured_perfumes_per_intensity" name="parfume_reviews_settings[featured_perfumes_per_intensity]" value="<?php echo esc_attr($featured_perfumes_per_intensity); ?>" min="1" max="5" class="small-text" />
+					<p class="description"><?php _e('Брой парфюми за показване в превю за всяка интензивност на архивната страница (1-5).', 'parfume-reviews'); ?></p>
+				</td>
+			</tr>			
         </table>
         <?php
     }
