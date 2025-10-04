@@ -65,97 +65,82 @@ return [
             'sections' => [
                 'slugs' => [
                     'title' => 'URL Slugs',
-                    'description' => 'Персонализирайте URL адресите. ВНИМАНИЕ: След промяна отидете на Settings → Permalinks → Save Changes',
+                    'description' => 'Персонализирайте URL адресите. След промяна отидете на Настройки → Permalinks и запазете.',
                     'fields' => [
                         'parfume_slug' => [
                             'label' => 'Парфюми slug',
                             'type' => 'text',
                             'default' => 'parfiumi',
                             'placeholder' => 'parfiumi',
-                            'description' => 'URL база за парфюми (напр. site.com/parfiumi/product)'
+                            'description' => 'URL за архива на парфюмите'
                         ],
                         'brands_slug' => [
                             'label' => 'Марки slug',
                             'type' => 'text',
                             'default' => 'marki',
                             'placeholder' => 'marki',
-                            'description' => 'URL за марки таксономия'
+                            'description' => 'URL за таксономията марки'
                         ],
                         'gender_slug' => [
                             'label' => 'Пол slug',
                             'type' => 'text',
-                            'default' => 'pol',
-                            'placeholder' => 'pol',
-                            'description' => 'URL за пол таксономия'
+                            'default' => 'gender',
+                            'placeholder' => 'gender',
+                            'description' => 'URL за таксономията пол'
                         ],
-                        'notes_slug' => [
-                            'label' => 'Нотки slug',
+                        'aroma_type_slug' => [
+                            'label' => 'Вид аромат slug',
                             'type' => 'text',
-                            'default' => 'notki',
-                            'placeholder' => 'notki',
-                            'description' => 'URL за нотки таксономия'
-                        ],
-                        'perfumers_slug' => [
-                            'label' => 'Парфюмери slug',
-                            'type' => 'text',
-                            'default' => 'parfiumeri',
-                            'placeholder' => 'parfiumeri',
-                            'description' => 'URL за парфюмери таксономия'
+                            'default' => 'aroma-type',
+                            'placeholder' => 'aroma-type',
+                            'description' => 'URL за таксономията вид аромат'
                         ],
                         'season_slug' => [
                             'label' => 'Сезон slug',
                             'type' => 'text',
-                            'default' => 'sezon',
-                            'placeholder' => 'sezon',
-                            'description' => 'URL за сезон таксономия'
+                            'default' => 'season',
+                            'placeholder' => 'season',
+                            'description' => 'URL за таксономията сезон'
                         ],
                         'intensity_slug' => [
                             'label' => 'Интензивност slug',
                             'type' => 'text',
-                            'default' => 'intenzivnost',
-                            'placeholder' => 'intenzivnost',
-                            'description' => 'URL за интензивност таксономия'
+                            'default' => 'intensity',
+                            'placeholder' => 'intensity',
+                            'description' => 'URL за таксономията интензивност'
                         ],
-                        'aroma_type_slug' => [
-                            'label' => 'Тип аромат slug',
+                        'notes_slug' => [
+                            'label' => 'Нотки slug',
                             'type' => 'text',
-                            'default' => 'tip-aromat',
-                            'placeholder' => 'tip-aromat',
-                            'description' => 'URL за тип аромат таксономия'
+                            'default' => 'notes',
+                            'placeholder' => 'notes',
+                            'description' => 'URL за таксономията нотки'
+                        ],
+                        'perfumers_slug' => [
+                            'label' => 'Парфюмеристи slug',
+                            'type' => 'text',
+                            'default' => 'perfumers',
+                            'placeholder' => 'perfumers',
+                            'description' => 'URL за таксономията парфюмеристи'
                         ]
                     ]
                 ]
             ]
         ],
         
-        'mobile' => [
-            'title' => 'Мобилни',
-            'description' => 'Настройки за мобилни устройства',
-            'icon' => 'dashicons-smartphone',
+        'stores' => [
+            'title' => 'Магазини',
+            'description' => 'Управление на affiliate магазини',
+            'icon' => 'dashicons-store',
             'sections' => [
-                'mobile_panel' => [
-                    'title' => 'Мобилен панел',
-                    'description' => 'Настройки за фиксирания долен панел с магазини',
+                'store_management' => [
+                    'title' => 'Управление на магазини',
+                    'description' => 'Списък с всички добавени магазини и техните настройки',
                     'fields' => [
-                        'enable_mobile_panel' => [
-                            'label' => 'Включи мобилен панел',
-                            'type' => 'checkbox',
-                            'default' => 1,
-                            'description' => 'Показва фиксиран панел с магазини на мобилни устройства'
-                        ],
-                        'mobile_panel_zindex' => [
-                            'label' => 'Z-Index',
-                            'type' => 'number',
-                            'default' => 9999,
-                            'min' => 1,
-                            'max' => 999999,
-                            'description' => 'Z-index стойност на панела (по-високо = отгоре)'
-                        ],
-                        'mobile_panel_close_button' => [
-                            'label' => 'Бутон за затваряне',
-                            'type' => 'checkbox',
-                            'default' => 1,
-                            'description' => 'Показва бутон за затваряне на панела'
+                        'stores_list_info' => [
+                            'label' => 'Добавени магазини',
+                            'type' => 'info',
+                            'description' => 'Тук ще виждате списък с всички добавени магазини. Използвайте бутона долу за да добавите нов магазин.'
                         ]
                     ]
                 ]
@@ -163,39 +148,41 @@ return [
         ],
         
         'scraper' => [
-            'title' => 'Scraper',
-            'description' => 'Настройки за автоматично обновяване на цени',
+            'title' => 'Product Scraper',
+            'description' => 'Настройки за автоматично скрейпване на цени и информация',
             'icon' => 'dashicons-download',
             'sections' => [
                 'scraper_settings' => [
-                    'title' => 'Scraper конфигурация',
-                    'description' => 'Автоматично обновяване на цени от магазините',
+                    'title' => 'Основни настройки',
+                    'description' => 'Конфигурация на скрейпър системата',
                     'fields' => [
                         'enable_scraper' => [
-                            'label' => 'Включи scraper',
+                            'label' => 'Активирай скрейпъра',
                             'type' => 'checkbox',
                             'default' => 0,
-                            'description' => 'Активира функционалността за scraping на цени'
+                            'description' => 'Включва/изключва автоматичното скрейпване'
                         ],
-                        'auto_update_prices' => [
-                            'label' => 'Автоматично обновяване',
-                            'type' => 'checkbox',
-                            'default' => 0,
-                            'description' => 'Автоматично обновява цените на зададен интервал'
-                        ],
-                        'update_interval' => [
-                            'label' => 'Интервал (часове)',
+                        'scrape_interval' => [
+                            'label' => 'Интервал за скрейпване (часове)',
                             'type' => 'number',
-                            'default' => 24,
+                            'default' => 12,
                             'min' => 1,
                             'max' => 168,
                             'description' => 'На колко часа да се обновяват цените (1-168 часа)'
                         ],
-                        'scraper_timeout' => [
+                        'scrape_batch_size' => [
+                            'label' => 'Batch размер',
+                            'type' => 'number',
+                            'default' => 10,
+                            'min' => 1,
+                            'max' => 100,
+                            'description' => 'Брой URL-и за обработка при всяко изпълнение'
+                        ],
+                        'scrape_timeout' => [
                             'label' => 'Timeout (секунди)',
                             'type' => 'number',
                             'default' => 30,
-                            'min' => 5,
+                            'min' => 10,
                             'max' => 120,
                             'description' => 'Максимално време за scraping на един магазин'
                         ],
@@ -208,14 +195,69 @@ return [
                         ]
                     ]
                 ],
-                'supported_stores' => [
-                    'title' => 'Поддържани магазини',
-                    'description' => 'Списък на магазините, които scraper-ът поддържа',
+                'scraper_monitor' => [
+                    'title' => 'Monitor',
+                    'description' => 'Преглед и мониторинг на скрейпнати данни',
                     'fields' => [
-                        'scraper_stores_info' => [
-                            'label' => 'Налични магазини',
+                        'scraper_monitor_info' => [
+                            'label' => 'Статус на скрейпването',
                             'type' => 'info',
-                            'description' => 'Scraper-ът поддържа следните магазини:<br>• Notino.bg (пълна поддръжка)<br>• Parfimo.bg (базова поддръжка)<br>• Douglas.bg (базова поддръжка)<br>• Makeup.bg (базова поддръжка)'
+                            'description' => 'Виж подробна информация за всички Product URLs в секцията Monitor по-долу'
+                        ]
+                    ]
+                ],
+                'scraper_test_tool' => [
+                    'title' => 'Test Tool',
+                    'description' => 'Инструмент за тестване и конфигурация на schema',
+                    'fields' => [
+                        'scraper_test_info' => [
+                            'label' => 'Schema конфигурация',
+                            'type' => 'info',
+                            'description' => 'Използвайте Test Tool за да конфигурирате schema за всеки магазин'
+                        ]
+                    ]
+                ]
+            ]
+        ],
+        
+        'mobile' => [
+            'title' => 'Мобилни настройки',
+            'description' => 'Настройки за мобилни устройства',
+            'icon' => 'dashicons-smartphone',
+            'sections' => [
+                'mobile_panel' => [
+                    'title' => 'Фиксиран панел за магазини',
+                    'description' => 'Поведение на "Колона 2" на мобилни устройства',
+                    'fields' => [
+                        'enable_mobile_fixed' => [
+                            'label' => 'Фиксиран панел',
+                            'type' => 'checkbox',
+                            'default' => 1,
+                            'checkbox_label' => 'Показвай фиксиран магазин в долната част на екрана',
+                            'description' => 'При мобилни устройства първият магазин е винаги фиксиран в долу'
+                        ],
+                        'enable_mobile_close_button' => [
+                            'label' => 'Бутон за затваряне',
+                            'type' => 'checkbox',
+                            'default' => 1,
+                            'checkbox_label' => 'Позволявай скриване на "Колона 2" чрез бутон "X"',
+                            'description' => 'Показва бутон X за скриване на целия панел'
+                        ],
+                        'mobile_panel_zindex' => [
+                            'label' => 'Z-index',
+                            'type' => 'number',
+                            'default' => 9999,
+                            'min' => 1,
+                            'max' => 999999,
+                            'description' => 'Z-index на панела (за избягване на припокриване)'
+                        ],
+                        'mobile_panel_offset' => [
+                            'label' => 'Вертикален offset (px)',
+                            'type' => 'number',
+                            'default' => 0,
+                            'min' => 0,
+                            'max' => 500,
+                            'description' => 'Отместване отдолу (ако има cookie bar или друг елемент)'
                         ]
                     ]
                 ]
@@ -238,27 +280,18 @@ return [
                             'description' => 'Активира функционалността за сравнение'
                         ],
                         'max_comparison_items' => [
-                            'label' => 'Максимален брой за сравнение',
+                            'label' => 'Максимален брой парфюми',
                             'type' => 'number',
                             'default' => 4,
                             'min' => 2,
                             'max' => 10,
-                            'description' => 'Максимален брой парфюми за сравнение'
+                            'description' => 'Максимален брой парфюми за сравнение едновременно'
                         ],
                         'comparison_page' => [
                             'label' => 'Страница за сравнение',
                             'type' => 'page_select',
-                            'description' => 'Изберете страница за показване на сравнението'
-                        ],
-                        'comparison_bar_position' => [
-                            'label' => 'Позиция на comparison bar',
-                            'type' => 'select',
-                            'default' => 'bottom',
-                            'options' => [
-                                'bottom' => 'Долу',
-                                'top' => 'Горе'
-                            ],
-                            'description' => 'Къде да се показва comparison bar-а'
+                            'default' => '',
+                            'description' => 'Изберете страница за пълното сравнение (опционално)'
                         ]
                     ]
                 ]
@@ -267,56 +300,98 @@ return [
         
         'advanced' => [
             'title' => 'Разширени',
-            'description' => 'Разширени настройки',
+            'description' => 'Разширени настройки и инструменти',
             'icon' => 'dashicons-admin-tools',
             'sections' => [
+                'display_settings' => [
+                    'title' => 'Настройки за показване',
+                    'description' => 'Конфигурация на визуализацията',
+                    'fields' => [
+                        'similar_parfumes_count' => [
+                            'label' => 'Брой подобни парфюми',
+                            'type' => 'number',
+                            'default' => 4,
+                            'min' => 2,
+                            'max' => 12,
+                            'description' => 'Брой подобни парфюми за показване'
+                        ],
+                        'similar_parfumes_columns' => [
+                            'label' => 'Колони за подобни парфюми',
+                            'type' => 'number',
+                            'default' => 4,
+                            'min' => 2,
+                            'max' => 6,
+                            'description' => 'Брой колони за показване на подобни парфюми'
+                        ],
+                        'recently_viewed_count' => [
+                            'label' => 'Брой наскоро разгледани',
+                            'type' => 'number',
+                            'default' => 4,
+                            'min' => 2,
+                            'max' => 12,
+                            'description' => 'Брой наскоро разгледани парфюми'
+                        ],
+                        'recently_viewed_columns' => [
+                            'label' => 'Колони за наскоро разгледани',
+                            'type' => 'number',
+                            'default' => 4,
+                            'min' => 2,
+                            'max' => 6,
+                            'description' => 'Брой колони за показване на наскоро разгледани'
+                        ],
+                        'brand_parfumes_count' => [
+                            'label' => 'Брой парфюми от марката',
+                            'type' => 'number',
+                            'default' => 4,
+                            'min' => 2,
+                            'max' => 12,
+                            'description' => 'Брой парфюми от същата марка за показване'
+                        ],
+                        'brand_parfumes_columns' => [
+                            'label' => 'Колони за парфюми от марката',
+                            'type' => 'number',
+                            'default' => 4,
+                            'min' => 2,
+                            'max' => 6,
+                            'description' => 'Брой колони за показване на парфюми от марката'
+                        ]
+                    ]
+                ],
                 'performance' => [
                     'title' => 'Производителност',
                     'description' => 'Настройки за оптимизация',
                     'fields' => [
-                        'enable_caching' => [
+                        'enable_cache' => [
                             'label' => 'Включи кеширане',
                             'type' => 'checkbox',
                             'default' => 1,
-                            'description' => 'Кешира данните за по-добра производителност'
+                            'description' => 'Кешира скрейпнати данни и заявки'
                         ],
                         'cache_duration' => [
-                            'label' => 'Време на кеш (секунди)',
+                            'label' => 'Време на кеша (часове)',
                             'type' => 'number',
-                            'default' => 3600,
-                            'min' => 60,
-                            'max' => 86400,
-                            'description' => 'Колко дълго да се пазят кешираните данни'
+                            'default' => 24,
+                            'min' => 1,
+                            'max' => 720,
+                            'description' => 'Колко време да се пази кеша'
                         ]
                     ]
                 ],
                 'debug' => [
-                    'title' => 'Дебъг',
-                    'description' => 'Настройки за отстраняване на проблеми',
+                    'title' => 'Debug режим',
+                    'description' => 'Настройки за debugging',
                     'fields' => [
-                        'debug_mode' => [
+                        'enable_debug_mode' => [
                             'label' => 'Debug режим',
                             'type' => 'checkbox',
                             'default' => 0,
-                            'description' => 'Включва допълнително логване в debug.log'
+                            'description' => 'Записва подробни логове (само за development)'
                         ],
-                        'show_query_info' => [
-                            'label' => 'Показвай query информация',
+                        'debug_scraper' => [
+                            'label' => 'Debug Scraper',
                             'type' => 'checkbox',
                             'default' => 0,
-                            'description' => 'Показва информация за database queries (само за admins)'
-                        ]
-                    ]
-                ],
-                'uninstall' => [
-                    'title' => 'Деинсталация',
-                    'description' => 'Настройки при изтриване',
-                    'fields' => [
-                        'delete_data_on_uninstall' => [
-                            'label' => 'Изтрий данни при деинсталация',
-                            'type' => 'checkbox',
-                            'default' => 0,
-                            'description' => 'ВНИМАНИЕ: Изтрива всички парфюми, таксономии и настройки при изтриване на плъгина'
+                            'description' => 'Записва подробни scraper логове'
                         ]
                     ]
                 ]
