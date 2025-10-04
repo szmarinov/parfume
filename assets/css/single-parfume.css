@@ -1,0 +1,408 @@
+/**
+ * Single Parfume Styles
+ * 
+ * Styles for single parfume page
+ * 
+ * @package Parfume_Reviews
+ * @since 2.0.0
+ */
+
+/* ==========================================================================
+   Parfume Header
+   ========================================================================== */
+
+.parfume-header {
+    margin-bottom: calc(var(--pr-spacing) * 2);
+}
+
+.parfume-title {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 15px 0;
+    color: var(--pr-dark);
+    line-height: 1.2;
+}
+
+.parfume-brand {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 15px;
+}
+
+.parfume-brand a {
+    color: var(--pr-primary);
+    text-decoration: none;
+    transition: var(--pr-transition);
+}
+
+.parfume-brand a:hover {
+    color: var(--pr-secondary);
+}
+
+.parfume-rating {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.parfume-rating .rating-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--pr-primary);
+}
+
+.parfume-rating .rating-stars {
+    font-size: 20px;
+    color: var(--pr-secondary);
+}
+
+/* ==========================================================================
+   Gallery
+   ========================================================================== */
+
+.parfume-gallery {
+    margin-bottom: calc(var(--pr-spacing) * 2);
+}
+
+.parfume-gallery .main-image {
+    background: var(--pr-light);
+    border-radius: var(--pr-radius);
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.parfume-gallery .main-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.parfume-gallery .gallery-thumbnails {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 10px;
+}
+
+.parfume-gallery .thumbnail {
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: var(--pr-radius);
+    overflow: hidden;
+    transition: var(--pr-transition);
+}
+
+.parfume-gallery .thumbnail:hover,
+.parfume-gallery .thumbnail.active {
+    border-color: var(--pr-primary);
+}
+
+.parfume-gallery .thumbnail img {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    display: block;
+}
+
+/* ==========================================================================
+   Meta Info
+   ========================================================================== */
+
+.parfume-meta-info {
+    background: var(--pr-light);
+    border-radius: var(--pr-radius);
+    padding: var(--pr-spacing);
+    margin-bottom: calc(var(--pr-spacing) * 2);
+}
+
+.parfume-meta-info .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.parfume-meta-info .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.parfume-meta-info .meta-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #999;
+    letter-spacing: 0.5px;
+}
+
+.parfume-meta-info .meta-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--pr-dark);
+}
+
+/* ==========================================================================
+   Description
+   ========================================================================== */
+
+.parfume-description {
+    margin-bottom: calc(var(--pr-spacing) * 2);
+}
+
+.parfume-description h2 {
+    font-size: 24px;
+    margin-bottom: var(--pr-spacing);
+    color: var(--pr-dark);
+}
+
+.parfume-description .description-content {
+    line-height: 1.7;
+    color: #666;
+}
+
+/* ==========================================================================
+   Taxonomies
+   ========================================================================== */
+
+.parfume-taxonomies {
+    margin-bottom: calc(var(--pr-spacing) * 2);
+}
+
+.parfume-taxonomies .taxonomy-group {
+    margin-bottom: calc(var(--pr-spacing) * 1.5);
+}
+
+.parfume-taxonomies .taxonomy-group h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: var(--pr-dark);
+}
+
+.parfume-taxonomies .taxonomy-terms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.parfume-taxonomies .term-badge {
+    display: inline-block;
+    padding: 8px 16px;
+    background: var(--pr-light);
+    color: var(--pr-dark);
+    text-decoration: none;
+    border-radius: 20px;
+    font-size: 14px;
+    transition: var(--pr-transition);
+}
+
+.parfume-taxonomies .term-badge:hover {
+    background: var(--pr-primary);
+    color: #fff;
+}
+
+/* ==========================================================================
+   Pros & Cons
+   ========================================================================== */
+
+.parfume-pros-cons {
+    margin-bottom: calc(var(--pr-spacing) * 2);
+}
+
+.parfume-pros-cons .pros-cons-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: calc(var(--pr-spacing) * 1.5);
+}
+
+.parfume-pros-cons .pros,
+.parfume-pros-cons .cons {
+    background: var(--pr-light);
+    border-radius: var(--pr-radius);
+    padding: var(--pr-spacing);
+}
+
+.parfume-pros-cons h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+
+.parfume-pros-cons .pros h3 {
+    color: var(--pr-success);
+}
+
+.parfume-pros-cons .cons h3 {
+    color: var(--pr-error);
+}
+
+.parfume-pros-cons ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.parfume-pros-cons li {
+    padding: 8px 0 8px 25px;
+    position: relative;
+    line-height: 1.5;
+}
+
+.parfume-pros-cons .pros li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--pr-success);
+    font-weight: 700;
+}
+
+.parfume-pros-cons .cons li::before {
+    content: '✗';
+    position: absolute;
+    left: 0;
+    color: var(--pr-error);
+    font-weight: 700;
+}
+
+/* ==========================================================================
+   Sidebar (Stores)
+   ========================================================================== */
+
+.parfume-sidebar {
+    position: sticky;
+    top: 20px;
+}
+
+.parfume-stores {
+    background: #fff;
+    border: 1px solid var(--pr-border);
+    border-radius: var(--pr-radius);
+    padding: var(--pr-spacing);
+    margin-bottom: var(--pr-spacing);
+}
+
+.parfume-stores h3 {
+    font-size: 18px;
+    margin: 0 0 20px 0;
+    color: var(--pr-dark);
+}
+
+.parfume-stores .stores-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.parfume-stores .store-item {
+    border: 1px solid var(--pr-border);
+    border-radius: var(--pr-radius);
+    padding: 15px;
+    transition: var(--pr-transition);
+}
+
+.parfume-stores .store-item:hover {
+    border-color: var(--pr-primary);
+    box-shadow: var(--pr-shadow);
+}
+
+.parfume-stores .store-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 10px;
+}
+
+.parfume-stores .store-name {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.parfume-stores .store-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--pr-primary);
+}
+
+.parfume-stores .store-stock {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    display: inline-block;
+}
+
+.parfume-stores .store-stock.in-stock {
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--pr-success);
+}
+
+.parfume-stores .store-stock.out-of-stock {
+    background: rgba(220, 53, 69, 0.1);
+    color: var(--pr-error);
+}
+
+.parfume-stores .store-button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: var(--pr-primary);
+    color: #fff;
+    text-align: center;
+    text-decoration: none;
+    border-radius: var(--pr-radius);
+    font-weight: 500;
+    transition: var(--pr-transition);
+}
+
+.parfume-stores .store-button:hover {
+    background: var(--pr-secondary);
+    transform: translateY(-2px);
+    box-shadow: var(--pr-shadow);
+}
+
+/* ==========================================================================
+   Related Parfumes
+   ========================================================================== */
+
+.related-parfumes {
+    margin-top: calc(var(--pr-spacing) * 3);
+    padding-top: calc(var(--pr-spacing) * 3);
+    border-top: 1px solid var(--pr-border);
+}
+
+.related-parfumes h2 {
+    font-size: 24px;
+    margin-bottom: calc(var(--pr-spacing) * 2);
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+    .parfume-content-wrapper {
+        grid-template-columns: 1fr;
+    }
+    
+    .parfume-sidebar {
+        position: static;
+    }
+}
+
+@media (max-width: 768px) {
+    .parfume-title {
+        font-size: 24px;
+    }
+    
+    .parfume-pros-cons .pros-cons-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .parfume-meta-info .meta-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .parfume-meta-info .meta-grid {
+        grid-template-columns: 1fr;
+    }
+}

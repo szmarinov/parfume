@@ -1,0 +1,447 @@
+/**
+ * Comparison Styles
+ * 
+ * Styles for parfume comparison feature
+ * 
+ * @package Parfume_Reviews
+ * @since 2.0.0
+ */
+
+/* ==========================================================================
+   Comparison Bar (Fixed Bottom)
+   ========================================================================== */
+
+.comparison-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 2px solid var(--pr-border);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    z-index: 9998;
+}
+
+.comparison-bar.has-items {
+    transform: translateY(0);
+}
+
+.comparison-bar-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 15px var(--pr-spacing);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* ==========================================================================
+   Comparison Info
+   ========================================================================== */
+
+.comparison-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.comparison-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--pr-primary);
+    color: #fff;
+    border-radius: 50%;
+}
+
+.comparison-count {
+    font-weight: 600;
+    color: var(--pr-dark);
+}
+
+/* ==========================================================================
+   Comparison Items
+   ========================================================================== */
+
+.comparison-items {
+    display: flex;
+    gap: 15px;
+    flex: 1;
+    overflow-x: auto;
+    padding: 5px 0;
+}
+
+.comparison-item {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+    border: 2px solid var(--pr-border);
+    border-radius: var(--pr-radius);
+    overflow: hidden;
+}
+
+.comparison-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.comparison-item .remove-from-comparison {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    background: rgba(220, 53, 69, 0.9);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: var(--pr-transition);
+}
+
+.comparison-item:hover .remove-from-comparison {
+    opacity: 1;
+}
+
+.comparison-item .remove-from-comparison:hover {
+    background: var(--pr-error);
+    transform: scale(1.1);
+}
+
+/* ==========================================================================
+   Comparison Actions
+   ========================================================================== */
+
+.comparison-actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.compare-btn,
+.clear-comparison-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--pr-radius);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--pr-transition);
+}
+
+.compare-btn {
+    background: var(--pr-primary);
+    color: #fff;
+    text-decoration: none;
+}
+
+.compare-btn:hover {
+    background: var(--pr-secondary);
+}
+
+.clear-comparison-btn {
+    background: transparent;
+    color: var(--pr-dark);
+    border: 1px solid var(--pr-border);
+}
+
+.clear-comparison-btn:hover {
+    border-color: var(--pr-error);
+    color: var(--pr-error);
+}
+
+/* ==========================================================================
+   Comparison Page
+   ========================================================================== */
+
+.comparison-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: calc(var(--pr-spacing) * 2) var(--pr-spacing);
+}
+
+.comparison-header {
+    text-align: center;
+    margin-bottom: calc(var(--pr-spacing) * 3);
+}
+
+.comparison-header h1 {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.comparison-table-wrapper {
+    overflow-x: auto;
+}
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: var(--pr-radius);
+    overflow: hidden;
+}
+
+.comparison-table thead {
+    background: var(--pr-light);
+}
+
+.comparison-table th,
+.comparison-table td {
+    padding: 15px;
+    text-align: center;
+    border: 1px solid var(--pr-border);
+}
+
+.comparison-table th {
+    font-weight: 600;
+    color: var(--pr-dark);
+}
+
+.comparison-table tbody tr:hover {
+    background: var(--pr-light);
+}
+
+.comparison-table .parfume-image {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    border-radius: var(--pr-radius);
+    overflow: hidden;
+}
+
+.comparison-table .parfume-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.comparison-table .parfume-title {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.comparison-table .parfume-brand {
+    font-size: 13px;
+    color: #999;
+}
+
+.comparison-table .rating-stars {
+    color: var(--pr-secondary);
+}
+
+.comparison-table .price {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--pr-primary);
+}
+
+.comparison-table .view-button {
+    display: inline-block;
+    padding: 8px 16px;
+    background: var(--pr-primary);
+    color: #fff;
+    text-decoration: none;
+    border-radius: var(--pr-radius);
+    transition: var(--pr-transition);
+}
+
+.comparison-table .view-button:hover {
+    background: var(--pr-secondary);
+}
+
+.comparison-table .remove-button {
+    display: inline-block;
+    padding: 6px 12px;
+    background: transparent;
+    color: var(--pr-error);
+    border: 1px solid var(--pr-error);
+    text-decoration: none;
+    border-radius: var(--pr-radius);
+    cursor: pointer;
+    transition: var(--pr-transition);
+    margin-top: 8px;
+}
+
+.comparison-table .remove-button:hover {
+    background: var(--pr-error);
+    color: #fff;
+}
+
+/* ==========================================================================
+   Empty State
+   ========================================================================== */
+
+.comparison-empty {
+    text-align: center;
+    padding: calc(var(--pr-spacing) * 4) var(--pr-spacing);
+}
+
+.comparison-empty .empty-icon {
+    font-size: 64px;
+    color: #ccc;
+    margin-bottom: 20px;
+}
+
+.comparison-empty h2 {
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+.comparison-empty p {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.comparison-empty .button {
+    display: inline-block;
+    padding: 12px 24px;
+    background: var(--pr-primary);
+    color: #fff;
+    text-decoration: none;
+    border-radius: var(--pr-radius);
+    transition: var(--pr-transition);
+}
+
+.comparison-empty .button:hover {
+    background: var(--pr-secondary);
+}
+
+/* ==========================================================================
+   Comparison Toggle Button (on Cards)
+   ========================================================================== */
+
+.comparison-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #fff;
+    color: var(--pr-dark);
+    border: 1px solid var(--pr-border);
+    border-radius: var(--pr-radius);
+    cursor: pointer;
+    transition: var(--pr-transition);
+}
+
+.comparison-toggle-btn:hover {
+    border-color: var(--pr-primary);
+    color: var(--pr-primary);
+}
+
+.comparison-toggle-btn.in-comparison {
+    background: var(--pr-primary);
+    color: #fff;
+    border-color: var(--pr-primary);
+}
+
+.comparison-toggle-btn.in-comparison:hover {
+    background: var(--pr-secondary);
+    border-color: var(--pr-secondary);
+}
+
+/* ==========================================================================
+   Notifications
+   ========================================================================== */
+
+.parfume-notifications {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.parfume-notification {
+    padding: 15px 20px;
+    background: #fff;
+    border-radius: var(--pr-radius);
+    box-shadow: var(--pr-shadow-hover);
+    min-width: 300px;
+    opacity: 0;
+    transform: translateX(100px);
+    transition: all 0.3s ease;
+    pointer-events: all;
+}
+
+.parfume-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.parfume-notification.success {
+    border-left: 4px solid var(--pr-success);
+}
+
+.parfume-notification.error {
+    border-left: 4px solid var(--pr-error);
+}
+
+.parfume-notification.warning {
+    border-left: 4px solid var(--pr-warning);
+}
+
+.parfume-notification.info {
+    border-left: 4px solid var(--pr-primary);
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .comparison-bar-inner {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .comparison-items {
+        order: -1;
+        width: 100%;
+    }
+    
+    .comparison-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .comparison-table th,
+    .comparison-table td {
+        padding: 10px 8px;
+        font-size: 13px;
+    }
+    
+    .parfume-notifications {
+        left: 10px;
+        right: 10px;
+    }
+    
+    .parfume-notification {
+        min-width: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .comparison-item {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .comparison-table .parfume-image {
+        width: 80px;
+        height: 80px;
+    }
+}
