@@ -67,6 +67,12 @@ spl_autoload_register(function ($class) {
 });
 
 /**
+ * Load helper functions
+ * These are global functions used in templates
+ */
+require_once PARFUME_REVIEWS_PATH . 'includes/helpers.php';
+
+/**
  * Check minimum requirements before activation
  */
 function check_requirements() {
@@ -186,78 +192,16 @@ function activate() {
  * Deactivation hook
  */
 function deactivate() {
-    try {
-        // Flush rewrite rules
-        flush_rewrite_rules();
-        
-        // Clean up temporary options
-        delete_option('parfume_reviews_flush_rewrite_rules');
-        
-        // Log deactivation
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Parfume Reviews: Plugin deactivated');
-        }
-    } catch (\Exception $e) {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Parfume Reviews Deactivation Error: ' . $e->getMessage());
-        }
-    }
-}
-
-/**
- * Uninstall hook
- * Note: This is called from uninstall.php
- */
-function uninstall() {
-    // Check if user has permission to delete plugins
-    if (!current_user_can('delete_plugins')) {
-        return;
-    }
-    
-    // Get uninstall option from settings
-    $settings = get_option('parfume_reviews_settings', []);
-    $delete_data = isset($settings['delete_data_on_uninstall']) ? $settings['delete_data_on_uninstall'] : false;
-    
-    if (!$delete_data) {
-        return; // Don't delete data if option is not set
-    }
-    
-    // Clean up database
-    global $wpdb;
-    
-    // Delete all parfume posts
-    $wpdb->query("DELETE FROM {$wpdb->posts} WHERE post_type = 'parfume'");
-    $wpdb->query("DELETE FROM {$wpdb->postmeta} WHERE post_id NOT IN (SELECT ID FROM {$wpdb->posts})");
-    
-    // Delete taxonomies
-    $taxonomies = ['marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'];
-    foreach ($taxonomies as $taxonomy) {
-        $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$wpdb->term_taxonomy} WHERE taxonomy = %s",
-            $taxonomy
-        ));
-    }
-    
-    // Clean up orphaned terms
-    $wpdb->query("DELETE FROM {$wpdb->terms} WHERE term_id NOT IN (SELECT term_id FROM {$wpdb->term_taxonomy})");
-    
-    // Delete plugin options
-    delete_option('parfume_reviews_version');
-    delete_option('parfume_reviews_settings');
-    delete_option('parfume_reviews_flush_rewrite_rules');
-    
     // Flush rewrite rules
     flush_rewrite_rules();
+    
+    // Log deactivation
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('Parfume Reviews: Plugin deactivated');
+    }
 }
 
-/**
- * Register hooks
- */
+// Register hooks
+add_action('plugins_loaded', __NAMESPACE__ . '\\init');
 register_activation_hook(__FILE__, __NAMESPACE__ . '\\activate');
 register_deactivation_hook(__FILE__, __NAMESPACE__ . '\\deactivate');
-
-/**
- * Initialize plugin on plugins_loaded
- * This ensures WordPress is fully loaded
- */
-add_action('plugins_loaded', __NAMESPACE__ . '\\init');

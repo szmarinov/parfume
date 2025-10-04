@@ -1,24 +1,24 @@
 <?php
 /**
- * Taxonomy Manager
+ * Template Loader
  * 
- * Main class for managing all taxonomies
+ * Handles template loading and overrides
  * 
  * @package Parfume_Reviews
- * @subpackage Taxonomies
+ * @subpackage Templates
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Taxonomies;
+namespace Parfume_Reviews\Templates;
 
 use Parfume_Reviews\Core\Container;
 
 /**
- * TaxonomyManager Class
+ * Loader Class
  * 
- * Orchestrates all taxonomy-related functionality
+ * Manages template loading system
  */
-class TaxonomyManager {
+class Loader {
     
     /**
      * Container instance
@@ -28,25 +28,18 @@ class TaxonomyManager {
     private $container;
     
     /**
-     * Taxonomy configuration
+     * Template path in theme
      * 
-     * @var array
+     * @var string
      */
-    private $config;
+    private $theme_template_path = 'parfume-reviews';
     
     /**
-     * Registrar instance
+     * Plugin template path
      * 
-     * @var Registrar
+     * @var string
      */
-    private $registrar;
-    
-    /**
-     * Rewrite handler instance
-     * 
-     * @var RewriteHandler
-     */
-    private $rewrite_handler;
+    private $plugin_template_path;
     
     /**
      * Constructor
@@ -55,356 +48,264 @@ class TaxonomyManager {
      */
     public function __construct(Container $container) {
         $this->container = $container;
-        $this->config = $this->get_config();
-        
-        // Initialize components
-        $this->registrar = new Registrar($this->config);
-        $this->rewrite_handler = new RewriteHandler($this->config);
+        $this->plugin_template_path = PARFUME_REVIEWS_PATH . 'templates/';
     }
     
     /**
-     * Get taxonomy configuration
-     * 
-     * @return array
-     */
-    private function get_config() {
-        return $this->container->get('config.taxonomies');
-    }
-    
-    /**
-     * Register all taxonomies
-     */
-    public function register() {
-        $this->registrar->register_all();
-    }
-    
-    /**
-     * Handle rewrite rules
-     * 
-     * @param \WP $wp WordPress environment object
-     */
-    public function handle_rewrite($wp) {
-        $this->rewrite_handler->parse_request($wp);
-    }
-    
-    /**
-     * Load taxonomy templates
+     * Load template
      * 
      * @param string $template Current template path
      * @return string Modified template path
      */
-    public function load_templates($template) {
-        return $this->rewrite_handler->load_template($template);
-    }
-    
-    /**
-     * Get all registered taxonomies
-     * 
-     * @return array
-     */
-    public function get_taxonomies() {
-        return array_keys($this->config);
-    }
-    
-    /**
-     * Get taxonomy configuration by name
-     * 
-     * @param string $taxonomy Taxonomy name
-     * @return array|null
-     */
-    public function get_taxonomy_config($taxonomy) {
-        return isset($this->config[$taxonomy]) ? $this->config[$taxonomy] : null;
-    }
-    
-    /**
-     * Check if taxonomy is registered
-     * 
-     * @param string $taxonomy Taxonomy name
-     * @return bool
-     */
-    public function is_registered($taxonomy) {
-        return isset($this->config[$taxonomy]) && taxonomy_exists($taxonomy);
-    }
-    
-    /**
-     * Get taxonomy terms
-     * 
-     * @param string $taxonomy Taxonomy name
-     * @param array $args get_terms arguments
-     * @return array|WP_Error
-     */
-    public function get_terms($taxonomy, $args = []) {
-        if (!$this->is_registered($taxonomy)) {
-            return new \WP_Error('invalid_taxonomy', __('Taxonomy does not exist', 'parfume-reviews'));
+    public function load_template($template) {
+        global $post;
+        
+        // Single parfume template
+        if (is_singular('parfume')) {
+            $new_template = $this->locate_template('single-parfume.php');
+            if ($new_template) {
+                return $new_template;
+            }
         }
         
-        $default_args = [
-            'taxonomy' => $taxonomy,
-            'hide_empty' => false,
-            'orderby' => 'name',
-            'order' => 'ASC'
-        ];
-        
-        $args = wp_parse_args($args, $default_args);
-        
-        return get_terms($args);
-    }
-    
-    /**
-     * Get term by slug
-     * 
-     * @param string $taxonomy Taxonomy name
-     * @param string $slug Term slug
-     * @return \WP_Term|false
-     */
-    public function get_term_by_slug($taxonomy, $slug) {
-        return get_term_by('slug', $slug, $taxonomy);
-    }
-    
-    /**
-     * Get term by ID
-     * 
-     * @param int $term_id Term ID
-     * @param string $taxonomy Taxonomy name
-     * @return \WP_Term|false
-     */
-    public function get_term($term_id, $taxonomy) {
-        return get_term($term_id, $taxonomy);
-    }
-    
-    /**
-     * Create new term
-     * 
-     * @param string $taxonomy Taxonomy name
-     * @param string $name Term name
-     * @param array $args Optional term arguments
-     * @return array|WP_Error
-     */
-    public function create_term($taxonomy, $name, $args = []) {
-        if (!$this->is_registered($taxonomy)) {
-            return new \WP_Error('invalid_taxonomy', __('Taxonomy does not exist', 'parfume-reviews'));
+        // Parfume archive template
+        if (is_post_type_archive('parfume')) {
+            $new_template = $this->locate_template('archive-parfume.php');
+            if ($new_template) {
+                return $new_template;
+            }
         }
         
-        return wp_insert_term($name, $taxonomy, $args);
-    }
-    
-    /**
-     * Update term
-     * 
-     * @param int $term_id Term ID
-     * @param string $taxonomy Taxonomy name
-     * @param array $args Term arguments to update
-     * @return array|WP_Error
-     */
-    public function update_term($term_id, $taxonomy, $args = []) {
-        if (!$this->is_registered($taxonomy)) {
-            return new \WP_Error('invalid_taxonomy', __('Taxonomy does not exist', 'parfume-reviews'));
+        // Taxonomy templates - check only after WordPress is loaded
+        if (did_action('parse_query')) {
+            $taxonomy_template = $this->load_taxonomy_template();
+            if ($taxonomy_template) {
+                return $taxonomy_template;
+            }
         }
         
-        return wp_update_term($term_id, $taxonomy, $args);
+        return $template;
     }
     
     /**
-     * Delete term
+     * Load taxonomy template
      * 
-     * @param int $term_id Term ID
-     * @param string $taxonomy Taxonomy name
-     * @return bool|WP_Error
+     * @return string|false Template path or false
      */
-    public function delete_term($term_id, $taxonomy) {
-        if (!$this->is_registered($taxonomy)) {
-            return new \WP_Error('invalid_taxonomy', __('Taxonomy does not exist', 'parfume-reviews'));
-        }
-        
-        return wp_delete_term($term_id, $taxonomy);
-    }
-    
-    /**
-     * Get post terms
-     * 
-     * @param int $post_id Post ID
-     * @param string $taxonomy Taxonomy name
-     * @return array|WP_Error
-     */
-    public function get_post_terms($post_id, $taxonomy) {
-        if (!$this->is_registered($taxonomy)) {
-            return new \WP_Error('invalid_taxonomy', __('Taxonomy does not exist', 'parfume-reviews'));
-        }
-        
-        return wp_get_post_terms($post_id, $taxonomy);
-    }
-    
-    /**
-     * Set post terms
-     * 
-     * @param int $post_id Post ID
-     * @param string $taxonomy Taxonomy name
-     * @param array|int|string $terms Terms to set
-     * @param bool $append Whether to append or replace
-     * @return array|WP_Error
-     */
-    public function set_post_terms($post_id, $taxonomy, $terms, $append = false) {
-        if (!$this->is_registered($taxonomy)) {
-            return new \WP_Error('invalid_taxonomy', __('Taxonomy does not exist', 'parfume-reviews'));
-        }
-        
-        return wp_set_post_terms($post_id, $terms, $taxonomy, $append);
-    }
-    
-    /**
-     * Get taxonomy archive URL
-     * 
-     * @param string $taxonomy Taxonomy name
-     * @return string|false
-     */
-    public function get_archive_url($taxonomy) {
-        if (!$this->is_registered($taxonomy)) {
-            return false;
-        }
-        
-        $settings = get_option('parfume_reviews_settings', []);
-        $parfume_slug = isset($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
-        
-        $config = $this->get_taxonomy_config($taxonomy);
-        $tax_slug = isset($config['rewrite']['slug']) ? basename($config['rewrite']['slug']) : $taxonomy;
-        
-        return home_url('/' . $parfume_slug . '/' . $tax_slug . '/');
-    }
-    
-    /**
-     * Get term link
-     * 
-     * @param int|\WP_Term $term Term ID or object
-     * @param string $taxonomy Taxonomy name
-     * @return string|WP_Error
-     */
-    public function get_term_link($term, $taxonomy = '') {
-        return get_term_link($term, $taxonomy);
-    }
-    
-    /**
-     * Get term count
-     * 
-     * @param string $taxonomy Taxonomy name
-     * @return int
-     */
-    public function get_term_count($taxonomy) {
-        if (!$this->is_registered($taxonomy)) {
-            return 0;
-        }
-        
-        $terms = $this->get_terms($taxonomy, ['fields' => 'count']);
-        return is_wp_error($terms) ? 0 : $terms;
-    }
-    
-    /**
-     * Get posts by term
-     * 
-     * @param string $taxonomy Taxonomy name
-     * @param int|string $term Term ID or slug
-     * @param array $args WP_Query arguments
-     * @return \WP_Query
-     */
-    public function get_posts_by_term($taxonomy, $term, $args = []) {
-        $default_args = [
-            'post_type' => 'parfume',
-            'post_status' => 'publish',
-            'posts_per_page' => 12,
-            'tax_query' => [
-                [
-                    'taxonomy' => $taxonomy,
-                    'field' => is_numeric($term) ? 'term_id' : 'slug',
-                    'terms' => $term
-                ]
-            ]
-        ];
-        
-        $args = wp_parse_args($args, $default_args);
-        
-        return new \WP_Query($args);
-    }
-    
-    /**
-     * Check if current page is taxonomy archive
-     * 
-     * @param string $taxonomy Optional taxonomy name
-     * @return bool
-     */
-    public function is_taxonomy_archive($taxonomy = null) {
-        if ($taxonomy) {
-            return is_tax($taxonomy);
-        }
-        
-        return is_tax($this->get_taxonomies());
-    }
-    
-    /**
-     * Get current taxonomy
-     * 
-     * @return string|false
-     */
-    public function get_current_taxonomy() {
-        if (!$this->is_taxonomy_archive()) {
-            return false;
-        }
-        
+    private function load_taxonomy_template() {
         $queried_object = get_queried_object();
         
-        return isset($queried_object->taxonomy) ? $queried_object->taxonomy : false;
-    }
-    
-    /**
-     * Get current term
-     * 
-     * @return \WP_Term|false
-     */
-    public function get_current_term() {
-        if (!$this->is_taxonomy_archive()) {
+        if (!isset($queried_object->taxonomy)) {
             return false;
         }
         
-        return get_queried_object();
+        $taxonomy = $queried_object->taxonomy;
+        
+        // Check if it's a parfume taxonomy
+        $parfume_taxonomies = ['marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'];
+        
+        if (!in_array($taxonomy, $parfume_taxonomies)) {
+            return false;
+        }
+        
+        // Try specific taxonomy template first
+        $specific_template = $this->locate_template("taxonomy-{$taxonomy}.php");
+        if ($specific_template) {
+            return $specific_template;
+        }
+        
+        // Fall back to generic taxonomy template
+        $generic_template = $this->locate_template('taxonomy.php');
+        if ($generic_template) {
+            return $generic_template;
+        }
+        
+        return false;
     }
     
     /**
-     * Add default terms for a taxonomy
+     * Locate template
      * 
-     * @param string $taxonomy Taxonomy name
+     * Checks theme folder first, then plugin folder
+     * 
+     * @param string $template_name Template file name
+     * @return string|false Template path or false if not found
      */
-    public function add_default_terms($taxonomy) {
-        $config = $this->get_taxonomy_config($taxonomy);
+    public function locate_template($template_name) {
+        // Check in theme folder
+        $theme_template = locate_template([
+            trailingslashit($this->theme_template_path) . $template_name
+        ]);
         
-        if (!$config || !isset($config['default_terms'])) {
+        if ($theme_template) {
+            return $theme_template;
+        }
+        
+        // Check in plugin folder
+        $plugin_template = $this->plugin_template_path . $template_name;
+        
+        if (file_exists($plugin_template)) {
+            return $plugin_template;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Get template part
+     * 
+     * Load a template part
+     * 
+     * @param string $slug Template slug
+     * @param string $name Optional template name
+     * @param array $args Optional arguments to pass to template
+     */
+    public function get_template_part($slug, $name = null, $args = []) {
+        $templates = [];
+        
+        if ($name) {
+            $templates[] = "{$slug}-{$name}.php";
+        }
+        
+        $templates[] = "{$slug}.php";
+        
+        $template = $this->locate_template_from_array($templates);
+        
+        if ($template) {
+            if (!empty($args)) {
+                extract($args);
+            }
+            
+            do_action('parfume_reviews_before_template_part', $slug, $name, $template, $args);
+            
+            include $template;
+            
+            do_action('parfume_reviews_after_template_part', $slug, $name, $template, $args);
+        }
+    }
+    
+    /**
+     * Locate template from array
+     * 
+     * @param array $template_names Array of template names
+     * @return string|false Template path or false
+     */
+    private function locate_template_from_array($template_names) {
+        foreach ($template_names as $template_name) {
+            $template = $this->locate_template($template_name);
+            if ($template) {
+                return $template;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Include template with arguments
+     * 
+     * @param string $template_name Template file name
+     * @param array $args Arguments to pass to template
+     * @param string $template_path Optional template path
+     * @param string $default_path Optional default path
+     */
+    public function include_template($template_name, $args = [], $template_path = '', $default_path = '') {
+        if (!empty($args)) {
+            extract($args);
+        }
+        
+        $template = $this->locate_template($template_name);
+        
+        if (!$template) {
             return;
         }
         
-        foreach ($config['default_terms'] as $term_name) {
-            if (!term_exists($term_name, $taxonomy)) {
-                $this->create_term($taxonomy, $term_name);
-            }
+        do_action('parfume_reviews_before_template', $template_name, $template, $args);
+        
+        include $template;
+        
+        do_action('parfume_reviews_after_template', $template_name, $template, $args);
+    }
+    
+    /**
+     * Enqueue template assets
+     */
+    public function enqueue_assets() {
+        // Only on parfume pages
+        if (!$this->is_parfume_page()) {
+            return;
+        }
+        
+        // Enqueue CSS based on page type
+        if (is_singular('parfume')) {
+            wp_enqueue_style(
+                'parfume-reviews-single',
+                PARFUME_REVIEWS_URL . 'assets/css/single-parfume.css',
+                ['parfume-reviews-main'],
+                PARFUME_REVIEWS_VERSION
+            );
+        }
+        
+        if (is_post_type_archive('parfume') || $this->is_parfume_taxonomy()) {
+            wp_enqueue_style(
+                'parfume-reviews-archive',
+                PARFUME_REVIEWS_URL . 'assets/css/archive.css',
+                ['parfume-reviews-main'],
+                PARFUME_REVIEWS_VERSION
+            );
         }
     }
     
     /**
-     * Get taxonomy labels
+     * Check if current page is parfume related
      * 
-     * @param string $taxonomy Taxonomy name
-     * @return array|null
+     * @return bool
      */
-    public function get_labels($taxonomy) {
-        $config = $this->get_taxonomy_config($taxonomy);
-        return $config && isset($config['labels']) ? $config['labels'] : null;
+    private function is_parfume_page() {
+        // Check only after WordPress is fully loaded
+        if (!did_action('wp')) {
+            return false;
+        }
+        
+        return is_singular('parfume') || 
+               is_post_type_archive('parfume') || 
+               $this->is_parfume_taxonomy();
     }
     
     /**
-     * Get taxonomy label
+     * Check if current page is parfume taxonomy
      * 
-     * @param string $taxonomy Taxonomy name
-     * @param string $label_key Label key (e.g., 'name', 'singular_name')
-     * @return string|null
+     * @return bool
      */
-    public function get_label($taxonomy, $label_key = 'name') {
-        $labels = $this->get_labels($taxonomy);
-        return $labels && isset($labels[$label_key]) ? $labels[$label_key] : null;
+    private function is_parfume_taxonomy() {
+        // Check only after parse_query
+        if (!did_action('parse_query')) {
+            return false;
+        }
+        
+        $parfume_taxonomies = ['marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'];
+        
+        foreach ($parfume_taxonomies as $taxonomy) {
+            if (is_tax($taxonomy)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Get template content
+     * 
+     * Returns template content as string instead of including it
+     * 
+     * @param string $template_name Template file name
+     * @param array $args Arguments to pass to template
+     * @return string Template content
+     */
+    public function get_template_content($template_name, $args = []) {
+        ob_start();
+        $this->include_template($template_name, $args);
+        return ob_get_clean();
     }
 }

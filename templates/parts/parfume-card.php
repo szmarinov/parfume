@@ -25,14 +25,18 @@ if (!$post) {
     return;
 }
 
-// Get meta data
+// Get meta data and sanitize
 $rating = get_post_meta($post_id, '_parfume_rating', true);
+$rating = !empty($rating) && is_numeric($rating) ? floatval($rating) : 0;
+
 $stores = get_post_meta($post_id, '_parfume_stores', true);
 
 // Calculate cheapest price
 $cheapest_price = null;
 if (!empty($stores) && is_array($stores)) {
-    $prices = array_filter(array_column($stores, 'price'));
+    $prices = array_filter(array_column($stores, 'price'), function($price) {
+        return !empty($price) && is_numeric($price) && $price > 0;
+    });
     if (!empty($prices)) {
         $cheapest_price = min($prices);
     }
@@ -62,32 +66,15 @@ $notes = wp_get_post_terms($post_id, 'notes', ['number' => 3]);
             
             <!-- Quick Actions -->
             <div class="card-actions">
-                
-                <!-- Add to Comparison -->
-                <?php if (function_exists('parfume_reviews_comparison_button')) : ?>
-                    <button type="button" 
-                            class="quick-action comparison-toggle" 
-                            data-post-id="<?php echo esc_attr($post_id); ?>"
-                            title="<?php _e('Добави за сравнение', 'parfume-reviews'); ?>">
-                        <span class="dashicons dashicons-forms"></span>
-                    </button>
+                <?php if (function_exists('parfume_reviews_get_comparison_button')) : ?>
+                    <?php echo parfume_reviews_get_comparison_button($post_id); ?>
                 <?php endif; ?>
-                
-                <!-- Wishlist (if implemented) -->
-                <button type="button" 
-                        class="quick-action wishlist-toggle" 
-                        data-post-id="<?php echo esc_attr($post_id); ?>"
-                        title="<?php _e('Добави в любими', 'parfume-reviews'); ?>">
-                    <span class="dashicons dashicons-heart"></span>
-                </button>
-                
             </div>
             
             <!-- Price Badge -->
             <?php if ($cheapest_price) : ?>
                 <div class="price-badge">
-                    <span class="price-from"><?php _e('от', 'parfume-reviews'); ?></span>
-                    <span class="price-value"><?php echo esc_html(number_format($cheapest_price, 2)); ?></span>
+                    <span class="price-amount"><?php echo number_format($cheapest_price, 2, '.', ''); ?></span>
                     <span class="price-currency">лв</span>
                 </div>
             <?php endif; ?>
@@ -97,7 +84,7 @@ $notes = wp_get_post_terms($post_id, 'notes', ['number' => 3]);
         <div class="card-content">
             
             <!-- Brand -->
-            <?php if (!empty($brands)) : ?>
+            <?php if (!empty($brands) && !is_wp_error($brands)) : ?>
                 <div class="card-brand">
                     <a href="<?php echo esc_url(get_term_link($brands[0])); ?>">
                         <?php echo esc_html($brands[0]->name); ?>
@@ -113,7 +100,7 @@ $notes = wp_get_post_terms($post_id, 'notes', ['number' => 3]);
             </h3>
             
             <!-- Gender -->
-            <?php if (!empty($genders)) : ?>
+            <?php if (!empty($genders) && !is_wp_error($genders)) : ?>
                 <div class="card-gender">
                     <?php foreach ($genders as $gender) : ?>
                         <span class="gender-badge"><?php echo esc_html($gender->name); ?></span>
@@ -122,7 +109,7 @@ $notes = wp_get_post_terms($post_id, 'notes', ['number' => 3]);
             <?php endif; ?>
             
             <!-- Notes -->
-            <?php if (!empty($notes)) : ?>
+            <?php if (!empty($notes) && !is_wp_error($notes)) : ?>
                 <div class="card-notes">
                     <?php foreach ($notes as $note) : ?>
                         <span class="note-badge"><?php echo esc_html($note->name); ?></span>
@@ -131,7 +118,7 @@ $notes = wp_get_post_terms($post_id, 'notes', ['number' => 3]);
             <?php endif; ?>
             
             <!-- Rating -->
-            <?php if ($rating) : ?>
+            <?php if ($rating > 0) : ?>
                 <div class="card-rating">
                     <div class="rating-stars">
                         <?php

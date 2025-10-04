@@ -1,0 +1,382 @@
+/**
+ * Admin Settings Styles
+ * 
+ * Styles for plugin settings page
+ * 
+ * @package Parfume_Reviews
+ * @since 2.0.0
+ */
+
+/* ==========================================================================
+   Settings Page Layout
+   ========================================================================== */
+
+.parfume-reviews-settings {
+    max-width: 1200px;
+}
+
+.parfume-reviews-settings .nav-tab-wrapper {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ccd0d4;
+}
+
+.parfume-reviews-settings .nav-tab {
+    position: relative;
+    padding: 10px 20px;
+    font-size: 14px;
+}
+
+.parfume-reviews-settings .nav-tab:before {
+    font-family: dashicons;
+    margin-right: 8px;
+    font-size: 16px;
+    vertical-align: middle;
+}
+
+/* Tab Icons */
+.parfume-reviews-settings .nav-tab[data-tab="general"]:before {
+    content: "\f108"; /* admin-generic */
+}
+
+.parfume-reviews-settings .nav-tab[data-tab="urls"]:before {
+    content: "\f103"; /* admin-links */
+}
+
+.parfume-reviews-settings .nav-tab[data-tab="mobile"]:before {
+    content: "\f470"; /* smartphone */
+}
+
+.parfume-reviews-settings .nav-tab[data-tab="scraper"]:before {
+    content: "\f177"; /* download */
+}
+
+.parfume-reviews-settings .nav-tab[data-tab="comparison"]:before {
+    content: "\f173"; /* columns */
+}
+
+.parfume-reviews-settings .nav-tab[data-tab="advanced"]:before {
+    content: "\f111"; /* admin-tools */
+}
+
+/* ==========================================================================
+   Form Sections
+   ========================================================================== */
+
+.form-table {
+    margin-top: 20px;
+}
+
+.form-table th {
+    width: 250px;
+    padding: 20px 10px 20px 0;
+}
+
+.form-table td {
+    padding: 15px 10px;
+}
+
+.form-table tr {
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.form-table tr:last-child {
+    border-bottom: none;
+}
+
+/* Field Descriptions */
+.form-table .description {
+    margin-top: 8px;
+    font-style: italic;
+    color: #646970;
+    font-size: 13px;
+}
+
+/* ==========================================================================
+   Input Fields
+   ========================================================================== */
+
+.form-table input[type="text"],
+.form-table input[type="number"],
+.form-table input[type="url"],
+.form-table select,
+.form-table textarea {
+    width: 100%;
+    max-width: 400px;
+}
+
+.form-table input[type="number"].small-text {
+    max-width: 100px;
+}
+
+.form-table textarea {
+    max-width: 600px;
+}
+
+/* Checkbox Fields */
+.form-table input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.form-table label {
+    display: inline-flex;
+    align-items: center;
+}
+
+/* ==========================================================================
+   Section Headers
+   ========================================================================== */
+
+h2.hndle {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    padding: 8px 12px;
+}
+
+.postbox .inside {
+    margin: 0;
+    padding: 0;
+}
+
+/* ==========================================================================
+   Settings Groups
+   ========================================================================== */
+
+.settings-section {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    margin-bottom: 20px;
+}
+
+.settings-section-header {
+    padding: 12px;
+    border-bottom: 1px solid #c3c4c7;
+    background: #f6f7f7;
+}
+
+.settings-section-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.settings-section-body {
+    padding: 20px;
+}
+
+/* ==========================================================================
+   Submit Button
+   ========================================================================== */
+
+.submit {
+    padding: 0;
+    margin-top: 20px;
+}
+
+.submit .button-primary {
+    padding: 8px 24px;
+    font-size: 14px;
+}
+
+/* ==========================================================================
+   Notice Messages
+   ========================================================================== */
+
+.notice {
+    margin: 20px 0;
+}
+
+.notice p {
+    margin: 0.5em 0;
+}
+
+/* ==========================================================================
+   Scraper Settings Specific
+   ========================================================================== */
+
+.scraper-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.scraper-status.enabled {
+    background: #d4edda;
+    color: #155724;
+}
+
+.scraper-status.disabled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.scraper-status:before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.supported-stores-list {
+    list-style: none;
+    margin: 10px 0;
+    padding: 0;
+}
+
+.supported-stores-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.supported-stores-list li:before {
+    content: "\f147"; /* yes */
+    font-family: dashicons;
+    color: #46b450;
+    margin-right: 8px;
+}
+
+/* ==========================================================================
+   Mobile Settings Preview
+   ========================================================================== */
+
+.mobile-preview {
+    max-width: 400px;
+    margin: 20px 0;
+    padding: 15px;
+    background: #f6f7f7;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+}
+
+.mobile-preview-header {
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.mobile-panel-demo {
+    background: #fff;
+    padding: 15px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    position: relative;
+}
+
+.mobile-panel-demo:before {
+    content: "Магазини";
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+/* ==========================================================================
+   URL Structure Preview
+   ========================================================================== */
+
+.url-preview {
+    margin-top: 10px;
+    padding: 12px;
+    background: #f6f7f7;
+    border-left: 4px solid #2271b1;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.url-preview-label {
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif;
+}
+
+/* ==========================================================================
+   Comparison Settings
+   ========================================================================== */
+
+.comparison-max-items-slider {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.comparison-max-items-slider input[type="range"] {
+    flex: 1;
+    max-width: 300px;
+}
+
+.comparison-max-items-value {
+    font-weight: 600;
+    font-size: 16px;
+    color: #2271b1;
+    min-width: 30px;
+}
+
+/* ==========================================================================
+   Advanced Settings Warnings
+   ========================================================================== */
+
+.setting-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    margin-top: 10px;
+    font-size: 13px;
+}
+
+.setting-warning:before {
+    content: "\f227"; /* warning */
+    font-family: dashicons;
+    font-size: 16px;
+    color: #856404;
+}
+
+.setting-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f8d7da;
+    border-left: 4px solid #dc3545;
+    margin-top: 10px;
+    font-size: 13px;
+}
+
+.setting-danger:before {
+    content: "\f153"; /* dismiss */
+    font-family: dashicons;
+    font-size: 16px;
+    color: #721c24;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media screen and (max-width: 782px) {
+    .form-table th,
+    .form-table td {
+        display: block;
+        width: 100%;
+        padding: 10px;
+    }
+    
+    .form-table th {
+        padding-bottom: 0;
+    }
+    
+    .form-table input[type="text"],
+    .form-table input[type="number"],
+    .form-table input[type="url"],
+    .form-table select,
+    .form-table textarea {
+        max-width: 100%;
+    }
+}
