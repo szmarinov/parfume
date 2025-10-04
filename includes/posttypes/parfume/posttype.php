@@ -56,7 +56,13 @@ class PostType {
     public function __construct(Container $container) {
         $this->container = $container;
         $this->config = $this->get_config();
+        $this->post_type = isset($this->config['post_type']) ? $this->config['post_type'] : 'parfume';
+        
+        // Initialize meta boxes
         $this->meta_boxes = new MetaBoxes($this->config);
+        
+        // Register admin assets hook
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_meta_box_assets']);
     }
     
     /**
@@ -80,6 +86,7 @@ class PostType {
      */
     private function get_default_config() {
         return [
+            'post_type' => 'parfume',
             'labels' => [],
             'public' => true,
             'publicly_queryable' => true,
@@ -97,6 +104,7 @@ class PostType {
             'query_var' => true,
             'can_export' => true,
             'delete_with_user' => false,
+            'meta_boxes' => []
         ];
     }
     
@@ -179,6 +187,49 @@ class PostType {
     }
     
     /**
+     * Enqueue meta box assets
+     * 
+     * @param string $hook Current admin page hook
+     */
+    public function enqueue_meta_box_assets($hook) {
+        // Only on post edit screens
+        if ($hook !== 'post.php' && $hook !== 'post-new.php') {
+            return;
+        }
+        
+        // Only for parfume post type
+        global $post;
+        if (!$post || $post->post_type !== 'parfume') {
+            return;
+        }
+        
+        // Enqueue CSS
+        wp_enqueue_style(
+            'parfume-reviews-admin-metaboxes',
+            PARFUME_REVIEWS_URL . 'assets/css/admin-metaboxes.css',
+            [],
+            PARFUME_REVIEWS_VERSION
+        );
+        
+        // Enqueue JavaScript
+        wp_enqueue_media(); // For gallery field
+        wp_enqueue_script(
+            'parfume-reviews-admin-metaboxes',
+            PARFUME_REVIEWS_URL . 'assets/js/admin-metaboxes.js',
+            ['jquery', 'jquery-ui-sortable'],
+            PARFUME_REVIEWS_VERSION,
+            true
+        );
+        
+        // Pass data to JavaScript
+        wp_localize_script('parfume-reviews-admin-metaboxes', 'parfumeMetaboxes', [
+            'nonce' => wp_create_nonce('parfume_scraper_nonce'),
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'postId' => $post->ID
+        ]);
+    }
+    
+    /**
      * Get post type slug
      * 
      * @return string
@@ -219,7 +270,7 @@ class PostType {
      * @param int $post_id Post ID
      * @param string $key Meta key
      * @param mixed $value Meta value
-     * @return bool|int
+     * @return bool
      */
     public function update_meta($post_id, $key, $value) {
         return update_post_meta($post_id, '_parfume_' . $key, $value);
@@ -234,162 +285,5 @@ class PostType {
      */
     public function delete_meta($post_id, $key) {
         return delete_post_meta($post_id, '_parfume_' . $key);
-    }
-    
-    /**
-     * Get all parfume meta
-     * 
-     * @param int $post_id Post ID
-     * @return array
-     */
-    public function get_all_meta($post_id) {
-        $meta = [];
-        $all_meta = get_post_meta($post_id);
-        
-        foreach ($all_meta as $key => $value) {
-            // Only get parfume meta (prefixed with _parfume_)
-            if (strpos($key, '_parfume_') === 0) {
-                $clean_key = str_replace('_parfume_', '', $key);
-                $meta[$clean_key] = isset($value[0]) ? $value[0] : $value;
-            }
-        }
-        
-        return $meta;
-    }
-    
-    /**
-     * Get parfumes with filters
-     * 
-     * @param array $args WP_Query arguments
-     * @return \WP_Query
-     */
-    public function get_parfumes($args = []) {
-        $default_args = [
-            'post_type' => $this->post_type,
-            'post_status' => 'publish',
-            'posts_per_page' => 12,
-            'orderby' => 'date',
-            'order' => 'DESC'
-        ];
-        
-        $args = wp_parse_args($args, $default_args);
-        
-        return new \WP_Query($args);
-    }
-    
-    /**
-     * Get parfume by ID
-     * 
-     * @param int $post_id Post ID
-     * @return \WP_Post|null
-     */
-    public function get_parfume($post_id) {
-        $post = get_post($post_id);
-        
-        if ($post && $post->post_type === $this->post_type) {
-            return $post;
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Get featured parfumes
-     * 
-     * @param int $count Number of parfumes to get
-     * @return \WP_Query
-     */
-    public function get_featured($count = 6) {
-        return $this->get_parfumes([
-            'posts_per_page' => $count,
-            'meta_query' => [
-                [
-                    'key' => '_parfume_featured',
-                    'value' => '1',
-                    'compare' => '='
-                ]
-            ]
-        ]);
-    }
-    
-    /**
-     * Get top rated parfumes
-     * 
-     * @param int $count Number of parfumes to get
-     * @return \WP_Query
-     */
-    public function get_top_rated($count = 6) {
-        return $this->get_parfumes([
-            'posts_per_page' => $count,
-            'meta_key' => '_parfume_rating',
-            'orderby' => 'meta_value_num',
-            'order' => 'DESC'
-        ]);
-    }
-    
-    /**
-     * Get newest parfumes
-     * 
-     * @param int $count Number of parfumes to get
-     * @return \WP_Query
-     */
-    public function get_newest($count = 6) {
-        return $this->get_parfumes([
-            'posts_per_page' => $count,
-            'orderby' => 'date',
-            'order' => 'DESC'
-        ]);
-    }
-    
-    /**
-     * Search parfumes
-     * 
-     * @param string $search_term Search term
-     * @param array $args Additional WP_Query arguments
-     * @return \WP_Query
-     */
-    public function search($search_term, $args = []) {
-        $args['s'] = $search_term;
-        return $this->get_parfumes($args);
-    }
-    
-    /**
-     * Get parfumes by taxonomy term
-     * 
-     * @param string $taxonomy Taxonomy name
-     * @param string|int $term Term slug or ID
-     * @param array $args Additional WP_Query arguments
-     * @return \WP_Query
-     */
-    public function get_by_term($taxonomy, $term, $args = []) {
-        $tax_query = [
-            [
-                'taxonomy' => $taxonomy,
-                'field' => is_numeric($term) ? 'term_id' : 'slug',
-                'terms' => $term
-            ]
-        ];
-        
-        if (isset($args['tax_query'])) {
-            $args['tax_query'] = array_merge($args['tax_query'], $tax_query);
-        } else {
-            $args['tax_query'] = $tax_query;
-        }
-        
-        return $this->get_parfumes($args);
-    }
-    
-    /**
-     * Count parfumes
-     * 
-     * @param array $args WP_Query arguments
-     * @return int
-     */
-    public function count($args = []) {
-        $args['posts_per_page'] = -1;
-        $args['fields'] = 'ids';
-        
-        $query = $this->get_parfumes($args);
-        return $query->found_posts;
     }
 }

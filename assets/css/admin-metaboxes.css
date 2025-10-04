@@ -1,0 +1,377 @@
+/**
+ * Admin Meta Boxes Styles
+ * 
+ * Styles for custom meta boxes
+ * 
+ * @package Parfume_Reviews
+ * @since 2.0.0
+ */
+
+/* ==========================================================================
+   Meta Box Fields
+   ========================================================================== */
+
+.parfume-meta-box-fields {
+    padding: 12px;
+}
+
+.parfume-field-wrapper {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.parfume-field-wrapper:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.parfume-field-wrapper label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.parfume-field-wrapper .description {
+    margin-top: 6px;
+    font-style: italic;
+    color: #646970;
+    font-size: 13px;
+}
+
+/* ==========================================================================
+   Repeater Fields
+   ========================================================================== */
+
+.parfume-repeater-field {
+    background: #fff;
+}
+
+.repeater-items {
+    margin-bottom: 12px;
+}
+
+.repeater-item {
+    position: relative;
+    padding: 15px;
+    margin-bottom: 12px;
+    background: #f6f7f7;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+}
+
+.repeater-item:hover {
+    border-color: #2271b1;
+}
+
+.repeater-item-handle {
+    cursor: move;
+    padding: 4px;
+    margin: -15px -15px 10px -15px;
+    background: #e0e0e0;
+    text-align: center;
+    border-radius: 3px 3px 0 0;
+}
+
+.repeater-item-handle:before {
+    content: "⋮⋮";
+    color: #999;
+    font-size: 12px;
+}
+
+.repeater-field {
+    margin-bottom: 12px;
+}
+
+.repeater-field:last-child {
+    margin-bottom: 0;
+}
+
+.repeater-field label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.repeater-field input[type="text"],
+.repeater-field input[type="url"],
+.repeater-field input[type="number"] {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #8c8f94;
+    border-radius: 3px;
+}
+
+.repeater-field input[type="text"]:focus,
+.repeater-field input[type="url"]:focus,
+.repeater-field input[type="number"]:focus {
+    border-color: #2271b1;
+    outline: none;
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+.remove-repeater-item {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #b32d2e;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.remove-repeater-item:hover {
+    color: #dc3232;
+}
+
+.add-repeater-item {
+    margin-top: 8px;
+}
+
+.repeater-item-placeholder {
+    background: #e3f2fd;
+    border: 2px dashed #2271b1;
+    height: 100px;
+}
+
+/* ==========================================================================
+   Gallery Fields
+   ========================================================================== */
+
+.parfume-gallery-field {
+    background: #fff;
+}
+
+.gallery-images {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 10px;
+    background: #f6f7f7;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    min-height: 120px;
+}
+
+.gallery-image {
+    position: relative;
+    padding-top: 100%;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.gallery-image img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.gallery-image:hover {
+    border-color: #2271b1;
+}
+
+.remove-gallery-image {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: none;
+    padding: 0;
+}
+
+.gallery-image:hover .remove-gallery-image {
+    display: block;
+}
+
+.remove-gallery-image:hover {
+    background: #dc3232;
+}
+
+.gallery-image-placeholder {
+    background: #e3f2fd;
+    border: 2px dashed #2271b1;
+}
+
+/* ==========================================================================
+   Stores Meta Box (Sidebar)
+   ========================================================================== */
+
+#parfume_stores {
+    background: #f6f7f7;
+}
+
+#parfume_stores .inside {
+    margin: 0;
+    padding: 0;
+}
+
+#parfume_stores .parfume-meta-box-fields {
+    padding: 12px;
+}
+
+#parfume_stores .repeater-item {
+    background: #fff;
+    padding: 12px;
+}
+
+#parfume_stores .repeater-field {
+    margin-bottom: 10px;
+}
+
+#parfume_stores .repeater-field label {
+    font-size: 12px;
+    color: #646970;
+}
+
+#parfume_stores input[type="text"],
+#parfume_stores input[type="url"],
+#parfume_stores input[type="number"] {
+    font-size: 13px;
+    padding: 4px 8px;
+}
+
+/* Store action buttons */
+.store-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.store-actions button {
+    flex: 1;
+    font-size: 11px;
+    padding: 4px 8px;
+    white-space: nowrap;
+}
+
+.update-store-price {
+    background: #2271b1;
+    border-color: #2271b1;
+    color: #fff;
+}
+
+.update-store-price:hover {
+    background: #135e96;
+    border-color: #135e96;
+}
+
+.scrape-store-url {
+    background: #50575e;
+    border-color: #50575e;
+    color: #fff;
+}
+
+.scrape-store-url:hover {
+    background: #3c434a;
+    border-color: #3c434a;
+}
+
+/* ==========================================================================
+   Scraper Status
+   ========================================================================== */
+
+.scraper-status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+.scraper-status-indicator.active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.scraper-status-indicator.inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.scraper-status-indicator:before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+/* ==========================================================================
+   Loading States
+   ========================================================================== */
+
+.repeater-item.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.repeater-item.loading:after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #2271b1;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   Validation States
+   ========================================================================== */
+
+input.error,
+input[type="url"].error {
+    border-color: #dc3232 !important;
+    box-shadow: 0 0 0 1px #dc3232 !important;
+}
+
+input.success,
+input[type="url"].success {
+    border-color: #46b450 !important;
+    box-shadow: 0 0 0 1px #46b450 !important;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 782px) {
+    .gallery-images {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    }
+    
+    .store-actions {
+        flex-direction: column;
+    }
+    
+    .store-actions button {
+        width: 100%;
+    }
+}
