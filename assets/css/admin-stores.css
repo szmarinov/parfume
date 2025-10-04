@@ -1,0 +1,385 @@
+/**
+ * Admin Stores Styles
+ * 
+ * Styles for stores meta box
+ * 
+ * @package Parfume_Reviews
+ * @since 2.0.0
+ */
+
+/* ==========================================================================
+   Stores Repeater Container
+   ========================================================================== */
+
+.parfume-stores-repeater {
+    margin-top: 10px;
+}
+
+.stores-list {
+    margin-bottom: 15px;
+}
+
+.store-item {
+    position: relative;
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+}
+
+.store-item:hover {
+    border-color: #2271b1;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.store-item.ui-sortable-helper {
+    opacity: 0.7;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.sortable-placeholder {
+    border: 2px dashed #2271b1;
+    background: #f0f6fc;
+    height: 60px;
+    margin-bottom: 12px;
+    border-radius: 4px;
+}
+
+/* ==========================================================================
+   Store Item Handle (Drag)
+   ========================================================================== */
+
+.repeater-item-handle {
+    cursor: move;
+    padding: 6px;
+    text-align: center;
+    background: #f0f0f1;
+    border-bottom: 1px solid #c3c4c7;
+    border-radius: 4px 4px 0 0;
+}
+
+.repeater-item-handle .dashicons {
+    color: #646970;
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+}
+
+.repeater-item-handle:hover .dashicons {
+    color: #2271b1;
+}
+
+/* ==========================================================================
+   Store Item Header
+   ========================================================================== */
+
+.store-item-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    gap: 12px;
+}
+
+.store-logo-preview {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border: 1px solid #dcdcde;
+    border-radius: 3px;
+    padding: 4px;
+    background: #fff;
+}
+
+.store-item-title {
+    flex: 1;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.store-item-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.store-item-actions .button {
+    padding: 4px 8px;
+    min-height: 0;
+    line-height: 1;
+}
+
+.store-item-actions .dashicons {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+}
+
+/* ==========================================================================
+   Store Item Content
+   ========================================================================== */
+
+.store-item-content {
+    padding: 15px;
+    border-top: 1px solid #f0f0f1;
+}
+
+.repeater-field {
+    margin-bottom: 15px;
+}
+
+.repeater-field:last-child {
+    margin-bottom: 0;
+}
+
+.repeater-field label {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.repeater-field .description {
+    margin-top: 5px;
+    font-size: 12px;
+    color: #646970;
+    font-style: italic;
+}
+
+/* ==========================================================================
+   Scraped Data Section
+   ========================================================================== */
+
+.scraped-data-section {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 2px solid #f0f0f1;
+}
+
+.scraped-data-section > h4 {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #646970;
+}
+
+.scraped-data-item {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 10px;
+    margin-bottom: 8px;
+    background: #f6f7f7;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.scraped-data-item strong {
+    min-width: 100px;
+    margin-right: 10px;
+    color: #1d2327;
+}
+
+.scraped-value {
+    flex: 1;
+    color: #2271b1;
+    font-weight: 500;
+}
+
+.scrape-time {
+    font-size: 11px;
+    color: #646970;
+    margin-left: 15px;
+}
+
+.no-data {
+    color: #999;
+    font-style: italic;
+}
+
+.in-stock {
+    color: #46b450;
+    font-weight: 600;
+}
+
+.out-of-stock {
+    color: #dc3232;
+    font-weight: 600;
+}
+
+/* ML Variants List */
+.ml-variants-list {
+    width: 100%;
+    margin-top: 5px;
+}
+
+.ml-variant-item {
+    padding: 5px 10px;
+    margin-bottom: 3px;
+    background: #fff;
+    border-left: 3px solid #2271b1;
+    font-size: 12px;
+}
+
+/* ==========================================================================
+   Scrape Status Badge
+   ========================================================================== */
+
+.scrape-status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-top: 8px;
+}
+
+.scrape-status-badge.status-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.scrape-status-badge.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.scrape-status-badge.status-error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.scrape-status-badge.status-blocked {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+/* ==========================================================================
+   Store Actions
+   ========================================================================== */
+
+.store-actions {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.store-actions .button {
+    margin-right: 8px;
+}
+
+.scrape-now-button {
+    background: #2271b1;
+    border-color: #2271b1;
+    color: #fff;
+}
+
+.scrape-now-button:hover {
+    background: #135e96;
+    border-color: #135e96;
+    color: #fff;
+}
+
+.scrape-now-button .dashicons {
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+.scrape-now-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Add Store Button
+   ========================================================================== */
+
+.add-store-button-wrap {
+    text-align: center;
+    margin: 15px 0 0 0;
+}
+
+.add-store-item {
+    background: #2271b1;
+    border-color: #2271b1;
+    color: #fff;
+    padding: 8px 16px;
+}
+
+.add-store-item:hover {
+    background: #135e96;
+    border-color: #135e96;
+    color: #fff;
+}
+
+.add-store-item .dashicons {
+    vertical-align: middle;
+    margin-right: 5px;
+}
+
+/* ==========================================================================
+   Sidebar Context (when meta box is in sidebar)
+   ========================================================================== */
+
+#parfume_stores.postbox {
+    background: #f6f7f7;
+}
+
+#parfume_stores .inside {
+    margin: 0;
+    padding: 0;
+}
+
+#parfume_stores .parfume-stores-repeater {
+    padding: 12px;
+}
+
+#parfume_stores .store-item {
+    font-size: 12px;
+}
+
+#parfume_stores .store-logo-preview {
+    width: 30px;
+    height: 30px;
+}
+
+#parfume_stores .store-item-title {
+    font-size: 13px;
+}
+
+#parfume_stores .repeater-field input[type="text"],
+#parfume_stores .repeater-field input[type="url"],
+#parfume_stores .repeater-field select {
+    font-size: 12px;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 782px) {
+    .store-item-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .store-item-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .scraped-data-item {
+        flex-direction: column;
+    }
+    
+    .scraped-data-item strong {
+        margin-bottom: 5px;
+    }
+    
+    .scrape-time {
+        margin-left: 0;
+        display: block;
+        margin-top: 3px;
+    }
+}

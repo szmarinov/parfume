@@ -77,27 +77,23 @@ return [
             'parent_item_colon' => 'Родителски парфюм:',
             'not_found' => 'Няма намерени парфюми.',
             'not_found_in_trash' => 'Няма парфюми в кошчето.',
-            'featured_image' => 'Главна снимка',
-            'set_featured_image' => 'Задай главна снимка',
-            'remove_featured_image' => 'Премахни главна снимка',
-            'use_featured_image' => 'Използвай като главна снимка',
             'archives' => 'Архиви на парфюми',
             'insert_into_item' => 'Вмъкни в парфюм',
             'uploaded_to_this_item' => 'Качено към този парфюм',
-            'filter_items_list' => 'Филтрирай списъка с парфюми',
+            'featured_image' => 'Изображение на парфюма',
+            'set_featured_image' => 'Задай изображение',
+            'remove_featured_image' => 'Премахни изображение',
+            'use_featured_image' => 'Използвай като изображение',
+            'filter_items_list' => 'Филтрирай списък с парфюми',
             'items_list_navigation' => 'Навигация в списъка с парфюми',
-            'items_list' => 'Списък с парфюми',
-            'item_published' => 'Парфюмът е публикуван.',
-            'item_published_privately' => 'Парфюмът е публикуван частно.',
-            'item_reverted_to_draft' => 'Парфюмът е върнат в чернова.',
-            'item_scheduled' => 'Парфюмът е планиран.',
-            'item_updated' => 'Парфюмът е обновен.',
+            'items_list' => 'Списък с парфюми'
         ],
         
         /**
          * Meta Boxes Configuration
          */
         'meta_boxes' => [
+            // Basic Information Meta Box
             'basic_info' => [
                 'id' => 'parfume_basic_info',
                 'title' => 'Основна информация',
@@ -105,7 +101,7 @@ return [
                 'priority' => 'high',
                 'fields' => [
                     'rating' => [
-                        'label' => 'Оценка',
+                        'label' => 'Обща оценка',
                         'type' => 'number',
                         'min' => 0,
                         'max' => 10,
@@ -113,160 +109,197 @@ return [
                         'default' => 0,
                         'description' => 'Обща оценка (0-10)'
                     ],
-                    'gender_text' => [
-                        'label' => 'Пол (текст)',
-                        'type' => 'text',
-                        'description' => 'Допълнителна информация за пол'
-                    ],
                     'release_year' => [
                         'label' => 'Година на издаване',
                         'type' => 'number',
                         'min' => 1900,
                         'max' => 2100,
-                        'step' => 1,
-                        'description' => 'Годината в която е издаден парфюмът'
+                        'description' => 'Годината, в която е пуснат парфюмът'
                     ],
-                    'longevity' => [
-                        'label' => 'Дълготрайност',
+                    'concentration' => [
+                        'label' => 'Концентрация',
                         'type' => 'select',
                         'options' => [
-                            '' => '-- Избери --',
-                            'weak' => 'Слаба (1-2 часа)',
-                            'moderate' => 'Средна (3-5 часа)',
-                            'long' => 'Дълга (6-8 часа)',
-                            'very_long' => 'Много дълга (8+ часа)',
+                            'edp' => 'Eau de Parfum (EDP)',
+                            'edt' => 'Eau de Toilette (EDT)',
+                            'edc' => 'Eau de Cologne (EDC)',
+                            'perfume' => 'Perfume/Extrait',
+                            'edp_intense' => 'EDP Intense',
+                            'other' => 'Друго'
                         ],
-                        'description' => 'Колко време издържа парфюмът'
-                    ],
-                    'sillage' => [
-                        'label' => 'Силаж',
-                        'type' => 'select',
-                        'options' => [
-                            '' => '-- Избери --',
-                            'intimate' => 'Интимен',
-                            'moderate' => 'Среден',
-                            'strong' => 'Силен',
-                            'enormous' => 'Огромен',
-                        ],
-                        'description' => 'Интензивността на аромата'
-                    ],
-                    'bottle_size' => [
-                        'label' => 'Обем на бутилката (ml)',
-                        'type' => 'text',
-                        'description' => 'Налични размери (напр. 50ml, 100ml)'
+                        'default' => 'edp'
                     ]
                 ]
             ],
             
-            'aroma_chart' => [
-                'id' => 'parfume_aroma_chart',
-                'title' => 'Ароматна диаграма',
+            // Characteristics Meta Box
+            'characteristics' => [
+                'id' => 'parfume_characteristics',
+                'title' => 'Характеристики',
+                'context' => 'normal',
+                'priority' => 'high',
+                'fields' => [
+                    'longevity' => [
+                        'label' => 'Дълготрайност',
+                        'type' => 'select',
+                        'options' => [
+                            'very_weak' => 'Много слаб',
+                            'weak' => 'Слаб',
+                            'moderate' => 'Умерен',
+                            'long_lasting' => 'Траен',
+                            'eternal' => 'Изключително траен'
+                        ],
+                        'default' => 'moderate',
+                        'description' => 'Колко време издържа ароматът'
+                    ],
+                    'sillage' => [
+                        'label' => 'Ароматна следа (Sillage)',
+                        'type' => 'select',
+                        'options' => [
+                            'intimate' => 'Слаба',
+                            'moderate' => 'Умерена',
+                            'strong' => 'Силна',
+                            'enormous' => 'Огромна'
+                        ],
+                        'default' => 'moderate',
+                        'description' => 'Интензивност на ароматната следа'
+                    ],
+                    'price_value' => [
+                        'label' => 'Ценова категория',
+                        'type' => 'select',
+                        'options' => [
+                            'too_expensive' => 'Прекалено скъп',
+                            'expensive' => 'Скъп',
+                            'acceptable' => 'Приемлива цена',
+                            'good_price' => 'Добра цена',
+                            'cheap' => 'Евтин'
+                        ],
+                        'default' => 'acceptable'
+                    ]
+                ]
+            ],
+            
+            // Notes Meta Box (Composition)
+            'notes' => [
+                'id' => 'parfume_notes',
+                'title' => 'Ароматни нотки',
+                'context' => 'normal',
+                'priority' => 'high',
+                'fields' => [
+                    'top_notes' => [
+                        'label' => 'Връхни нотки',
+                        'type' => 'taxonomy_select',
+                        'taxonomy' => 'notes',
+                        'multiple' => true,
+                        'description' => 'Първоначални нотки (първите 15 мин)'
+                    ],
+                    'middle_notes' => [
+                        'label' => 'Средни нотки (Сърце)',
+                        'type' => 'taxonomy_select',
+                        'taxonomy' => 'notes',
+                        'multiple' => true,
+                        'description' => 'Сърдечни нотки (2-4 часа)'
+                    ],
+                    'base_notes' => [
+                        'label' => 'Базови нотки',
+                        'type' => 'taxonomy_select',
+                        'taxonomy' => 'notes',
+                        'multiple' => true,
+                        'description' => 'Финални нотки (продължават най-дълго)'
+                    ]
+                ]
+            ],
+            
+            // Advantages & Disadvantages
+            'pros_cons' => [
+                'id' => 'parfume_pros_cons',
+                'title' => 'Предимства и недостатъци',
                 'context' => 'normal',
                 'priority' => 'default',
                 'fields' => [
-                    'aroma_chart' => [
-                        'label' => 'Ароматни характеристики',
+                    'advantages' => [
+                        'label' => 'Предимства',
                         'type' => 'repeater',
-                        'description' => 'Добавете ароматни характеристики и техните стойности',
+                        'button_label' => 'Добави предимство',
                         'fields' => [
-                            'name' => [
-                                'label' => 'Характеристика',
+                            'text' => [
+                                'label' => 'Предимство',
                                 'type' => 'text'
-                            ],
-                            'value' => [
-                                'label' => 'Стойност (%)',
-                                'type' => 'number',
-                                'min' => 0,
-                                'max' => 100,
-                                'step' => 1
+                            ]
+                        ]
+                    ],
+                    'disadvantages' => [
+                        'label' => 'Недостатъци',
+                        'type' => 'repeater',
+                        'button_label' => 'Добави недостатък',
+                        'fields' => [
+                            'text' => [
+                                'label' => 'Недостатък',
+                                'type' => 'text'
                             ]
                         ]
                     ]
                 ]
             ],
             
-            'pros_cons' => [
-                'id' => 'parfume_pros_cons',
-                'title' => 'Предимства и Недостатъци',
-                'context' => 'normal',
+            // Gallery Meta Box
+            'gallery' => [
+                'id' => 'parfume_gallery',
+                'title' => 'Галерия',
+                'context' => 'side',
                 'priority' => 'default',
                 'fields' => [
-                    'pros' => [
-                        'label' => 'Предимства',
-                        'type' => 'textarea',
-                        'rows' => 5,
-                        'description' => 'Едно предимство на ред'
-                    ],
-                    'cons' => [
-                        'label' => 'Недостатъци',
-                        'type' => 'textarea',
-                        'rows' => 5,
-                        'description' => 'Един недостатък на ред'
+                    'gallery' => [
+                        'label' => 'Изображения',
+                        'type' => 'gallery',
+                        'description' => 'Добавете допълнителни изображения'
                     ]
                 ]
             ],
             
+            // STORES META BOX
             'stores' => [
                 'id' => 'parfume_stores',
-                'title' => 'Магазини и Цени',
+                'title' => 'Магазини и цени',
                 'context' => 'side',
                 'priority' => 'default',
                 'fields' => [
                     'stores' => [
                         'label' => 'Магазини',
-                        'type' => 'repeater',
-                        'description' => 'Добавете магазини и цени',
+                        'type' => 'stores_repeater',
+                        'description' => 'Добавете магазини с Product URLs за автоматично скрейпване',
+                        'button_label' => 'Добави магазин',
                         'fields' => [
-                            'name' => [
-                                'label' => 'Име на магазин',
-                                'type' => 'text'
+                            'store_id' => [
+                                'label' => 'Магазин',
+                                'type' => 'store_select',
+                                'description' => 'Изберете магазин'
                             ],
-                            'url' => [
-                                'label' => 'URL',
-                                'type' => 'url'
+                            'product_url' => [
+                                'label' => 'Product URL',
+                                'type' => 'url',
+                                'placeholder' => 'https://example.com/product/parfum',
+                                'description' => 'URL на продукта в магазина'
                             ],
-                            'price' => [
-                                'label' => 'Цена',
-                                'type' => 'number',
-                                'min' => 0,
-                                'step' => 0.01
+                            'affiliate_url' => [
+                                'label' => 'Affiliate URL',
+                                'type' => 'url',
+                                'placeholder' => 'https://example.com/aff/product',
+                                'description' => 'Affiliate линк (с target="_blank" rel="nofollow")'
                             ],
-                            'currency' => [
-                                'label' => 'Валута',
+                            'promo_code' => [
+                                'label' => 'Promo Code',
                                 'type' => 'text',
-                                'default' => 'BGN'
+                                'placeholder' => 'DISCOUNT10',
+                                'description' => 'Промо код за отстъпка'
                             ],
-                            'in_stock' => [
-                                'label' => 'В наличност',
-                                'type' => 'checkbox'
-                            ],
-                            'shipping_info' => [
-                                'label' => 'Информация за доставка',
-                                'type' => 'text'
-                            ],
-                            'coupon_code' => [
-                                'label' => 'Код за отстъпка',
-                                'type' => 'text'
-                            ],
-                            'promotion' => [
-                                'label' => 'Промоция',
-                                'type' => 'text'
+                            'promo_code_info' => [
+                                'label' => 'Promo Code Info',
+                                'type' => 'text',
+                                'placeholder' => '-10% отстъпка',
+                                'description' => 'Информация за промо кода'
                             ]
                         ]
-                    ]
-                ]
-            ],
-            
-            'gallery' => [
-                'id' => 'parfume_gallery',
-                'title' => 'Галерия',
-                'context' => 'side',
-                'priority' => 'low',
-                'fields' => [
-                    'gallery' => [
-                        'label' => 'Снимки',
-                        'type' => 'gallery',
-                        'description' => 'Добавете допълнителни снимки на парфюма'
                     ]
                 ]
             ]
