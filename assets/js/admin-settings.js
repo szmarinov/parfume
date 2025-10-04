@@ -1,5 +1,5 @@
 /**
- * Parfume Reviews Admin Settings JavaScript - FIXED VERSION
+ * Parfume Reviews Admin Settings JavaScript
  * assets/js/admin-settings.js
  */
 
@@ -15,61 +15,60 @@
 
     /**
      * Initialize tab functionality
-     * FIXED: Updated selectors to work with WordPress nav-tab-wrapper
      */
     function initTabs() {
-        // Handle tab clicks - FIXED: Updated selector to use .nav-tab-wrapper
-        $('.nav-tab-wrapper .nav-tab').on('click', function(e) {
+        // Handle tab clicks
+        $('.parfume-settings-tabs .nav-tab').on('click', function(e) {
             e.preventDefault();
             
             const $clickedTab = $(this);
             const targetTabId = $clickedTab.attr('href').replace('#', '');
             
-            // Update active tab visually - FIXED: Updated selector
-            $('.nav-tab-wrapper .nav-tab').removeClass('nav-tab-active');
+            // Update active tab visually
+            $('.parfume-settings-tabs .nav-tab').removeClass('nav-tab-active');
             $clickedTab.addClass('nav-tab-active');
             
             // Hide all tab content with fade effect
-            $('.tab-content').hide().removeClass('tab-content-active');
-            
-            // Show target tab content with fade effect
-            $('#' + targetTabId).addClass('tab-content-active').show();
-            
-            // Update URL hash without triggering scroll
-            if (history.pushState) {
-                history.pushState(null, null, '#' + targetTabId);
-            }
-            
-            // Trigger custom event for other scripts
-            $(document).trigger('parfume-tab-changed', [targetTabId]);
-            
-            // Focus management for accessibility
-            setTimeout(function() {
-                $('#' + targetTabId).find('input, select, textarea').first().focus();
-            }, 100);
+            $('.tab-content').removeClass('tab-content-active').fadeOut(200, function() {
+                // Show target tab content with fade effect after previous content is hidden
+                $('#' + targetTabId).addClass('tab-content-active').fadeIn(300, function() {
+                    // Update URL hash without triggering scroll
+                    if (history.pushState) {
+                        history.pushState(null, null, '#' + targetTabId);
+                    }
+                    
+                    // Trigger custom event for other scripts
+                    $(document).trigger('parfume-tab-changed', [targetTabId]);
+                });
+                
+                // Focus management for accessibility
+                setTimeout(function() {
+                    $('#' + targetTabId).find('input, select, textarea').first().focus();
+                }, 300);
+            });
         });
         
-        // Handle browser back/forward - FIXED: Updated selector
+        // Handle browser back/forward
         $(window).on('popstate', function() {
             const hash = window.location.hash;
             if (hash) {
                 const tabId = hash.replace('#', '');
                 if ($('#' + tabId).length) {
-                    $('.nav-tab-wrapper .nav-tab[href="' + hash + '"]').trigger('click');
+                    $('.parfume-settings-tabs .nav-tab[href="' + hash + '"]').trigger('click');
                 }
             } else {
                 // Default to first tab if no hash
-                $('.nav-tab-wrapper .nav-tab').first().trigger('click');
+                $('.parfume-settings-tabs .nav-tab').first().trigger('click');
             }
         });
         
-        // Initialize from URL hash on page load or default to first tab - FIXED: Updated selector
+        // Initialize from URL hash on page load or default to first tab
         const initialHash = window.location.hash;
         if (initialHash && $(initialHash).length) {
-            $('.nav-tab-wrapper .nav-tab[href="' + initialHash + '"]').trigger('click');
+            $('.parfume-settings-tabs .nav-tab[href="' + initialHash + '"]').trigger('click');
         } else {
             // Show first tab by default
-            $('.nav-tab-wrapper .nav-tab').first().trigger('click');
+            $('.parfume-settings-tabs .nav-tab').first().trigger('click');
         }
     }
 
@@ -80,30 +79,27 @@
         // Add loading state to form submission
         $('form').on('submit', function() {
             const $form = $(this);
-            const $submitBtn = $form.find('input[type="submit"], button[type="submit"]');
+            const $submitBtn = $form.find('.button-primary');
             
-            $submitBtn.addClass('updating-message').prop('disabled', true);
+            $submitBtn.prop('disabled', true)
+                     .text('Запазване...')
+                     .addClass('updating-message');
+            
             $form.addClass('settings-loading');
         });
         
-        // Enhanced file input styling
-        $('input[type="file"]').on('change', function() {
-            const $input = $(this);
-            const fileName = $input.val().split('\\').pop();
-            const $label = $input.siblings('label, .file-label');
+        // Auto-save indication for certain fields
+        $('.auto-save input, .auto-save select, .auto-save textarea').on('change', function() {
+            const $field = $(this);
+            const $indicator = $('<span class="save-indicator">Промяна направена</span>');
             
-            if (fileName) {
-                $label.text(fileName);
-            }
-        });
-        
-        // Auto-save draft functionality for large forms
-        let autoSaveTimeout;
-        $('.tab-content input, .tab-content select, .tab-content textarea').on('input change', function() {
-            clearTimeout(autoSaveTimeout);
-            autoSaveTimeout = setTimeout(function() {
-                // Could implement auto-save here if needed
-                console.log('Auto-save triggered');
+            $field.parent().find('.save-indicator').remove();
+            $field.parent().append($indicator);
+            
+            setTimeout(function() {
+                $indicator.fadeOut(function() {
+                    $indicator.remove();
+                });
             }, 2000);
         });
     }
@@ -112,72 +108,107 @@
      * Initialize form validation
      */
     function initValidation() {
-        // URL slug validation
+        // Slug validation
         $('input[name*="_slug"]').on('input', function() {
             const $input = $(this);
             let value = $input.val();
             
-            // Convert to valid slug format
+            // Convert to valid slug
             value = value.toLowerCase()
-                        .replace(/[^\w\-]/g, '-')
-                        .replace(/-+/g, '-')
-                        .replace(/^-|-$/g, '');
+                        .replace(/[^\w\s-]/g, '') // Remove special chars
+                        .replace(/[\s_-]+/g, '-') // Replace spaces/underscores with hyphens
+                        .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
             
             if (value !== $input.val()) {
                 $input.val(value);
+                showValidationMessage($input, 'Slug-ът е автоматично форматиран', 'info');
             }
             
-            // Visual feedback
-            if (value.length > 0 && value.match(/^[a-z0-9\-]+$/)) {
-                $input.removeClass('invalid').addClass('valid');
+            // Check for empty slug
+            if (value === '') {
+                showValidationMessage($input, 'Slug-ът не може да бъде празен', 'error');
             } else {
-                $input.removeClass('valid').addClass('invalid');
+                clearValidationMessage($input);
             }
         });
         
-        // Number input validation
+        // Numeric validation
         $('input[type="number"]').on('input', function() {
             const $input = $(this);
+            const value = parseInt($input.val());
             const min = parseInt($input.attr('min')) || 0;
-            const max = parseInt($input.attr('max')) || Infinity;
-            const value = parseInt($input.val()) || 0;
+            const max = parseInt($input.attr('max')) || 999;
             
-            if (value < min || value > max) {
-                $input.addClass('invalid');
+            if (isNaN(value) || value < min || value > max) {
+                showValidationMessage($input, `Стойността трябва да бъде между ${min} и ${max}`, 'error');
             } else {
-                $input.removeClass('invalid');
+                clearValidationMessage($input);
             }
         });
         
-        // Required field validation
-        $('input[required], select[required], textarea[required]').on('blur', function() {
+        // File upload validation
+        $('input[type="file"]').on('change', function() {
             const $input = $(this);
-            if (!$input.val().trim()) {
-                $input.addClass('invalid');
-            } else {
-                $input.removeClass('invalid');
+            const file = this.files[0];
+            
+            if (file) {
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                const allowedTypes = ['application/json'];
+                
+                if (file.size > maxSize) {
+                    showValidationMessage($input, 'Файлът е твърде голям (макс. 10MB)', 'error');
+                    $input.val('');
+                } else if (!allowedTypes.includes(file.type) && !file.name.endsWith('.json')) {
+                    showValidationMessage($input, 'Позволени са само JSON файлове', 'error');
+                    $input.val('');
+                } else {
+                    showValidationMessage($input, 'Файлът е валиден', 'success');
+                }
             }
         });
+    }
+
+    /**
+     * Show validation message
+     */
+    function showValidationMessage($field, message, type) {
+        clearValidationMessage($field);
+        
+        const $message = $('<div class="validation-message validation-' + type + '">' + message + '</div>');
+        $field.after($message);
+        
+        // Auto-hide success and info messages
+        if (type === 'success' || type === 'info') {
+            setTimeout(function() {
+                $message.fadeOut(function() {
+                    $message.remove();
+                });
+            }, 3000);
+        }
+    }
+
+    /**
+     * Clear validation message
+     */
+    function clearValidationMessage($field) {
+        $field.siblings('.validation-message').remove();
     }
 
     /**
      * Initialize tooltips and help text
      */
     function initTooltips() {
-        // Add help tooltips for complex settings
+        // Add help icons for complex fields
         const helpTexts = {
-            'parfume_slug': 'Промяната изисква обновяване на permalink структурата.',
-            'posts_per_page': 'Определя колко парфюма се показват на една страница в архива.',
-            'scraper_frequency': 'Колко често системата проверява за промени в цените от външните магазини.',
-            'mobile_z_index': 'CSS z-index стойност за mobile panel. По-висока стойност означава, че панелът ще се показва над други елементи.',
-            'debug_mode': 'Включва допълнителна информация за debugging в browser console и WordPress debug log.',
-            'backup_frequency': 'Как често да се създават автоматични backup файлове на настройките и данните.'
+            'parfume_slug': 'Това е основният URL slug за архивната страница на парфюмите. Промяната изисква обновяване на permalink структурата.',
+            'archive_posts_per_page': 'Определя колко парфюма се показват на една страница в архива.',
+            'price_check_interval': 'Колко често системата проверява за промени в цените от външните магазини.'
         };
         
         $.each(helpTexts, function(fieldName, helpText) {
             const $field = $('input[name*="' + fieldName + '"], select[name*="' + fieldName + '"]');
             if ($field.length) {
-                const $helpIcon = $('<span class="help-icon dashicons dashicons-editor-help" title="' + helpText + '"></span>');
+                const $helpIcon = $('<span class="help-icon" title="' + helpText + '">?</span>');
                 $field.after($helpIcon);
                 
                 $helpIcon.on('click', function() {
@@ -221,169 +252,98 @@
         if (!$fileInput.val()) {
             e.preventDefault();
             alert('Моля изберете файл за импорт.');
-            return;
+            return false;
         }
         
         // Show progress
-        $submitBtn.val('Импортиране...').prop('disabled', true);
+        $submitBtn.prop('disabled', true)
+                  .val('Импортиране...')
+                  .addClass('updating-message');
         
-        // Add progress bar if needed
-        if (!$form.find('.progress-bar').length) {
-            $form.append('<div class="progress-bar"><div class="progress-fill"></div></div>');
+        // Add progress indicator
+        const $progress = $('<div class="import-progress">Обработване на файла...</div>');
+        $form.append($progress);
+    });
+
+    /**
+     * Handle export button clicks
+     */
+    $(document).on('click', 'a[href*="parfume_export"]', function(e) {
+        const $btn = $(this);
+        const originalText = $btn.text();
+        
+        $btn.text('Експортиране...')
+            .addClass('updating-message')
+            .prop('disabled', true);
+        
+        // Reset button after delay (since it's a download link)
+        setTimeout(function() {
+            $btn.text(originalText)
+                .removeClass('updating-message')
+                .prop('disabled', false);
+        }, 3000);
+    });
+
+    /**
+     * Keyboard shortcuts
+     */
+    $(document).on('keydown', function(e) {
+        // Ctrl/Cmd + S to save
+        if ((e.ctrlKey || e.metaKey) && e.which === 83) {
+            e.preventDefault();
+            $('form .button-primary').click();
+        }
+        
+        // Ctrl/Cmd + number to switch tabs
+        if ((e.ctrlKey || e.metaKey) && e.which >= 49 && e.which <= 57) {
+            const tabIndex = e.which - 49;
+            const $tab = $('.parfume-settings-tabs .nav-tab').eq(tabIndex);
+            if ($tab.length) {
+                e.preventDefault();
+                $tab.click();
+            }
         }
     });
 
     /**
-     * Handle settings reset functionality
+     * Auto-save draft functionality
      */
-    $(document).on('click', '.reset-settings', function(e) {
-        e.preventDefault();
-        
-        if (confirm('Сигурни ли сте, че искате да нулирате настройките? Тази операция не може да бъде отменена.')) {
-            const $btn = $(this);
-            const section = $btn.data('section');
+    let autoSaveTimer;
+    function startAutoSave() {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(function() {
+            const formData = $('form').serialize();
             
-            $.post(ajaxurl, {
-                action: 'parfume_reset_settings',
-                section: section,
-                nonce: parfumeSettings.nonce
-            }, function(response) {
-                if (response.success) {
-                    location.reload();
-                } else {
-                    alert('Грешка при нулиране на настройките: ' + response.data);
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'parfume_autosave_settings',
+                    nonce: $('#_wpnonce').val(),
+                    data: formData
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showNotification('Настройките са автоматично запазени', 'info');
+                    }
                 }
             });
-        }
-    });
-
-    /**
-     * Handle dynamic store management
-     */
-    $(document).on('click', '.add-store', function(e) {
-        e.preventDefault();
-        // Store management functionality would go here
-    });
-
-    /**
-     * Handle scraper queue management
-     */
-    $(document).on('click', '#run-scraper-now', function(e) {
-        e.preventDefault();
-        const $btn = $(this);
-        
-        $btn.prop('disabled', true).text('Стартира...');
-        
-        $.post(ajaxurl, {
-            action: 'parfume_run_scraper_now',
-            nonce: parfumeSettings.nonce
-        }, function(response) {
-            if (response.success) {
-                alert('Scraper е стартиран успешно.');
-                location.reload();
-            } else {
-                alert('Грешка при стартиране на scraper: ' + response.data);
-            }
-        }).always(function() {
-            $btn.prop('disabled', false).text('Стартирай скрейпване сега');
-        });
-    });
-
-    /**
-     * Auto-refresh for dynamic content
-     */
-    function setupAutoRefresh() {
-        // Refresh scraper queue status every 30 seconds if on scraper tab
-        setInterval(function() {
-            if ($('#product-scraper').hasClass('tab-content-active')) {
-                const $queueStatus = $('#scraper-queue-status');
-                if ($queueStatus.length) {
-                    $.post(ajaxurl, {
-                        action: 'parfume_get_queue_status',
-                        nonce: parfumeSettings.nonce
-                    }, function(response) {
-                        if (response.success) {
-                            $queueStatus.html(response.data);
-                        }
-                    });
-                }
-            }
-        }, 30000);
+        }, 30000); // Auto-save every 30 seconds
     }
 
-    // Initialize auto-refresh
-    setupAutoRefresh();
-
     /**
-     * Handle shortcode generation
+     * Show notification
      */
-    $(document).on('change', '#shortcode-type, #shortcode-count, #shortcode-columns, #shortcode-orderby', function() {
-        generateShortcode();
-    });
-
-    function generateShortcode() {
-        const type = $('#shortcode-type').val();
-        const count = $('#shortcode-count').val();
-        const columns = $('#shortcode-columns').val();
-        const orderby = $('#shortcode-orderby').val();
+    function showNotification(message, type) {
+        const $notification = $('<div class="notice notice-' + type + ' is-dismissible"><p>' + message + '</p></div>');
+        $('.wrap > h1').after($notification);
         
-        if (!type) {
-            $('#generated-shortcode').val('');
-            return;
-        }
-        
-        let shortcode = '[' + type;
-        
-        if (count && count !== '6') {
-            shortcode += ' count="' + count + '"';
-        }
-        
-        if (columns && columns !== '3') {
-            shortcode += ' columns="' + columns + '"';
-        }
-        
-        if (orderby && orderby !== 'date') {
-            shortcode += ' orderby="' + orderby + '"';
-        }
-        
-        shortcode += ']';
-        
-        $('#generated-shortcode').val(shortcode);
+        setTimeout(function() {
+            $notification.fadeOut();
+        }, 3000);
     }
 
-    // Global functions for shortcode copying
-    window.copyToClipboard = function(text) {
-        navigator.clipboard.writeText(text).then(function() {
-            // Show success message
-            const $message = $('<div class="notice notice-success is-dismissible"><p>Shortcode копиран в клипборда!</p></div>');
-            $('.wrap').prepend($message);
-            setTimeout(function() {
-                $message.fadeOut();
-            }, 3000);
-        }, function(err) {
-            // Fallback for older browsers
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                alert('Shortcode копиран в клипборда!');
-            } catch (err) {
-                alert('Грешка при копиране. Моля копирайте ръчно.');
-            }
-            document.body.removeChild(textArea);
-        });
-    };
-
-    window.copyGeneratedShortcode = function() {
-        const shortcode = document.getElementById('generated-shortcode').value;
-        if (shortcode) {
-            copyToClipboard(shortcode);
-        } else {
-            alert('Първо генерирайте shortcode.');
-        }
-    };
+    // Start auto-save on form changes
+    $('form input, form select, form textarea').on('change', startAutoSave);
 
 })(jQuery);

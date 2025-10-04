@@ -32,14 +32,6 @@ class Settings_General {
             'parfume-reviews-settings',
             'parfume_reviews_general_section'
         );
-        
-        add_settings_field(
-            'featured_perfumes_per_intensity',
-            __('Парфюми за интензивност', 'parfume-reviews'),
-            array($this, 'featured_perfumes_per_intensity_callback'),
-            'parfume-reviews-settings',
-            'parfume_reviews_general_section'
-        );
     }
     
     /**
@@ -62,14 +54,6 @@ class Settings_General {
                     </th>
                     <td>
                         <?php $this->posts_per_page_callback(); ?>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">
-                        <label for="featured_perfumes_per_intensity"><?php _e('Парфюми за интензивност', 'parfume-reviews'); ?></label>
-                    </th>
-                    <td>
-                        <?php $this->featured_perfumes_per_intensity_callback(); ?>
                     </td>
                 </tr>
             </tbody>
@@ -95,23 +79,6 @@ class Settings_General {
     }
     
     /**
-     * Callback за featured_perfumes_per_intensity настройката
-     */
-    public function featured_perfumes_per_intensity_callback() {
-        $settings = get_option('parfume_reviews_settings', array());
-        $value = isset($settings['featured_perfumes_per_intensity']) ? $settings['featured_perfumes_per_intensity'] : 3;
-        
-        echo '<input type="number" 
-                     id="featured_perfumes_per_intensity"
-                     name="parfume_reviews_settings[featured_perfumes_per_intensity]" 
-                     value="' . esc_attr($value) . '" 
-                     min="1" 
-                     max="5" 
-                     class="small-text" />';
-        echo '<p class="description">' . __('Брой парфюми за показване в превю за всяка интензивност на архивната страница (1-5).', 'parfume-reviews') . '</p>';
-    }
-    
-    /**
      * Валидира настройките преди запазване
      */
     public function validate_settings($input) {
@@ -130,22 +97,6 @@ class Settings_General {
                     'error'
                 );
                 $validated['posts_per_page'] = 12; // default value
-            }
-        }
-        
-        // Валидация за featured_perfumes_per_intensity
-        if (isset($input['featured_perfumes_per_intensity'])) {
-            $featured_perfumes = intval($input['featured_perfumes_per_intensity']);
-            if ($featured_perfumes >= 1 && $featured_perfumes <= 5) {
-                $validated['featured_perfumes_per_intensity'] = $featured_perfumes;
-            } else {
-                add_settings_error(
-                    'parfume_reviews_settings',
-                    'featured_perfumes_error',
-                    __('Парфюмите за интензивност трябва да бъдат между 1 и 5.', 'parfume-reviews'),
-                    'error'
-                );
-                $validated['featured_perfumes_per_intensity'] = 3; // default value
             }
         }
         
@@ -176,20 +127,7 @@ class Settings_General {
         $settings = get_option('parfume_reviews_settings', array());
         
         return array(
-            'posts_per_page' => isset($settings['posts_per_page']) ? absint($settings['posts_per_page']) : 12,
-            'featured_perfumes_per_intensity' => isset($settings['featured_perfumes_per_intensity']) ? absint($settings['featured_perfumes_per_intensity']) : 3
-        );
-    }
-    
-    /**
-     * Получава настройките с defaults
-     */
-    public function get_settings_with_defaults() {
-        $settings = get_option('parfume_reviews_settings', array());
-        
-        return array(
-            'posts_per_page' => isset($settings['posts_per_page']) ? absint($settings['posts_per_page']) : 12,
-            'featured_perfumes_per_intensity' => isset($settings['featured_perfumes_per_intensity']) ? absint($settings['featured_perfumes_per_intensity']) : 3
+            'posts_per_page' => isset($settings['posts_per_page']) ? $settings['posts_per_page'] : 12
         );
     }
     
@@ -205,11 +143,6 @@ class Settings_General {
             $errors[] = __('Постовете на страница трябва да бъдат между 1 и 50.', 'parfume-reviews');
         }
         
-        // Проверка за featured_perfumes_per_intensity
-        if ($settings['featured_perfumes_per_intensity'] < 1 || $settings['featured_perfumes_per_intensity'] > 5) {
-            $errors[] = __('Парфюмите за интензивност трябва да бъдат между 1 и 5.', 'parfume-reviews');
-        }
-        
         return empty($errors) ? true : $errors;
     }
     
@@ -218,8 +151,7 @@ class Settings_General {
      */
     public function load_defaults() {
         $defaults = array(
-            'posts_per_page' => 12,
-            'featured_perfumes_per_intensity' => 3
+            'posts_per_page' => 12
         );
         
         $current_settings = get_option('parfume_reviews_settings', array());
@@ -233,8 +165,7 @@ class Settings_General {
      */
     public function reset_to_defaults() {
         $defaults = array(
-            'posts_per_page' => 12,
-            'featured_perfumes_per_intensity' => 3
+            'posts_per_page' => 12
         );
         
         $current_settings = get_option('parfume_reviews_settings', array());

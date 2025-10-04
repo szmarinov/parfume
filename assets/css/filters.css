@@ -182,18 +182,24 @@
 /* Price Inputs */
 .price-inputs {
     display: flex;
-    gap: 10px;
     align-items: center;
-    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .price-inputs input[type="number"] {
     flex: 1;
-    min-width: 100px;
     padding: 8px 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
+    background: #fff;
+    transition: border-color 0.3s ease;
+}
+
+.price-inputs input[type="number"]:focus {
+    outline: none;
+    border-color: #0073aa;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.1);
 }
 
 .price-separator {
@@ -201,34 +207,69 @@
     font-weight: bold;
 }
 
-/* Filter Submit */
-.filter-submit {
-    display: flex;
-    gap: 15px;
-    align-items: center;
-    justify-content: center;
-    margin-top: 25px;
-    padding-top: 20px;
-    border-top: 1px solid #f0f0f0;
+/* Select Dropdowns */
+.filter-section select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 14px;
+    margin-bottom: 10px;
+    transition: border-color 0.3s ease;
 }
 
-.filter-button {
-    background: linear-gradient(135deg, #0073aa, #005a87);
-    color: white;
+.filter-section select:focus {
+    outline: none;
+    border-color: #0073aa;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.1);
+}
+
+/* Filter Submit Buttons */
+.filter-submit {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 2px solid #e1e5e9;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.filter-button,
+.reset-button {
+    padding: 12px 24px;
     border: none;
-    padding: 12px 30px;
     border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
-    font-weight: bold;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(0, 115, 170, 0.3);
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
     min-width: 120px;
 }
 
+.filter-button {
+    background: #0073aa;
+    color: white;
+}
+
 .filter-button:hover {
-    background: linear-gradient(135deg, #005a87, #004466);
+    background: #005a87;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.4);
+    box-shadow: 0 2px 8px rgba(0, 115, 170, 0.3);
+}
+
+.filter-button.has-filters {
+    background: #d63384;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
 }
 
 .reset-button {
@@ -341,107 +382,6 @@
     color: #0073aa;
 }
 
-/* ==========================================================================
-   FILTER PREVIEW STYLES - Професионални стилове за избраните филтри
-   ========================================================================== */
-
-/* Filter Preview Container */
-.filter-preview {
-    display: none;
-    margin: 20px 0 15px 0;
-    padding: 16px 20px;
-    background: linear-gradient(135deg, #f8fafb 0%, #f1f3f4 100%);
-    border: 1px solid #e1e5e9;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    transition: all 0.3s ease;
-    position: relative;
-}
-
-.filter-preview::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #0073aa, #005a87, #667eea);
-    border-radius: 12px 12px 0 0;
-}
-
-.filter-preview:not(:empty) {
-    display: block;
-}
-
-/* Preview Tags */
-.preview-tag {
-    display: inline-flex;
-    align-items: center;
-    margin: 4px 8px 4px 0;
-    padding: 8px 14px;
-    background: #ffffff;
-    color: #2c3e50;
-    font-size: 13px;
-    font-weight: 500;
-    border: 1px solid #dee2e6;
-    border-radius: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.preview-tag::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: linear-gradient(180deg, #0073aa, #005a87);
-}
-
-.preview-tag:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    border-color: #0073aa;
-}
-
-.preview-tag:last-child {
-    margin-right: 0;
-}
-
-/* Filter Preview Header */
-.filter-preview::after {
-    content: "Избрани филтри:";
-    position: absolute;
-    top: -8px;
-    left: 20px;
-    background: linear-gradient(135deg, #f8fafb 0%, #f1f3f4 100%);
-    padding: 0 8px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Animation for when tags are added */
-@keyframes fadeInScale {
-    0% {
-        opacity: 0;
-        transform: scale(0.8) translateY(-10px);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-.preview-tag {
-    animation: fadeInScale 0.3s ease-out;
-}
-
 /* ========================================
    RESPONSIVE DESIGN
    ======================================== */
@@ -495,26 +435,6 @@
     .filter-tags {
         justify-content: center;
     }
-    
-    /* Filter Preview Responsive */
-    .filter-preview {
-        margin: 15px 0 12px 0;
-        padding: 12px 16px;
-        border-radius: 10px;
-    }
-    
-    .preview-tag {
-        margin: 3px 6px 3px 0;
-        padding: 6px 12px;
-        font-size: 12px;
-        border-radius: 16px;
-    }
-    
-    .filter-preview::after {
-        font-size: 10px;
-        left: 16px;
-        top: -7px;
-    }
 }
 
 @media (max-width: 480px) {
@@ -545,58 +465,12 @@
         font-size: 13px;
         min-width: 100px;
     }
-    
-    /* Filter Preview Mobile */
-    .filter-preview {
-        margin: 12px 0 10px 0;
-        padding: 10px 14px;
-        border-radius: 8px;
-    }
-    
-    .preview-tag {
-        margin: 2px 4px 2px 0;
-        padding: 5px 10px;
-        font-size: 11px;
-        border-radius: 14px;
-    }
-    
-    .preview-tag::before {
-        width: 2px;
-    }
-    
-    .filter-preview::after {
-        font-size: 9px;
-        left: 14px;
-        top: -6px;
-        padding: 0 6px;
-    }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-    .filter-preview {
-        background: linear-gradient(135deg, #2a2d32 0%, #1e2025 100%);
-        border-color: #3a3d42;
-        color: #e1e5e9;
-    }
-    
-    .preview-tag {
-        background: #3a3d42;
-        color: #e1e5e9;
-        border-color: #4a4d52;
-    }
-    
-    .filter-preview::after {
-        color: #a0a4a8;
-        background: linear-gradient(135deg, #2a2d32 0%, #1e2025 100%);
-    }
 }
 
 /* Print Styles */
 @media print {
     .parfume-filters-wrapper,
-    .active-filters,
-    .filter-preview {
-        display: none !important;
+    .active-filters {
+        display: none;
     }
 }
