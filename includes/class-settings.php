@@ -6,6 +6,7 @@ namespace Parfume_Reviews;
  * Зарежда всички settings компоненти от отделни файлове
  * 
  * Файл: includes/class-settings.php
+ * ВЕРСИЯ С INLINE JAVASCRIPT ЗА ТАБОВЕТЕ
  */
 class Settings {
     
@@ -100,25 +101,8 @@ class Settings {
             return;
         }
         
-        wp_enqueue_style('parfume-admin-settings', PARFUME_REVIEWS_PLUGIN_URL . 
-            'assets/css/admin-settings.css', array(), PARFUME_REVIEWS_VERSION);
-        wp_enqueue_script('parfume-settings-tabs', PARFUME_REVIEWS_PLUGIN_URL . 
-            'assets/js/admin-settings.js', array('jquery'), PARFUME_REVIEWS_VERSION, true);
-        
         // Enqueue media uploader за store логота
         wp_enqueue_media();
-        
-        // Localize script за AJAX calls
-        wp_localize_script('parfume-settings-tabs', 'parfumeSettings', array(
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('parfume_settings_nonce'),
-            'strings' => array(
-                'confirm_delete' => __('Сигурни ли сте, че искате да изтриете този магазин?', 'parfume-reviews'),
-                'scraping' => __('Скрейпване...', 'parfume-reviews'),
-                'error' => __('Възникна грешка', 'parfume-reviews'),
-                'success' => __('Успешно', 'parfume-reviews'),
-            )
-        ));
     }
     
     /**
@@ -307,6 +291,114 @@ class Settings {
                 <?php submit_button(); ?>
             </form>
         </div>
+        
+        <!-- INLINE CSS ЗА ТАБОВЕТЕ -->
+        <style type="text/css">
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 20px;
+            border: 1px solid #ccd0d4;
+            border-top: none;
+            margin-bottom: 20px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .nav-tab-wrapper {
+            border-bottom: 1px solid #ccd0d4;
+            padding: 0;
+            margin: 20px 0;
+        }
+        
+        .nav-tab {
+            float: left;
+            border: 1px solid #ccd0d4;
+            border-bottom: none;
+            margin-left: 0.5em;
+            padding: 5px 10px;
+            font-size: 12px;
+            line-height: 16px;
+            background: #f1f1f1;
+            color: #555;
+            text-decoration: none;
+        }
+        
+        .nav-tab:hover {
+            background-color: #fff;
+            color: #464646;
+        }
+        
+        .nav-tab-active,
+        .nav-tab-active:hover {
+            background-color: #fff;
+            border-bottom-color: #fff;
+            color: #000;
+            font-weight: 600;
+        }
+        </style>
+        
+        <!-- INLINE JAVASCRIPT ЗА ТАБОВЕТЕ -->
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            console.log('Parfume Settings Tabs JS loaded');
+            
+            // Hide all tabs initially except first
+            $('.tab-content').hide();
+            $('.tab-content').first().show().addClass('active');
+            
+            // Tab click handler
+            $('.nav-tab-wrapper .nav-tab').on('click', function(e) {
+                e.preventDefault();
+                console.log('Tab clicked:', $(this).attr('href'));
+                
+                var targetTab = $(this).attr('href');
+                
+                // Remove active class from all tabs
+                $('.nav-tab-wrapper .nav-tab').removeClass('nav-tab-active');
+                
+                // Add active class to clicked tab
+                $(this).addClass('nav-tab-active');
+                
+                // Hide all tab content
+                $('.tab-content').hide().removeClass('active');
+                
+                // Show target tab content
+                $(targetTab).show().addClass('active');
+                
+                // Update URL hash
+                if (history.pushState) {
+                    history.pushState(null, null, targetTab);
+                } else {
+                    window.location.hash = targetTab;
+                }
+                
+                console.log('Switched to tab:', targetTab);
+            });
+            
+            // Check URL hash on page load
+            var hash = window.location.hash;
+            if (hash) {
+                console.log('URL has hash:', hash);
+                var $targetTab = $('.nav-tab-wrapper .nav-tab[href="' + hash + '"]');
+                if ($targetTab.length) {
+                    $targetTab.trigger('click');
+                }
+            } else {
+                console.log('No hash, showing first tab');
+            }
+            
+            // Handle browser back/forward
+            $(window).on('hashchange', function() {
+                var newHash = window.location.hash;
+                if (newHash) {
+                    $('.nav-tab-wrapper .nav-tab[href="' + newHash + '"]').trigger('click');
+                }
+            });
+        });
+        </script>
         <?php
     }
     
