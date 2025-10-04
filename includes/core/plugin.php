@@ -4,21 +4,27 @@
  * 
  * Orchestrates the entire plugin lifecycle and manages all components
  * 
- * @package Parfume_Reviews
+ * @package ParfumeReviews
  * @subpackage Core
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Core;
+namespace ParfumeReviews\Core;
 
-use Parfume_Reviews\PostTypes\Parfume\PostType;
-use Parfume_Reviews\Taxonomies\TaxonomyManager;
-use Parfume_Reviews\Templates\Loader as TemplateLoader;
-use Parfume_Reviews\Admin\Settings\SettingsManager;
-use Parfume_Reviews\Features\Comparison\Comparison;
-use Parfume_Reviews\Features\ImportExport\ImportExport;
-use Parfume_Reviews\Features\Scraper\Scraper;
-use Parfume_Reviews\Features\Filters\FiltersHandler;
+use ParfumeReviews\PostTypes\Parfume\PostType;
+use ParfumeReviews\Taxonomies\TaxonomyManager;
+use ParfumeReviews\Templates\Loader as TemplateLoader;
+use ParfumeReviews\Admin\Settings\SettingsManager;
+use ParfumeReviews\Features\Comparison\Comparison;
+use ParfumeReviews\Features\ImportExport\ImportExport;
+use ParfumeReviews\Features\Scraper\Scraper;
+use ParfumeReviews\Features\Scraper\ScraperMonitor;
+use ParfumeReviews\Features\Scraper\ScraperCron;
+use ParfumeReviews\Features\Scraper\ScraperTestTool;
+use ParfumeReviews\Features\Stores\StoreManager;
+use ParfumeReviews\Features\Stores\StoreSchema;
+use ParfumeReviews\Features\Stores\StoreRepository;
+use ParfumeReviews\Features\Filters\FiltersHandler;
 
 /**
  * Main Plugin Class
@@ -204,6 +210,9 @@ class Plugin {
         // Register hooks for templates
         $this->loader->add_filter('template_include', $template_loader, 'load_template');
         $this->loader->add_action('wp_enqueue_scripts', $template_loader, 'enqueue_assets');
+        
+        // Single template override
+        $this->loader->add_filter('single_template', $this, 'load_single_template');
     }
     
     /**
@@ -214,6 +223,7 @@ class Plugin {
             return;
         }
         
+        // Settings manager
         $settings = new SettingsManager($this->container);
         $this->container->set('settings', $settings);
         
@@ -221,12 +231,56 @@ class Plugin {
         $this->loader->add_action('admin_menu', $settings, 'add_menu');
         $this->loader->add_action('admin_init', $settings, 'register_settings');
         $this->loader->add_action('admin_enqueue_scripts', $settings, 'enqueue_assets');
+        
+        // Admin stores assets
+        $this->loader->add_action('admin_enqueue_scripts', $this, 'enqueue_admin_stores_assets');
     }
     
     /**
      * Register features
      */
     private function register_features() {
+        // Store Management System
+        $store_manager = StoreManager::get_instance();
+        $this->container->set('features.store_manager', $store_manager);
+        
+        // Store Schema
+        $store_schema = new StoreSchema();
+        $this->container->set('features.store_schema', $store_schema);
+        
+        // Store Repository
+        $store_repository = new StoreRepository();
+        $this->container->set('features.store_repository', $store_repository);
+        
+        // Scraper with dependencies
+        $scraper = new Scraper($this->container);
+        $this->container->set('features.scraper', $scraper);
+        
+        if (is_admin()) {
+            // Scraper Monitor (Admin only)
+            $scraper_monitor = new ScraperMonitor($this->container);
+            $this->container->set('features.scraper_monitor', $scraper_monitor);
+            $this->loader->add_action('admin_menu', $this, 'add_scraper_monitor_page');
+            
+            // Scraper Test Tool (Admin only)
+            $scraper_test_tool = new ScraperTestTool($this->container);
+            $this->container->set('features.scraper_test_tool', $scraper_test_tool);
+            $this->loader->add_action('admin_menu', $this, 'add_scraper_test_tool_page');
+            
+            // AJAX handlers for scraper
+            $this->loader->add_action('wp_ajax_parfume_scrape_product', $scraper, 'ajax_scrape');
+            $this->loader->add_action('wp_ajax_parfume_update_price', $scraper, 'ajax_update_price');
+            
+            // AJAX handlers for test tool
+            $this->loader->add_action('wp_ajax_parfume_test_scrape', $scraper_test_tool, 'ajax_test_scrape');
+            $this->loader->add_action('wp_ajax_parfume_test_selector', $scraper_test_tool, 'ajax_test_selector');
+            $this->loader->add_action('wp_ajax_parfume_save_test_schema', $scraper_test_tool, 'ajax_save_schema');
+        }
+        
+        // Scraper Cron
+        $scraper_cron = new ScraperCron($this->container);
+        $this->container->set('features.scraper_cron', $scraper_cron);
+        
         // Comparison feature
         $comparison = new Comparison($this->container);
         $this->container->set('features.comparison', $comparison);
@@ -242,15 +296,6 @@ class Plugin {
             $this->loader->add_action('admin_post_parfume_export', $import_export, 'handle_export');
         }
         
-        // Scraper feature
-        $scraper = new Scraper($this->container);
-        $this->container->set('features.scraper', $scraper);
-        
-        if (is_admin()) {
-            $this->loader->add_action('wp_ajax_parfume_scrape_product', $scraper, 'ajax_scrape');
-            $this->loader->add_action('wp_ajax_parfume_update_price', $scraper, 'ajax_update_price');
-        }
-        
         // Filters feature
         $filters = new FiltersHandler($this->container);
         $this->container->set('features.filters', $filters);
@@ -264,106 +309,275 @@ class Plugin {
         // Shortcodes
         $this->loader->add_action('init', $this, 'register_shortcodes');
         
+        // Frontend assets
+        $this->loader->add_action('wp_enqueue_scripts', $this, 'enqueue_frontend_assets');
+        
         // AJAX handlers for frontend
         $this->register_ajax_handlers();
-        
-        // Enqueue frontend assets
-        $this->loader->add_action('wp_enqueue_scripts', $this, 'enqueue_frontend_assets');
     }
     
     /**
-     * Register shortcodes
+     * Add Scraper Monitor admin page
      */
-    public function register_shortcodes() {
-        // Main shortcodes will be registered here
-        // Example: add_shortcode('parfume_grid', [$this, 'shortcode_parfume_grid']);
+    public function add_scraper_monitor_page() {
+        add_submenu_page(
+            'edit.php?post_type=parfume',
+            __('Scraper Monitor', 'parfume-reviews'),
+            __('Scraper Monitor', 'parfume-reviews'),
+            'manage_options',
+            'parfume-scraper-monitor',
+            [$this->container->get('features.scraper_monitor'), 'render_page']
+        );
     }
     
     /**
-     * Register AJAX handlers
+     * Add Scraper Test Tool admin page
      */
-    private function register_ajax_handlers() {
-        // Add to comparison (logged in and non-logged in)
-        $this->loader->add_action('wp_ajax_add_to_comparison', $this, 'ajax_add_to_comparison');
-        $this->loader->add_action('wp_ajax_nopriv_add_to_comparison', $this, 'ajax_add_to_comparison');
+    public function add_scraper_test_tool_page() {
+        add_submenu_page(
+            'edit.php?post_type=parfume',
+            __('Scraper Test Tool', 'parfume-reviews'),
+            __('Test Tool', 'parfume-reviews'),
+            'manage_options',
+            'parfume-scraper-test',
+            [$this->container->get('features.scraper_test_tool'), 'render_page']
+        );
+    }
+    
+    /**
+     * Enqueue admin stores assets
+     */
+    public function enqueue_admin_stores_assets($hook) {
+        // Only on post editor pages
+        if ('post.php' !== $hook && 'post-new.php' !== $hook) {
+            return;
+        }
         
-        // Remove from comparison
-        $this->loader->add_action('wp_ajax_remove_from_comparison', $this, 'ajax_remove_from_comparison');
-        $this->loader->add_action('wp_ajax_nopriv_remove_from_comparison', $this, 'ajax_remove_from_comparison');
+        global $post;
         
-        // Get comparison data
-        $this->loader->add_action('wp_ajax_get_comparison_data', $this, 'ajax_get_comparison_data');
-        $this->loader->add_action('wp_ajax_nopriv_get_comparison_data', $this, 'ajax_get_comparison_data');
+        if (!$post || 'parfume' !== $post->post_type) {
+            return;
+        }
+        
+        // Admin stores CSS
+        wp_enqueue_style(
+            'parfume-admin-stores',
+            PARFUME_REVIEWS_URL . 'assets/css/admin-stores.css',
+            [],
+            $this->version
+        );
+        
+        // Admin stores JS
+        wp_enqueue_script(
+            'parfume-admin-stores',
+            PARFUME_REVIEWS_URL . 'assets/js/admin-stores.js',
+            ['jquery', 'jquery-ui-sortable'],
+            $this->version,
+            true
+        );
+        
+        // Localize script
+        wp_localize_script('parfume-admin-stores', 'parfumeAdminStores', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('parfume_admin_stores'),
+            'strings' => [
+                'confirm_delete' => __('Are you sure you want to remove this store?', 'parfume-reviews'),
+                'scraping' => __('Scraping...', 'parfume-reviews'),
+                'scrape_success' => __('Product data scraped successfully!', 'parfume-reviews'),
+                'scrape_error' => __('Failed to scrape product data.', 'parfume-reviews'),
+            ]
+        ]);
     }
     
     /**
      * Enqueue frontend assets
      */
     public function enqueue_frontend_assets() {
-        // Only on parfume pages
-        if (!$this->is_parfume_page()) {
+        // Only on single parfume pages
+        if (!is_singular('parfume')) {
             return;
         }
-        
-        // Main CSS
+
+        // Stores Column CSS
         wp_enqueue_style(
-            'parfume-reviews-main',
-            PARFUME_REVIEWS_URL . 'assets/css/main.css',
+            'parfume-stores-column',
+            PARFUME_REVIEWS_URL . 'assets/css/stores-column.css',
             [],
             $this->version
         );
-        
-        // Comparison Lightbox CSS
+
+        // Mobile Fixed Panel CSS
         wp_enqueue_style(
-            'parfume-reviews-comparison-lightbox',
-            PARFUME_REVIEWS_URL . 'assets/css/comparison-lightbox.css',
-            ['parfume-reviews-main'],
+            'parfume-mobile-panel',
+            PARFUME_REVIEWS_URL . 'assets/css/mobile-fixed-panel.css',
+            ['parfume-stores-column'],
             $this->version
         );
-        
-        // Main JavaScript
+
+        // Stores Frontend JS
         wp_enqueue_script(
-            'parfume-reviews-main',
-            PARFUME_REVIEWS_URL . 'assets/js/main.js',
+            'parfume-stores-frontend',
+            PARFUME_REVIEWS_URL . 'assets/js/stores-frontend.js',
             ['jquery'],
             $this->version,
             true
         );
-        
-        // Comparison Lightbox JavaScript
+
+        // Mobile Panel JS
         wp_enqueue_script(
-            'parfume-reviews-comparison-lightbox',
-            PARFUME_REVIEWS_URL . 'assets/js/comparison-lightbox.js',
-            ['jquery', 'parfume-reviews-main'],
+            'parfume-mobile-panel',
+            PARFUME_REVIEWS_URL . 'assets/js/mobile-panel.js',
+            ['jquery', 'parfume-stores-frontend'],
             $this->version,
             true
         );
+
+        // Localize mobile settings from WordPress options
+        $mobile_settings = get_option('parfume_reviews_mobile', []);
         
-        // Localize script
-        wp_localize_script('parfume-reviews-main', 'parfumeReviews', [
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('parfume_reviews_nonce')
+        wp_localize_script('parfume-mobile-panel', 'parfumeMobileSettings', [
+            'enabled' => isset($mobile_settings['enabled']) ? $mobile_settings['enabled'] : true,
+            'zIndex' => isset($mobile_settings['z_index']) ? intval($mobile_settings['z_index']) : 9999,
+            'offset' => isset($mobile_settings['offset']) ? intval($mobile_settings['offset']) : 0,
+            'showCloseButton' => isset($mobile_settings['show_close_button']) ? $mobile_settings['show_close_button'] : true,
+            'breakpoint' => isset($mobile_settings['breakpoint']) ? intval($mobile_settings['breakpoint']) : 768,
         ]);
     }
     
     /**
-     * Run the loader to register hooks with WordPress
+     * Load single template
+     */
+    public function load_single_template($template) {
+        global $post;
+
+        if ('parfume' === $post->post_type) {
+            $plugin_template = PARFUME_REVIEWS_PATH . 'templates/single-parfume.php';
+            
+            if (file_exists($plugin_template)) {
+                return $plugin_template;
+            }
+        }
+
+        return $template;
+    }
+    
+    /**
+     * Register AJAX handlers
+     */
+    private function register_ajax_handlers() {
+        // Frontend AJAX handlers (both logged in and logged out users)
+        $this->loader->add_action('wp_ajax_parfume_add_to_comparison', $this, 'ajax_add_to_comparison');
+        $this->loader->add_action('wp_ajax_nopriv_parfume_add_to_comparison', $this, 'ajax_add_to_comparison');
+        
+        $this->loader->add_action('wp_ajax_parfume_remove_from_comparison', $this, 'ajax_remove_from_comparison');
+        $this->loader->add_action('wp_ajax_nopriv_parfume_remove_from_comparison', $this, 'ajax_remove_from_comparison');
+    }
+    
+    /**
+     * Register shortcodes
+     */
+    public function register_shortcodes() {
+        add_shortcode('parfume_comparison', [$this, 'render_comparison_shortcode']);
+        add_shortcode('parfume_filters', [$this, 'render_filters_shortcode']);
+    }
+    
+    /**
+     * Render comparison shortcode
+     */
+    public function render_comparison_shortcode($atts) {
+        $comparison = $this->container->get('features.comparison');
+        return $comparison->render_comparison_table($atts);
+    }
+    
+    /**
+     * Render filters shortcode
+     */
+    public function render_filters_shortcode($atts) {
+        $filters = $this->container->get('features.filters');
+        return $filters->render_filters_form($atts);
+    }
+    
+    /**
+     * AJAX: Add to comparison
+     */
+    public function ajax_add_to_comparison() {
+        check_ajax_referer('parfume_comparison', 'nonce');
+        
+        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+        
+        if (!$post_id) {
+            wp_send_json_error(['message' => __('Invalid product ID', 'parfume-reviews')]);
+        }
+        
+        $comparison = $this->container->get('features.comparison');
+        $result = $comparison->add_to_comparison($post_id);
+        
+        if ($result) {
+            wp_send_json_success(['message' => __('Added to comparison', 'parfume-reviews')]);
+        } else {
+            wp_send_json_error(['message' => __('Failed to add to comparison', 'parfume-reviews')]);
+        }
+    }
+    
+    /**
+     * AJAX: Remove from comparison
+     */
+    public function ajax_remove_from_comparison() {
+        check_ajax_referer('parfume_comparison', 'nonce');
+        
+        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+        
+        if (!$post_id) {
+            wp_send_json_error(['message' => __('Invalid product ID', 'parfume-reviews')]);
+        }
+        
+        $comparison = $this->container->get('features.comparison');
+        $result = $comparison->remove_from_comparison($post_id);
+        
+        if ($result) {
+            wp_send_json_success(['message' => __('Removed from comparison', 'parfume-reviews')]);
+        } else {
+            wp_send_json_error(['message' => __('Failed to remove from comparison', 'parfume-reviews')]);
+        }
+    }
+    
+    /**
+     * Maybe flush rewrite rules
+     */
+    public function maybe_flush_rewrite_rules() {
+        $version_option = 'parfume_reviews_version';
+        $current_version = get_option($version_option);
+        
+        if ($current_version !== $this->version) {
+            flush_rewrite_rules();
+            update_option($version_option, $this->version);
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Parfume Reviews: Rewrite rules flushed - Version ' . $this->version);
+            }
+        }
+    }
+    
+    /**
+     * Load text domain for translations
+     */
+    public function load_textdomain() {
+        load_plugin_textdomain(
+            'parfume-reviews',
+            false,
+            dirname(PARFUME_REVIEWS_BASENAME) . '/languages'
+        );
+    }
+    
+    /**
+     * Run the plugin
      */
     public function run() {
         $this->loader->run();
     }
     
     /**
-     * Get the plugin version
-     * 
-     * @return string
-     */
-    public function get_version() {
-        return $this->version;
-    }
-    
-    /**
-     * Get the dependency injection container
+     * Get container instance
      * 
      * @return Container
      */
@@ -372,96 +586,12 @@ class Plugin {
     }
     
     /**
-     * Load plugin text domain
-     */
-    public function load_textdomain() {
-        load_plugin_textdomain(
-            'parfume-reviews',
-            false,
-            dirname(PARFUME_REVIEWS_BASENAME) . '/languages/'
-        );
-    }
-    
-    /**
-     * Maybe flush rewrite rules
-     */
-    public function maybe_flush_rewrite_rules() {
-        if (get_option('parfume_reviews_flush_rewrite_rules')) {
-            flush_rewrite_rules();
-            delete_option('parfume_reviews_flush_rewrite_rules');
-            
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Parfume Reviews: Rewrite rules flushed');
-            }
-        }
-    }
-    
-    /**
-     * Check if current page is parfume related
+     * Get version
      * 
-     * @return bool
+     * @return string
      */
-    private function is_parfume_page() {
-        if (!did_action('wp')) {
-            return false;
-        }
-        
-        return is_singular('parfume') || 
-               is_post_type_archive('parfume') || 
-               $this->is_parfume_taxonomy();
+    public function get_version() {
+        return $this->version;
     }
     
-    /**
-     * Check if current page is parfume taxonomy
-     * 
-     * @return bool
-     */
-    private function is_parfume_taxonomy() {
-        if (!did_action('parse_query')) {
-            return false;
-        }
-        
-        $parfume_taxonomies = ['marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'];
-        
-        foreach ($parfume_taxonomies as $taxonomy) {
-            if (is_tax($taxonomy)) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    /**
-     * AJAX: Add to comparison
-     */
-    public function ajax_add_to_comparison() {
-        // Implementation handled by Comparison feature
-        if ($this->container->has('features.comparison')) {
-            $comparison = $this->container->get('features.comparison');
-            // Forward to comparison handler
-        }
-    }
-    
-    /**
-     * AJAX: Remove from comparison
-     */
-    public function ajax_remove_from_comparison() {
-        // Implementation handled by Comparison feature
-        if ($this->container->has('features.comparison')) {
-            $comparison = $this->container->get('features.comparison');
-            // Forward to comparison handler
-        }
-    }
-    
-    /**
-     * AJAX: Get comparison data
-     */
-    public function ajax_get_comparison_data() {
-        // Implementation handled by Comparison feature
-        if ($this->container->has('features.comparison')) {
-            $comparison = $this->container->get('features.comparison');
-            // Forward to comparison handler
-        }
-    }
 }

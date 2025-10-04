@@ -1,0 +1,185 @@
+/**
+ * Stores Admin Page Styles
+ * 
+ * Styles for the Stores Management admin page
+ * 
+ * @package ParfumeReviews
+ */
+
+/* ==========================================================================
+   Table Columns
+   ========================================================================== */
+
+.column-logo {
+    width: 80px;
+    text-align: center;
+}
+
+.column-name {
+    width: 25%;
+}
+
+.column-domain {
+    width: 25%;
+}
+
+.column-status {
+    width: 15%;
+}
+
+.column-schema {
+    width: 15%;
+}
+
+.column-actions {
+    width: 180px;
+    text-align: right;
+}
+
+/* ==========================================================================
+   Status Badges
+   ========================================================================== */
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-enabled {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-disabled {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* ==========================================================================
+   Store Form
+   ========================================================================== */
+
+.store-form {
+    max-width: 800px;
+}
+
+.required {
+    color: #dc3232;
+}
+
+/* Logo Upload */
+.logo-upload-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.logo-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 150px;
+    height: 100px;
+    border: 2px dashed #ddd;
+    border-radius: 4px;
+    background: #f9f9f9;
+}
+
+.logo-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.upload-logo-button,
+.remove-logo-button {
+    margin-right: 10px;
+}
+
+/* ==========================================================================
+   Delete Button
+   ========================================================================== */
+
+.button-link-delete {
+    color: #a00;
+}
+
+.button-link-delete:hover {
+    color: #dc3232;
+}
+
+/* ==========================================================================
+   No Items Message
+   ========================================================================== */
+
+.no-items {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+    font-style: italic;
+}
+
+/* ==========================================================================
+   Actions Column
+   ========================================================================== */
+
+.column-actions .button {
+    margin-left: 5px;
+}
+
+.column-actions .button:first-child {
+    margin-left: 0;
+}
+
+/* ==========================================================================
+   Form Description
+   ========================================================================== */
+
+.form-table .description {
+    margin-top: 8px;
+    color: #666;
+    font-size: 13px;
+}
+
+/* ==========================================================================
+   Schema Status Icons
+   ========================================================================== */
+
+.column-schema .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+    margin-right: 5px;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 782px) {
+    .column-logo,
+    .column-status,
+    .column-schema {
+        display: none;
+    }
+    
+    .column-name,
+    .column-domain {
+        width: auto;
+    }
+    
+    .column-actions {
+        text-align: left;
+    }
+    
+    .column-actions .button {
+        display: block;
+        margin: 5px 0;
+    }
+}
