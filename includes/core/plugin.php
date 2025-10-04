@@ -305,7 +305,7 @@ class Plugin {
             return;
         }
         
-        // CSS
+        // Main CSS
         wp_enqueue_style(
             'parfume-reviews-main',
             PARFUME_REVIEWS_URL . 'assets/css/main.css',
@@ -313,11 +313,28 @@ class Plugin {
             $this->version
         );
         
-        // JavaScript
+        // Comparison Lightbox CSS
+        wp_enqueue_style(
+            'parfume-reviews-comparison-lightbox',
+            PARFUME_REVIEWS_URL . 'assets/css/comparison-lightbox.css',
+            ['parfume-reviews-main'],
+            $this->version
+        );
+        
+        // Main JavaScript
         wp_enqueue_script(
             'parfume-reviews-main',
             PARFUME_REVIEWS_URL . 'assets/js/main.js',
             ['jquery'],
+            $this->version,
+            true
+        );
+        
+        // Comparison Lightbox JavaScript
+        wp_enqueue_script(
+            'parfume-reviews-comparison-lightbox',
+            PARFUME_REVIEWS_URL . 'assets/js/comparison-lightbox.js',
+            ['jquery', 'parfume-reviews-main'],
             $this->version,
             true
         );

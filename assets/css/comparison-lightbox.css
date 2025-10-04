@@ -1,0 +1,428 @@
+/**
+ * Comparison Lightbox Styles
+ * 
+ * Styles for comparison popup/lightbox
+ * 
+ * @package Parfume_Reviews
+ * @since 2.0.0
+ */
+
+/* ==========================================================================
+   Lightbox Overlay
+   ========================================================================== */
+
+.comparison-lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999999;
+    display: none;
+}
+
+.comparison-lightbox-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.3s ease;
+}
+
+.comparison-lightbox-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 2;
+}
+
+.comparison-lightbox-content {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+    max-width: 1400px;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    animation: scaleIn 0.3s ease;
+}
+
+body.comparison-lightbox-open {
+    overflow: hidden;
+}
+
+/* ==========================================================================
+   Lightbox Header
+   ========================================================================== */
+
+.comparison-lightbox-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 30px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.comparison-lightbox-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.comparison-lightbox-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+    background: #fff;
+    border: 2px solid #e0e0e0;
+    border-radius: 50%;
+    font-size: 28px;
+    line-height: 1;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.comparison-lightbox-close:hover {
+    background: #e74c3c;
+    border-color: #e74c3c;
+    color: #fff;
+    transform: rotate(90deg);
+}
+
+.clear-all-comparison {
+    padding: 8px 20px;
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.clear-all-comparison:hover {
+    background: #c0392b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+/* ==========================================================================
+   Lightbox Body
+   ========================================================================== */
+
+.comparison-lightbox-body {
+    flex: 1;
+    overflow: auto;
+    padding: 30px;
+}
+
+.comparison-loading {
+    text-align: center;
+    padding: 60px 20px;
+    font-size: 18px;
+    color: #666;
+}
+
+.comparison-loading:before {
+    content: "";
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f0f0f0;
+    border-top-color: #3498db;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 20px;
+}
+
+.comparison-empty,
+.comparison-error {
+    text-align: center;
+    padding: 60px 20px;
+    font-size: 18px;
+    color: #999;
+}
+
+.comparison-error {
+    color: #e74c3c;
+}
+
+/* ==========================================================================
+   Comparison Table
+   ========================================================================== */
+
+.comparison-table-scroll {
+    overflow-x: auto;
+}
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.comparison-table thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    padding: 20px 15px;
+    font-weight: 600;
+    text-align: center;
+    vertical-align: top;
+    border: 2px solid #fff;
+}
+
+.comparison-table thead th.comparison-row-label {
+    background: #2c3e50;
+    width: 150px;
+    min-width: 150px;
+}
+
+.comparison-table thead .comparison-item {
+    position: relative;
+    min-width: 200px;
+}
+
+.comparison-table .comparison-item-image {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 15px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.2);
+    border: 3px solid rgba(255, 255, 255, 0.3);
+}
+
+.comparison-table .comparison-item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.comparison-table .comparison-item-title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 10px;
+}
+
+.comparison-table .remove-from-comparison-lightbox {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    background: rgba(231, 76, 60, 0.9);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.comparison-table .remove-from-comparison-lightbox:hover {
+    background: #c0392b;
+    transform: scale(1.1);
+}
+
+.comparison-table tbody th {
+    background: #f8f9fa;
+    padding: 15px;
+    font-weight: 600;
+    text-align: left;
+    border: 1px solid #e0e0e0;
+    color: #2c3e50;
+}
+
+.comparison-table tbody td {
+    padding: 15px;
+    text-align: center;
+    border: 1px solid #e0e0e0;
+    vertical-align: middle;
+}
+
+.comparison-table tbody tr:nth-child(even) {
+    background: #fafbfc;
+}
+
+.comparison-table tbody tr:hover {
+    background: #f0f8ff;
+}
+
+/* Rating in table */
+.comparison-table .rating-value {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    color: #3498db;
+    margin-bottom: 5px;
+}
+
+.comparison-table .rating-stars {
+    font-size: 16px;
+    color: #f39c12;
+}
+
+.comparison-table .rating-stars .star {
+    margin: 0 2px;
+}
+
+/* Price in table */
+.comparison-table .price {
+    font-size: 22px;
+    font-weight: 700;
+    color: #27ae60;
+}
+
+/* Action buttons */
+.comparison-table .button {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #3498db;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.comparison-table .button:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 1200px) {
+    .comparison-table .comparison-item {
+        min-width: 180px;
+    }
+    
+    .comparison-table .comparison-item-image {
+        width: 100px;
+        height: 100px;
+    }
+}
+
+@media (max-width: 768px) {
+    .comparison-lightbox-wrapper {
+        padding: 10px;
+    }
+    
+    .comparison-lightbox-content {
+        max-height: 95vh;
+        border-radius: 8px;
+    }
+    
+    .comparison-lightbox-header {
+        padding: 15px 20px;
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    
+    .comparison-lightbox-header h2 {
+        font-size: 20px;
+    }
+    
+    .comparison-lightbox-body {
+        padding: 15px;
+    }
+    
+    .comparison-table thead th.comparison-row-label {
+        width: 100px;
+        min-width: 100px;
+        font-size: 13px;
+    }
+    
+    .comparison-table .comparison-item {
+        min-width: 150px;
+    }
+    
+    .comparison-table .comparison-item-image {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .comparison-table .comparison-item-title {
+        font-size: 14px;
+    }
+    
+    .comparison-table tbody th,
+    .comparison-table tbody td {
+        padding: 10px;
+        font-size: 13px;
+    }
+    
+    .comparison-table .rating-value {
+        font-size: 16px;
+    }
+    
+    .comparison-table .price {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .comparison-table .comparison-item {
+        min-width: 120px;
+    }
+    
+    .comparison-table .comparison-item-image {
+        width: 60px;
+        height: 60px;
+    }
+}
