@@ -9,9 +9,9 @@
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Admin\Settings;
+namespace ParfumeReviews\Admin\Settings;
 
-use Parfume_Reviews\Core\Container;
+use ParfumeReviews\Core\Container;
 
 /**
  * SettingsManager Class
