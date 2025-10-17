@@ -1,47 +1,115 @@
 /**
- * Main Styles
+ * Main Styles - UPDATED
  * 
- * Core styles for Parfume Reviews plugin
+ * Core styles and variables for Parfume Reviews plugin
  * 
- * @package Parfume_Reviews
+ * @package ParfumeReviews
  * @since 2.0.0
  */
 
 /* ==========================================================================
-   CSS Variables
+   CSS Variables - Design System
    ========================================================================== */
 
 :root {
+    /* Colors - Primary Palette */
     --pr-primary: #8b7355;
     --pr-secondary: #d4a574;
     --pr-accent: #c9a882;
     --pr-dark: #2c2c2c;
     --pr-light: #f8f5f2;
+    
+    /* Colors - UI */
     --pr-border: #e5e5e5;
     --pr-success: #28a745;
     --pr-warning: #ffc107;
     --pr-error: #dc3545;
+    --pr-info: #17a2b8;
+    
+    /* Spacing */
     --pr-spacing: 20px;
+    --pr-spacing-sm: 10px;
+    --pr-spacing-md: 15px;
+    --pr-spacing-lg: 30px;
+    --pr-spacing-xl: 40px;
+    
+    /* Border Radius */
     --pr-radius: 8px;
+    --pr-radius-sm: 4px;
+    --pr-radius-md: 12px;
+    --pr-radius-lg: 16px;
+    --pr-radius-xl: 24px;
+    --pr-radius-full: 50px;
+    
+    /* Shadows */
     --pr-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --pr-shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.08);
+    --pr-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+    --pr-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.15);
+    --pr-shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.2);
     --pr-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+    
+    /* Transitions */
     --pr-transition: all 0.3s ease;
+    --pr-transition-fast: all 0.2s ease;
+    --pr-transition-slow: all 0.4s ease;
+    
+    /* Typography */
+    --pr-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --pr-font-size-base: 16px;
+    --pr-line-height-base: 1.6;
+    
+    /* Z-index layers */
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
 }
 
 /* ==========================================================================
-   Reset & Base
+   Reset & Base Styles
    ========================================================================== */
 
 .parfume-archive-wrapper,
-.parfume-single,
-.parfume-container {
+.parfume-single-wrapper,
+.parfume-home-wrapper,
+.parfume-container,
+.taxonomy-page-wrapper,
+.perfumer-page-wrapper {
     box-sizing: border-box;
 }
 
 .parfume-archive-wrapper *,
-.parfume-single *,
-.parfume-container * {
+.parfume-single-wrapper *,
+.parfume-home-wrapper *,
+.parfume-container *,
+.taxonomy-page-wrapper *,
+.perfumer-page-wrapper * {
     box-sizing: inherit;
+}
+
+/* ==========================================================================
+   Typography
+   ========================================================================== */
+
+.parfume-archive-wrapper,
+.parfume-single-wrapper,
+.parfume-home-wrapper,
+.taxonomy-page-wrapper,
+.perfumer-page-wrapper {
+    font-family: var(--pr-font-family);
+    font-size: var(--pr-font-size-base);
+    line-height: var(--pr-line-height-base);
+    color: var(--pr-dark);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    line-height: 1.2;
+    margin-top: 0;
 }
 
 /* ==========================================================================
@@ -49,16 +117,17 @@
    ========================================================================== */
 
 .parfume-container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 0 var(--pr-spacing);
 }
 
-.parfume-content-wrapper {
-    display: grid;
-    grid-template-columns: 1fr 350px;
-    gap: calc(var(--pr-spacing) * 2);
-    margin-top: calc(var(--pr-spacing) * 2);
+.parfume-container-narrow {
+    max-width: 1200px;
+}
+
+.parfume-container-wide {
+    max-width: 1600px;
 }
 
 /* ==========================================================================
@@ -66,375 +135,440 @@
    ========================================================================== */
 
 .parfume-breadcrumbs {
-    padding: 10px 0;
+    padding: 15px 0;
     font-size: 14px;
     color: #666;
+    background: transparent;
 }
 
-.parfume-breadcrumbs a {
-    color: var(--pr-primary);
-    text-decoration: none;
-    transition: var(--pr-transition);
-}
-
-.parfume-breadcrumbs a:hover {
-    color: var(--pr-secondary);
-}
-
-.parfume-breadcrumbs .separator {
-    margin: 0 8px;
-    color: #ccc;
-}
-
-/* ==========================================================================
-   Parfume Card
-   ========================================================================== */
-
-.parfume-card {
-    background: #fff;
-    border: 1px solid var(--pr-border);
-    border-radius: var(--pr-radius);
-    overflow: hidden;
-    transition: var(--pr-transition);
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-.parfume-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--pr-shadow-hover);
-    border-color: var(--pr-secondary);
-}
-
-.parfume-card .card-inner {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.parfume-card .card-image {
-    position: relative;
-    padding-top: 100%;
-    overflow: hidden;
-    background: var(--pr-light);
-}
-
-.parfume-card .card-image img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: var(--pr-transition);
-}
-
-.parfume-card:hover .card-image img {
-    transform: scale(1.05);
-}
-
-.parfume-card .card-actions {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    display: flex;
-    gap: 8px;
-    opacity: 0;
-    transition: var(--pr-transition);
-}
-
-.parfume-card:hover .card-actions {
-    opacity: 1;
-}
-
-.parfume-card .quick-action {
-    width: 36px;
-    height: 36px;
-    border: none;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.95);
-    color: var(--pr-dark);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--pr-transition);
-    box-shadow: var(--pr-shadow);
-}
-
-.parfume-card .quick-action:hover {
-    background: var(--pr-primary);
-    color: #fff;
-    transform: scale(1.1);
-}
-
-.parfume-card .price-badge {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    background: var(--pr-primary);
-    color: #fff;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 600;
-    box-shadow: var(--pr-shadow);
-}
-
-.parfume-card .card-content {
-    padding: var(--pr-spacing);
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.parfume-card .card-brand {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #999;
-    margin-bottom: 8px;
-}
-
-.parfume-card .card-brand a {
-    color: inherit;
-    text-decoration: none;
-    transition: var(--pr-transition);
-}
-
-.parfume-card .card-brand a:hover {
-    color: var(--pr-primary);
-}
-
-.parfume-card .card-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0 0 10px 0;
-    line-height: 1.3;
-}
-
-.parfume-card .card-title a {
-    color: var(--pr-dark);
-    text-decoration: none;
-    transition: var(--pr-transition);
-}
-
-.parfume-card .card-title a:hover {
-    color: var(--pr-primary);
-}
-
-.parfume-card .card-gender,
-.parfume-card .card-notes {
+.breadcrumb-list {
+    list-style: none;
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 10px;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
 }
 
-.parfume-card .gender-badge,
-.parfume-card .note-badge {
-    font-size: 11px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: var(--pr-light);
-    color: #666;
-}
-
-.parfume-card .card-rating {
+.breadcrumb-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 10px;
 }
 
-.parfume-card .rating-stars {
-    color: var(--pr-secondary);
-}
-
-.parfume-card .rating-value {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--pr-dark);
-}
-
-.parfume-card .card-excerpt {
-    font-size: 14px;
-    line-height: 1.5;
-    color: #666;
-    margin-bottom: 15px;
-    flex: 1;
-}
-
-.parfume-card .card-footer {
-    margin-top: auto;
-}
-
-.parfume-card .card-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 20px;
-    background: var(--pr-primary);
-    color: #fff;
+.breadcrumb-item a {
+    color: var(--pr-primary);
     text-decoration: none;
-    border-radius: var(--pr-radius);
+    transition: var(--pr-transition-fast);
+}
+
+.breadcrumb-item a:hover {
+    color: var(--pr-secondary);
+    text-decoration: underline;
+}
+
+.breadcrumb-item.active {
+    color: var(--pr-dark);
     font-weight: 500;
-    transition: var(--pr-transition);
 }
 
-.parfume-card .card-button:hover {
-    background: var(--pr-secondary);
-    transform: translateX(4px);
-}
-
-/* ==========================================================================
-   Grid Layout
-   ========================================================================== */
-
-.parfumes-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: calc(var(--pr-spacing) * 1.5);
-    margin: calc(var(--pr-spacing) * 2) 0;
+.breadcrumb-separator {
+    color: #999;
+    user-select: none;
 }
 
 /* ==========================================================================
-   Pagination
+   Buttons & Links
    ========================================================================== */
 
-.parfume-pagination {
-    margin: calc(var(--pr-spacing) * 3) 0;
-    text-align: center;
-}
-
-.parfume-pagination .nav-links {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.parfume-pagination a,
-.parfume-pagination span {
+.btn,
+.parfume-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 40px;
-    height: 40px;
-    padding: 0 12px;
-    border: 1px solid var(--pr-border);
-    border-radius: var(--pr-radius);
-    color: var(--pr-dark);
-    text-decoration: none;
-    transition: var(--pr-transition);
-}
-
-.parfume-pagination a:hover {
-    background: var(--pr-primary);
-    color: #fff;
-    border-color: var(--pr-primary);
-}
-
-.parfume-pagination .current {
-    background: var(--pr-primary);
-    color: #fff;
-    border-color: var(--pr-primary);
-}
-
-/* ==========================================================================
-   No Results
-   ========================================================================== */
-
-.no-results {
-    text-align: center;
-    padding: calc(var(--pr-spacing) * 4) var(--pr-spacing);
-}
-
-.no-results h2 {
-    color: var(--pr-dark);
-    margin-bottom: var(--pr-spacing);
-}
-
-.no-results p {
-    color: #666;
-    margin-bottom: var(--pr-spacing);
-}
-
-.no-results .button {
-    display: inline-block;
+    gap: 8px;
     padding: 12px 24px;
     background: var(--pr-primary);
     color: #fff;
-    text-decoration: none;
+    border: none;
     border-radius: var(--pr-radius);
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--pr-transition);
+    white-space: nowrap;
+}
+
+.btn:hover,
+.parfume-button:hover {
+    background: var(--pr-secondary);
+    transform: translateY(-2px);
+    box-shadow: var(--pr-shadow-md);
+}
+
+.btn:active,
+.parfume-button:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--pr-primary);
+    border: 2px solid var(--pr-primary);
+}
+
+.btn-secondary:hover {
+    background: var(--pr-primary);
+    color: #fff;
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--pr-dark);
+    border: 2px solid var(--pr-border);
+}
+
+.btn-outline:hover {
+    border-color: var(--pr-primary);
+    color: var(--pr-primary);
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.btn-lg {
+    padding: 16px 32px;
+    font-size: 18px;
+}
+
+.btn-full {
+    width: 100%;
+}
+
+/* ==========================================================================
+   Cards - Base Styles
+   ========================================================================== */
+
+.card {
+    background: #fff;
+    border-radius: var(--pr-radius-md);
+    box-shadow: var(--pr-shadow);
+    overflow: hidden;
     transition: var(--pr-transition);
 }
 
-.no-results .button:hover {
-    background: var(--pr-secondary);
+.card:hover {
+    box-shadow: var(--pr-shadow-hover);
+}
+
+.card-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--pr-border);
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.card-footer {
+    padding: 20px;
+    border-top: 1px solid var(--pr-border);
+    background: var(--pr-light);
 }
 
 /* ==========================================================================
-   Responsive Design
+   Rating Stars - Reusable Component
    ========================================================================== */
 
-@media (max-width: 1024px) {
-    .parfume-content-wrapper {
-        grid-template-columns: 1fr;
-    }
-    
-    .parfumes-grid {
-        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-        gap: var(--pr-spacing);
-    }
+.rating-stars {
+    display: inline-flex;
+    gap: 3px;
+    font-size: 16px;
+    color: #ffc107;
 }
 
+.star {
+    display: inline-block;
+}
+
+.star-full {
+    color: #ffc107;
+}
+
+.star-half {
+    color: #ffc107;
+    position: relative;
+}
+
+.star-half:after {
+    content: '☆';
+    position: absolute;
+    left: 0;
+    width: 50%;
+    overflow: hidden;
+}
+
+.star-empty {
+    color: #e0e0e0;
+}
+
+/* ==========================================================================
+   Badges & Tags
+   ========================================================================== */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    background: var(--pr-light);
+    border-radius: var(--pr-radius-full);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pr-dark);
+    border: 1px solid var(--pr-border);
+}
+
+.badge-primary {
+    background: var(--pr-primary);
+    color: #fff;
+    border-color: var(--pr-primary);
+}
+
+.badge-success {
+    background: var(--pr-success);
+    color: #fff;
+    border-color: var(--pr-success);
+}
+
+.badge-warning {
+    background: var(--pr-warning);
+    color: #fff;
+    border-color: var(--pr-warning);
+}
+
+.badge-error {
+    background: var(--pr-error);
+    color: #fff;
+    border-color: var(--pr-error);
+}
+
+/* ==========================================================================
+   Forms - Base Styles
+   ========================================================================== */
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--pr-dark);
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--pr-border);
+    border-radius: var(--pr-radius);
+    font-size: 15px;
+    font-family: inherit;
+    background: #fff;
+    transition: var(--pr-transition-fast);
+}
+
+.form-control:hover {
+    border-color: var(--pr-secondary);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--pr-primary);
+    box-shadow: 0 0 0 3px rgba(139, 115, 85, 0.1);
+}
+
+.form-control::placeholder {
+    color: #999;
+}
+
+select.form-control {
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="8" viewBox="0 0 12 8"><path fill="%23666" d="M6 8L0 2l1.4-1.4L6 5.2 10.6.6 12 2z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 40px;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* ==========================================================================
+   Alerts & Messages
+   ========================================================================== */
+
+.alert {
+    padding: 16px 20px;
+    border-radius: var(--pr-radius);
+    margin-bottom: 20px;
+    border-left: 4px solid;
+}
+
+.alert-success {
+    background: rgba(40, 167, 69, 0.1);
+    border-color: var(--pr-success);
+    color: #155724;
+}
+
+.alert-warning {
+    background: rgba(255, 193, 7, 0.1);
+    border-color: var(--pr-warning);
+    color: #856404;
+}
+
+.alert-error {
+    background: rgba(220, 53, 69, 0.1);
+    border-color: var(--pr-error);
+    color: #721c24;
+}
+
+.alert-info {
+    background: rgba(23, 162, 184, 0.1);
+    border-color: var(--pr-info);
+    color: #0c5460;
+}
+
+/* ==========================================================================
+   Loading States
+   ========================================================================== */
+
+.loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.loading:after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    border: 3px solid var(--pr-border);
+    border-top-color: var(--pr-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+
+/* Spacing */
+.mt-0 { margin-top: 0 !important; }
+.mt-1 { margin-top: var(--pr-spacing-sm) !important; }
+.mt-2 { margin-top: var(--pr-spacing) !important; }
+.mt-3 { margin-top: var(--pr-spacing-lg) !important; }
+.mt-4 { margin-top: var(--pr-spacing-xl) !important; }
+
+.mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: var(--pr-spacing-sm) !important; }
+.mb-2 { margin-bottom: var(--pr-spacing) !important; }
+.mb-3 { margin-bottom: var(--pr-spacing-lg) !important; }
+.mb-4 { margin-bottom: var(--pr-spacing-xl) !important; }
+
+.p-0 { padding: 0 !important; }
+.p-1 { padding: var(--pr-spacing-sm) !important; }
+.p-2 { padding: var(--pr-spacing) !important; }
+.p-3 { padding: var(--pr-spacing-lg) !important; }
+.p-4 { padding: var(--pr-spacing-xl) !important; }
+
+/* Display */
+.d-none { display: none !important; }
+.d-block { display: block !important; }
+.d-flex { display: flex !important; }
+.d-grid { display: grid !important; }
+
+/* Text */
+.text-center { text-align: center !important; }
+.text-left { text-align: left !important; }
+.text-right { text-align: right !important; }
+
+.text-primary { color: var(--pr-primary) !important; }
+.text-secondary { color: var(--pr-secondary) !important; }
+.text-dark { color: var(--pr-dark) !important; }
+.text-muted { color: #999 !important; }
+
+.fw-normal { font-weight: 400 !important; }
+.fw-bold { font-weight: 700 !important; }
+
+/* ==========================================================================
+   Responsive Utilities
+   ========================================================================== */
+
 @media (max-width: 768px) {
-    :root {
-        --pr-spacing: 15px;
-    }
-    
-    .parfumes-grid {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    }
-    
-    .parfume-card .card-title {
-        font-size: 16px;
-    }
+    .d-md-none { display: none !important; }
+    .d-md-block { display: block !important; }
 }
 
 @media (max-width: 480px) {
-    .parfumes-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .parfume-card .card-actions {
-        opacity: 1;
-    }
+    .d-sm-none { display: none !important; }
+    .d-sm-block { display: block !important; }
 }
 
 /* ==========================================================================
-   Utilities
+   Accessibility
    ========================================================================== */
 
-.text-center {
-    text-align: center;
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
 }
 
-.mb-0 {
-    margin-bottom: 0 !important;
+/* Focus styles */
+a:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid var(--pr-primary);
+    outline-offset: 2px;
 }
 
-.mt-0 {
-    margin-top: 0 !important;
-}
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
 
-.hidden {
-    display: none !important;
-}
-
-.loading {
-    opacity: 0.6;
-    pointer-events: none;
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .parfume-archive-wrapper,
+    .parfume-single-wrapper,
+    .parfume-home-wrapper {
+        background: #fff !important;
+    }
 }

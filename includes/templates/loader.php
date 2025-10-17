@@ -4,7 +4,7 @@
  * 
  * Handles template loading and overrides
  * 
- * @package Parfume_Reviews
+ * @package ParfumeReviews
  * @subpackage Templates
  * @since 2.0.0
  */
@@ -59,6 +59,14 @@ class Loader {
      */
     public function load_template($template) {
         global $post;
+        
+        // Front page (home page) template
+        if (is_front_page() && !is_home()) {
+            $new_template = $this->locate_template('front-page.php');
+            if ($new_template) {
+                return $new_template;
+            }
+        }
         
         // Single parfume template
         if (is_singular('parfume')) {
@@ -132,9 +140,10 @@ class Loader {
      * @return string|false Template path or false if not found
      */
     public function locate_template($template_name) {
-        // Check in theme folder
+        // Check in theme folder first
         $theme_template = locate_template([
-            trailingslashit($this->theme_template_path) . $template_name
+            trailingslashit($this->theme_template_path) . $template_name,
+            $template_name // Also check root of theme
         ]);
         
         if ($theme_template) {
@@ -231,6 +240,24 @@ class Loader {
      * Enqueue template assets
      */
     public function enqueue_assets() {
+        // Home page assets
+        if (is_front_page() && !is_home()) {
+            wp_enqueue_style(
+                'parfume-reviews-home',
+                PARFUME_REVIEWS_URL . 'assets/css/home.css',
+                ['parfume-reviews-main'],
+                PARFUME_REVIEWS_VERSION
+            );
+            
+            wp_enqueue_script(
+                'parfume-reviews-home',
+                PARFUME_REVIEWS_URL . 'assets/js/home.js',
+                ['jquery'],
+                PARFUME_REVIEWS_VERSION,
+                true
+            );
+        }
+        
         // Only on parfume pages
         if (!$this->is_parfume_page()) {
             return;
@@ -244,9 +271,7 @@ class Loader {
                 ['parfume-reviews-main'],
                 PARFUME_REVIEWS_VERSION
             );
-        }
-        
-        if (is_post_type_archive('parfume') || $this->is_parfume_taxonomy()) {
+        } elseif (is_post_type_archive('parfume') || is_tax(['marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'])) {
             wp_enqueue_style(
                 'parfume-reviews-archive',
                 PARFUME_REVIEWS_URL . 'assets/css/archive.css',
@@ -257,55 +282,31 @@ class Loader {
     }
     
     /**
-     * Check if current page is parfume related
+     * Check if current page is a parfume-related page
      * 
      * @return bool
      */
     private function is_parfume_page() {
-        // Check only after WordPress is fully loaded
-        if (!did_action('wp')) {
-            return false;
-        }
-        
         return is_singular('parfume') || 
                is_post_type_archive('parfume') || 
-               $this->is_parfume_taxonomy();
+               is_tax(['marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer']);
     }
     
     /**
-     * Check if current page is parfume taxonomy
+     * Get template path
      * 
-     * @return bool
+     * @return string
      */
-    private function is_parfume_taxonomy() {
-        // Check only after parse_query
-        if (!did_action('parse_query')) {
-            return false;
-        }
-        
-        $parfume_taxonomies = ['marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'];
-        
-        foreach ($parfume_taxonomies as $taxonomy) {
-            if (is_tax($taxonomy)) {
-                return true;
-            }
-        }
-        
-        return false;
+    public function get_template_path() {
+        return $this->plugin_template_path;
     }
     
     /**
-     * Get template content
+     * Get theme template path
      * 
-     * Returns template content as string instead of including it
-     * 
-     * @param string $template_name Template file name
-     * @param array $args Arguments to pass to template
-     * @return string Template content
+     * @return string
      */
-    public function get_template_content($template_name, $args = []) {
-        ob_start();
-        $this->include_template($template_name, $args);
-        return ob_get_clean();
+    public function get_theme_template_path() {
+        return $this->theme_template_path;
     }
 }
