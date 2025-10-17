@@ -114,7 +114,7 @@ Available templates:
 ### Using the Repository
 
 ```php
-use Parfume_Reviews\PostTypes\Parfume\Repository;
+use ParfumeReviews\PostTypes\Parfume\Repository;
 
 $repo = new Repository();
 
@@ -134,7 +134,7 @@ $male_parfumes = $repo->by_term('gender', 'male');
 ### Using the Container
 
 ```php
-$container = \Parfume_Reviews\Core\Plugin::get_instance()->get_container();
+$container = \ParfumeReviews\Core\Plugin::get_instance()->get_container();
 
 // Get service
 $settings = $container->get('settings');

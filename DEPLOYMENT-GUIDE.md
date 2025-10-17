@@ -159,7 +159,7 @@ Settings → Permalinks → Save Changes
 
 **Naming convention:**
 ```
-Namespace: Parfume_Reviews\Core\Plugin
+Namespace: ParfumeReviews\Core\Plugin
 File: includes/core/plugin.php
 Class: Plugin
 ```
@@ -167,7 +167,7 @@ Class: Plugin
 ### Namespace структура
 
 ```php
-Parfume_Reviews\                    // Root namespace
+ParfumeReviews\                    // Root namespace
 ├── Core\                          // includes/core/
 │   ├── Plugin
 │   ├── Container
@@ -278,7 +278,7 @@ chmod 644 templates/*.php
 **Решение:**
 ```
 // Проверете namespace и file path
-// Namespace: Parfume_Reviews\Core\Plugin
+// Namespace: ParfumeReviews\Core\Plugin
 // File: includes/core/plugin.php (малки букви!)
 ```
 

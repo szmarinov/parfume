@@ -9,7 +9,7 @@
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Features\Scraper;
+namespace ParfumeReviews\Features\Scraper;
 
 /**
  * Logger Class

@@ -9,7 +9,7 @@
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Taxonomies;
+namespace ParfumeReviews\Taxonomies;
 
 /**
  * RewriteHandler Class

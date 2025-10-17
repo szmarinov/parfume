@@ -9,10 +9,10 @@
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Features\Scraper;
+namespace ParfumeReviews\Features\Scraper;
 
-use Parfume_Reviews\Features\Stores\StoreManager;
-use Parfume_Reviews\Features\Stores\StoreSchema;
+use ParfumeReviews\Features\Stores\StoreManager;
+use ParfumeReviews\Features\Stores\StoreSchema;
 
 /**
  * ScraperTestTool Class

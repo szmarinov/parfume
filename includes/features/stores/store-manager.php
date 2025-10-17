@@ -9,9 +9,9 @@
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Features\Stores;
+namespace ParfumeReviews\Features\Stores;
 
-use Parfume_Reviews\Core\Container;
+use ParfumeReviews\Core\Container;
 
 /**
  * StoreManager Class

@@ -9,9 +9,9 @@
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Features\ImportExport;
+namespace ParfumeReviews\Features\ImportExport;
 
-use Parfume_Reviews\Core\Container;
+use ParfumeReviews\Core\Container;
 
 /**
  * ImportExport Class

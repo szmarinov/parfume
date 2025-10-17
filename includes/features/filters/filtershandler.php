@@ -9,9 +9,9 @@
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Features\Filters;
+namespace ParfumeReviews\Features\Filters;
 
-use Parfume_Reviews\Core\Container;
+use ParfumeReviews\Core\Container;
 
 /**
  * FiltersHandler Class

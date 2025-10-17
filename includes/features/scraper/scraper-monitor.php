@@ -9,10 +9,10 @@
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Features\Scraper;
+namespace ParfumeReviews\Features\Scraper;
 
-use Parfume_Reviews\Features\Stores\StoreRepository;
-use Parfume_Reviews\Features\Stores\StoreManager;
+use ParfumeReviews\Features\Stores\StoreRepository;
+use ParfumeReviews\Features\Stores\StoreManager;
 
 /**
  * ScraperMonitor Class
@@ -480,7 +480,7 @@ class ScraperMonitor {
         }
         
         $store_repo = new StoreRepository();
-        $store_manager = new StoreManager(\Parfume_Reviews\Core\Plugin::get_instance()->get_container());
+        $store_manager = new StoreManager(\ParfumeReviews\Core\Plugin::get_instance()->get_container());
         
         $stores = $store_repo->get_post_stores($post_id);
         $store_id = isset($stores[$store_index]['store_id']) ? $stores[$store_index]['store_id'] : 0;

@@ -20,12 +20,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Parfume_Reviews\\": "includes/"
+            "ParfumeReviews\\": "includes/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Parfume_Reviews\\Tests\\": "tests/"
+            "ParfumeReviews\\Tests\\": "tests/"
         }
     },
     "scripts": {
