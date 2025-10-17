@@ -1,17 +1,30 @@
 <?php
 /**
- * Helper Functions
+ * Helper Functions - UNIFIED VERSION
  * 
  * Global helper functions for templates
+ * Contains all helper functions from both helpers.php and helper-functions.php
+ * 
+ * IMPORTANT: This file replaces both:
+ * - includes/helpers.php (old version)
+ * - includes/helpers/helper-functions.php (to be deleted)
  * 
  * @package Parfume_Reviews
  * @since 2.0.0
+ * @version 2.0.1-unified
  */
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
+
+// Mark that helpers are loaded
+define('PARFUME_REVIEWS_HELPERS_LOADED', true);
+
+/* ==========================================================================
+   RATING & DISPLAY FUNCTIONS
+   ========================================================================== */
 
 /**
  * Get rating stars HTML
@@ -54,6 +67,23 @@ function parfume_reviews_get_rating_stars($rating, $show_empty = true) {
 }
 
 /**
+ * Display parfume card
+ * 
+ * @param int $post_id Post ID
+ */
+function parfume_reviews_display_parfume_card($post_id) {
+    $template_loader = new \ParfumeReviews\Templates\Loader(
+        \ParfumeReviews\Core\Plugin::get_instance()->get_container()
+    );
+    
+    $template_loader->get_template_part('parts/parfume-card', null, ['post_id' => $post_id]);
+}
+
+/* ==========================================================================
+   PRICE & FORMATTING FUNCTIONS
+   ========================================================================== */
+
+/**
  * Format price
  * 
  * @param float $price Price value
@@ -69,20 +99,22 @@ function parfume_reviews_format_price($price, $currency = 'BGN') {
 }
 
 /**
- * Display parfume card
+ * Format date
  * 
- * @param int $post_id Post ID
+ * @param string $date Date string
+ * @param string $format Date format (default: d.m.Y)
+ * @return string Formatted date
  */
-function parfume_reviews_display_parfume_card($post_id) {
-    $template_loader = new \ParfumeReviews\Templates\Loader(
-        \ParfumeReviews\Core\Plugin::get_instance()->get_container()
-    );
-    
-    $template_loader->get_template_part('parts/parfume-card', null, ['post_id' => $post_id]);
+function parfume_reviews_format_date($date, $format = 'd.m.Y') {
+    return date_i18n($format, strtotime($date));
 }
 
+/* ==========================================================================
+   BREADCRUMBS FUNCTIONS
+   ========================================================================== */
+
 /**
- * Get breadcrumbs
+ * Get breadcrumbs array
  * 
  * @return array Breadcrumb items
  */
@@ -104,14 +136,33 @@ function parfume_reviews_get_breadcrumbs() {
         'url' => home_url('/' . $parfume_slug . '/')
     ];
     
-    // Current page
+    // Current page context
     if (is_singular('parfume')) {
+        // Add brand if exists
+        $brands = wp_get_post_terms(get_the_ID(), 'marki');
+        if (!empty($brands)) {
+            $breadcrumbs[] = [
+                'title' => $brands[0]->name,
+                'url' => get_term_link($brands[0])
+            ];
+        }
+        
+        // Current parfume (no URL for current page)
         $breadcrumbs[] = [
             'title' => get_the_title(),
             'url' => ''
         ];
     } elseif (is_tax()) {
         $term = get_queried_object();
+        $taxonomy = get_taxonomy($term->taxonomy);
+        
+        // Add taxonomy archive
+        $breadcrumbs[] = [
+            'title' => $taxonomy->labels->name,
+            'url' => home_url('/' . $parfume_slug . '/' . $term->taxonomy . '/')
+        ];
+        
+        // Current term (no URL for current page)
         $breadcrumbs[] = [
             'title' => $term->name,
             'url' => ''
@@ -122,217 +173,349 @@ function parfume_reviews_get_breadcrumbs() {
 }
 
 /**
- * Display breadcrumbs
+ * Display breadcrumbs HTML
+ * 
+ * @return string Breadcrumbs HTML
  */
-function parfume_reviews_display_breadcrumbs() {
+function parfume_reviews_breadcrumbs() {
+    if (is_front_page()) {
+        return '';
+    }
+    
     $breadcrumbs = parfume_reviews_get_breadcrumbs();
     
     if (empty($breadcrumbs)) {
-        return;
+        return '';
     }
     
-    echo '<nav class="parfume-breadcrumbs" aria-label="' . esc_attr__('Breadcrumb', 'parfume-reviews') . '">';
-    echo '<ol class="breadcrumb-list">';
+    $html = '<nav class="parfume-breadcrumbs" aria-label="' . esc_attr__('Навигация', 'parfume-reviews') . '">';
+    $html .= '<ol class="breadcrumb-list">';
     
-    $total = count($breadcrumbs);
-    $current = 0;
-    
-    foreach ($breadcrumbs as $crumb) {
-        $current++;
-        $is_last = ($current === $total);
+    foreach ($breadcrumbs as $index => $crumb) {
+        $is_last = ($index === count($breadcrumbs) - 1);
         
-        echo '<li class="breadcrumb-item' . ($is_last ? ' active' : '') . '">';
+        $html .= '<li class="breadcrumb-item' . ($is_last ? ' active' : '') . '">';
         
-        if (!$is_last && !empty($crumb['url'])) {
-            echo '<a href="' . esc_url($crumb['url']) . '">' . esc_html($crumb['title']) . '</a>';
+        if (!empty($crumb['url']) && !$is_last) {
+            $html .= '<a href="' . esc_url($crumb['url']) . '">' . esc_html($crumb['title']) . '</a>';
         } else {
-            echo '<span>' . esc_html($crumb['title']) . '</span>';
+            $html .= '<span>' . esc_html($crumb['title']) . '</span>';
         }
         
         if (!$is_last) {
-            echo '<span class="separator">/</span>';
+            $html .= '<span class="separator">/</span>';
         }
         
-        echo '</li>';
+        $html .= '</li>';
     }
     
-    echo '</ol>';
-    echo '</nav>';
-}
-
-/**
- * Get longevity label
- * 
- * @param string $longevity Longevity value
- * @return string Translated label
- */
-function parfume_reviews_get_longevity_label($longevity) {
-    $labels = [
-        'weak' => __('Слаба', 'parfume-reviews'),
-        'moderate' => __('Умерена', 'parfume-reviews'),
-        'long' => __('Дълга', 'parfume-reviews'),
-        'very_long' => __('Много дълга', 'parfume-reviews')
-    ];
+    $html .= '</ol>';
+    $html .= '</nav>';
     
-    return isset($labels[$longevity]) ? $labels[$longevity] : $longevity;
+    return $html;
 }
 
+/* ==========================================================================
+   A-Z NAVIGATION
+   ========================================================================== */
+
 /**
- * Get sillage label
+ * A-Z Navigation for Perfumers/Brands
+ * Generates alphabet navigation with scroll functionality
  * 
- * @param string $sillage Sillage value
- * @return string Translated label
+ * @param string $taxonomy Taxonomy name (default: marki)
+ * @param bool $show_cyrillic Show Cyrillic alphabet (default: true)
+ * @return string HTML for A-Z navigation
  */
-function parfume_reviews_get_sillage_label($sillage) {
-    $labels = [
-        'intimate' => __('Интимен', 'parfume-reviews'),
-        'moderate' => __('Умерен', 'parfume-reviews'),
-        'strong' => __('Силен', 'parfume-reviews'),
-        'enormous' => __('Много силен', 'parfume-reviews')
-    ];
+function parfume_reviews_az_navigation($taxonomy = 'marki', $show_cyrillic = true) {
+    // Latin alphabet
+    $latin = range('A', 'Z');
     
-    return isset($labels[$sillage]) ? $labels[$sillage] : $sillage;
-}
-
-/**
- * Check if current page is parfume related
- * 
- * @return bool
- */
-function parfume_reviews_is_parfume_page() {
-    if (!did_action('wp')) {
-        return false;
+    // Cyrillic alphabet
+    $cyrillic = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'З', 'И', 'Й', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ', 'Ю', 'Я'];
+    
+    // Get all terms
+    $terms = get_terms([
+        'taxonomy' => $taxonomy,
+        'hide_empty' => true
+    ]);
+    
+    if (is_wp_error($terms) || empty($terms)) {
+        return '';
     }
     
-    $parfume_taxonomies = ['marki', 'gender', 'aroma_type', 'season', 'intensity', 'notes', 'perfumer'];
-    
-    if (is_singular('parfume') || is_post_type_archive('parfume')) {
-        return true;
+    // Group terms by first letter
+    $grouped = [];
+    foreach ($terms as $term) {
+        $first_letter = mb_strtoupper(mb_substr($term->name, 0, 1));
+        if (!isset($grouped[$first_letter])) {
+            $grouped[$first_letter] = [];
+        }
+        $grouped[$first_letter][] = $term;
     }
     
-    foreach ($parfume_taxonomies as $taxonomy) {
-        if (is_tax($taxonomy)) {
-            return true;
+    // Generate navigation HTML
+    $html = '<div class="az-navigation">';
+    
+    // Latin letters
+    foreach ($latin as $letter) {
+        $active = isset($grouped[$letter]) ? 'active' : 'disabled';
+        $html .= sprintf(
+            '<a href="#letter-%s" class="az-letter %s" data-letter="%s">%s</a>',
+            $letter,
+            $active,
+            $letter,
+            $letter
+        );
+    }
+    
+    // Cyrillic letters
+    if ($show_cyrillic) {
+        $html .= '<span class="az-separator"></span>';
+        foreach ($cyrillic as $letter) {
+            $active = isset($grouped[$letter]) ? 'active' : 'disabled';
+            $html .= sprintf(
+                '<a href="#letter-%s" class="az-letter %s" data-letter="%s">%s</a>',
+                urlencode($letter),
+                $active,
+                $letter,
+                $letter
+            );
         }
     }
     
-    return false;
-}
-
-/**
- * Get taxonomy term link
- * 
- * @param string $taxonomy Taxonomy name
- * @param int|string $term Term ID or slug
- * @return string Term URL
- */
-function parfume_reviews_get_term_link($taxonomy, $term) {
-    $term_obj = is_numeric($term) ? get_term($term, $taxonomy) : get_term_by('slug', $term, $taxonomy);
+    $html .= '</div>';
     
-    if (!$term_obj || is_wp_error($term_obj)) {
-        return '';
+    // Generate grouped list HTML
+    $html .= '<div class="az-list">';
+    
+    $all_letters = $show_cyrillic ? array_merge($latin, $cyrillic) : $latin;
+    
+    foreach ($all_letters as $letter) {
+        if (isset($grouped[$letter])) {
+            $html .= sprintf('<h2 id="letter-%s" class="az-group-title">%s</h2>', urlencode($letter), $letter);
+            $html .= '<div class="az-group-items">';
+            
+            foreach ($grouped[$letter] as $term) {
+                $html .= sprintf(
+                    '<div class="az-item"><a href="%s">%s</a></div>',
+                    get_term_link($term),
+                    esc_html($term->name)
+                );
+            }
+            
+            $html .= '</div>';
+        }
     }
     
-    return get_term_link($term_obj, $taxonomy);
-}
-
-/**
- * Display filters
- * 
- * @param array $args Optional arguments
- */
-function parfume_reviews_display_filters($args = []) {
-    $template_loader = new \ParfumeReviews\Templates\Loader(
-        \ParfumeReviews\Core\Plugin::get_instance()->get_container()
-    );
+    $html .= '</div>';
     
-    $template_loader->get_template_part('parts/filters', null, $args);
-}
-
-/**
- * Display pagination
- * 
- * @param WP_Query $query Optional custom query
- */
-function parfume_reviews_display_pagination($query = null) {
-    $template_loader = new \ParfumeReviews\Templates\Loader(
-        \ParfumeReviews\Core\Plugin::get_instance()->get_container()
-    );
-    
-    $template_loader->get_template_part('parts/pagination', null, ['query' => $query]);
-}
-
-/**
- * Get comparison button HTML
- * 
- * @param int $post_id Post ID
- * @return string Button HTML
- */
-function parfume_reviews_get_comparison_button($post_id = null) {
-    if (!$post_id) {
-        $post_id = get_the_ID();
-    }
-    
-    $container = \ParfumeReviews\Core\Plugin::get_instance()->get_container();
-    
-    if (!$container->has('comparison')) {
-        return '';
-    }
-    
-    $comparison = $container->get('comparison');
-    
-    ob_start();
-    $comparison->render_comparison_button($post_id);
-    return ob_get_clean();
-}
-
-/**
- * Get stores data
- * 
- * @param int $post_id Post ID
- * @return array Stores data
- */
-function parfume_reviews_get_stores($post_id) {
-    $stores = get_post_meta($post_id, '_parfume_stores', true);
-    
-    if (!is_array($stores)) {
-        return [];
-    }
-    
-    return $stores;
-}
-
-/**
- * Get lowest price from stores
- * 
- * @param int $post_id Post ID
- * @return float|null Lowest price or null
- */
-function parfume_reviews_get_lowest_price($post_id) {
-    $stores = parfume_reviews_get_stores($post_id);
-    
-    if (empty($stores)) {
-        return null;
-    }
-    
-    $prices = array_filter(array_column($stores, 'price'), function($price) {
-        return !empty($price) && $price > 0;
+    // Add JavaScript for smooth scroll
+    $html .= '
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll(".az-letter.active").forEach(function(letter) {
+            letter.addEventListener("click", function(e) {
+                e.preventDefault();
+                var target = document.querySelector(this.getAttribute("href"));
+                if (target) {
+                    target.scrollIntoView({behavior: "smooth", block: "start"});
+                }
+            });
+        });
     });
+    </script>
+    ';
     
-    return !empty($prices) ? min($prices) : null;
+    return $html;
+}
+
+/* ==========================================================================
+   TEXT UTILITIES
+   ========================================================================== */
+
+/**
+ * Transliterate Cyrillic to Latin
+ * 
+ * @param string $text Text to transliterate
+ * @return string Transliterated text
+ */
+function parfume_reviews_transliterate($text) {
+    $cyrillic = [
+        'а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о', 'п',
+        'р', 'с', 'т', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ', 'ъ', 'ь', 'ю', 'я',
+        'А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'З', 'И', 'Й', 'К', 'Л', 'М', 'Н', 'О', 'П',
+        'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ', 'Ь', 'Ю', 'Я'
+    ];
+    
+    $latin = [
+        'a', 'b', 'v', 'g', 'd', 'e', 'zh', 'z', 'i', 'y', 'k', 'l', 'm', 'n', 'o', 'p',
+        'r', 's', 't', 'u', 'f', 'h', 'ts', 'ch', 'sh', 'sht', 'a', 'y', 'yu', 'ya',
+        'A', 'B', 'V', 'G', 'D', 'E', 'Zh', 'Z', 'I', 'Y', 'K', 'L', 'M', 'N', 'O', 'P',
+        'R', 'S', 'T', 'U', 'F', 'H', 'Ts', 'Ch', 'Sh', 'Sht', 'A', 'Y', 'Yu', 'Ya'
+    ];
+    
+    return str_replace($cyrillic, $latin, $text);
 }
 
 /**
- * Sanitize store data
+ * Calculate reading time
  * 
- * @param array $store Store data
- * @return array Sanitized data
+ * @param string $content Content to analyze
+ * @return int Reading time in minutes
  */
-function parfume_reviews_sanitize_store($store) {
-    return [
-        'name' => isset($store['name']) ? sanitize_text_field($store['name']) : '',
-        'url' => isset($store['url']) ? esc_url_raw($store['url']) : '',
-        'price' => isset($store['price']) ? floatval($store['price']) : 0,
-        'affiliate_link' => isset($store['affiliate_link']) ? esc_url_raw($store['affiliate_link']) : ''
+function parfume_reviews_reading_time($content) {
+    $word_count = str_word_count(strip_tags($content));
+    $minutes = ceil($word_count / 200); // 200 words per minute
+    return $minutes;
+}
+
+/* ==========================================================================
+   NOTES FUNCTIONS
+   ========================================================================== */
+
+/**
+ * Get color for note group
+ * 
+ * @param string $group Note group name
+ * @return string Hex color code
+ */
+function parfume_reviews_get_note_group_color($group) {
+    $colors = [
+        'дървесни' => '#8B4513',
+        'цветни' => '#FF69B4',
+        'ориенталски' => '#DAA520',
+        'плодови' => '#FF6347',
+        'зелени' => '#32CD32',
+        'гурме' => '#D2691E',
+        'морски' => '#4682B4',
+        'ароматни' => '#9370DB'
     ];
+    
+    return isset($colors[strtolower($group)]) ? $colors[strtolower($group)] : '#999';
+}
+
+/**
+ * Import notes from JSON
+ * 
+ * @param string $json_file Path to JSON file
+ * @return int|WP_Error Number of imported notes or error
+ */
+function parfume_reviews_import_notes_json($json_file) {
+    if (!file_exists($json_file)) {
+        return new WP_Error('file_not_found', __('JSON файлът не е намерен', 'parfume-reviews'));
+    }
+    
+    $json_data = file_get_contents($json_file);
+    $notes = json_decode($json_data, true);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        return new WP_Error('invalid_json', __('Невалиден JSON формат', 'parfume-reviews'));
+    }
+    
+    $imported = 0;
+    
+    foreach ($notes as $note_data) {
+        if (empty($note_data['note']) || empty($note_data['group'])) {
+            continue;
+        }
+        
+        // Check if term exists
+        $term = term_exists($note_data['note'], 'notes');
+        
+        if (!$term) {
+            // Create new term
+            $term = wp_insert_term($note_data['note'], 'notes');
+            
+            if (!is_wp_error($term)) {
+                // Add group meta
+                update_term_meta($term['term_id'], 'note_group', $note_data['group']);
+                $imported++;
+            }
+        } else {
+            // Update existing term's group
+            update_term_meta($term['term_id'], 'note_group', $note_data['group']);
+        }
+    }
+    
+    return $imported;
+}
+
+/**
+ * Export notes to JSON
+ * 
+ * @return string JSON string
+ */
+function parfume_reviews_export_notes_json() {
+    $terms = get_terms([
+        'taxonomy' => 'notes',
+        'hide_empty' => false
+    ]);
+    
+    if (is_wp_error($terms)) {
+        return json_encode([]);
+    }
+    
+    $notes = [];
+    
+    foreach ($terms as $term) {
+        $group = get_term_meta($term->term_id, 'note_group', true);
+        
+        $notes[] = [
+            'note' => $term->name,
+            'group' => $group ?: ''
+        ];
+    }
+    
+    return json_encode($notes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+}
+
+/* ==========================================================================
+   TEMPLATE PART LOADER
+   ========================================================================== */
+
+/**
+ * Get template part (replaces get_template_part for plugin templates)
+ * 
+ * @param string $slug Template slug
+ * @param string $name Template name (optional)
+ * @param array $args Arguments to pass to template
+ */
+function parfume_reviews_get_template_part($slug, $name = null, $args = []) {
+    $template_loader = new \ParfumeReviews\Templates\Loader(
+        \ParfumeReviews\Core\Plugin::get_instance()->get_container()
+    );
+    
+    $template_loader->get_template_part($slug, $name, $args);
+}
+
+/* ==========================================================================
+   BACKWARDS COMPATIBILITY ALIASES
+   ========================================================================== */
+
+/**
+ * Short aliases for common functions (backwards compatibility)
+ */
+if (!function_exists('parfume_format_price')) {
+    function parfume_format_price($price, $currency = 'лв.') {
+        return parfume_reviews_format_price($price, $currency);
+    }
+}
+
+if (!function_exists('parfume_get_rating_stars')) {
+    function parfume_get_rating_stars($rating, $show_empty = true) {
+        return parfume_reviews_get_rating_stars($rating, $show_empty);
+    }
+}
+
+if (!function_exists('parfume_format_date')) {
+    function parfume_format_date($date, $format = 'd.m.Y') {
+        return parfume_reviews_format_date($date, $format);
+    }
+}
+
+if (!function_exists('parfume_breadcrumbs')) {
+    function parfume_breadcrumbs() {
+        echo parfume_reviews_breadcrumbs();
+    }
 }
