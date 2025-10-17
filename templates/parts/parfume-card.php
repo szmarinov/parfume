@@ -1,159 +1,185 @@
 <?php
 /**
- * Parfume Card Component
+ * Parfume Card Component - IMPROVED
  * 
- * Reusable card component for displaying parfumes in grids
+ * Modern card design for displaying parfumes in grid
  * 
- * @package Parfume_Reviews
+ * @package ParfumeReviews
  * @since 2.0.0
- * 
- * @var int $post_id Post ID (passed as argument)
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Default to current post if not provided
-if (!isset($post_id)) {
-    $post_id = get_the_ID();
-}
+// Get post ID
+$post_id = isset($args['post_id']) ? $args['post_id'] : get_the_ID();
 
-// Get post object
-$post = get_post($post_id);
-if (!$post) {
-    return;
-}
-
-// Get meta data and sanitize
+// Get parfume data
 $rating = get_post_meta($post_id, '_parfume_rating', true);
-$rating = !empty($rating) && is_numeric($rating) ? floatval($rating) : 0;
-
+$release_year = get_post_meta($post_id, '_parfume_release_year', true);
 $stores = get_post_meta($post_id, '_parfume_stores', true);
 
-// Calculate cheapest price
-$cheapest_price = null;
+// Get lowest price from stores
+$lowest_price = null;
 if (!empty($stores) && is_array($stores)) {
     $prices = array_filter(array_column($stores, 'price'), function($price) {
-        return !empty($price) && is_numeric($price) && $price > 0;
+        return !empty($price) && is_numeric($price);
     });
     if (!empty($prices)) {
-        $cheapest_price = min($prices);
+        $lowest_price = min($prices);
     }
 }
 
 // Get taxonomies
 $brands = wp_get_post_terms($post_id, 'marki');
 $genders = wp_get_post_terms($post_id, 'gender');
-$notes = wp_get_post_terms($post_id, 'notes', ['number' => 3]);
-
+$types = wp_get_post_terms($post_id, 'aroma_type');
 ?>
 
-<article id="post-<?php echo esc_attr($post_id); ?>" class="parfume-card">
+<article id="parfume-<?php echo $post_id; ?>" class="parfume-card">
     
-    <div class="card-inner">
-        
-        <!-- Card Image -->
-        <div class="card-image">
-            <a href="<?php echo esc_url(get_permalink($post_id)); ?>">
-                <?php if (has_post_thumbnail($post_id)) : ?>
-                    <?php echo get_the_post_thumbnail($post_id, 'medium', ['alt' => get_the_title($post_id)]); ?>
-                <?php else : ?>
-                    <img src="<?php echo esc_url(PARFUME_REVIEWS_URL . 'assets/images/placeholder.jpg'); ?>" 
-                         alt="<?php echo esc_attr(get_the_title($post_id)); ?>">
-                <?php endif; ?>
-            </a>
-            
-            <!-- Quick Actions -->
-            <div class="card-actions">
-                <?php if (function_exists('parfume_reviews_get_comparison_button')) : ?>
-                    <?php echo parfume_reviews_get_comparison_button($post_id); ?>
-                <?php endif; ?>
-            </div>
-            
-            <!-- Price Badge -->
-            <?php if ($cheapest_price) : ?>
-                <div class="price-badge">
-                    <span class="price-amount"><?php echo number_format($cheapest_price, 2, '.', ''); ?></span>
-                    <span class="price-currency">лв</span>
-                </div>
-            <?php endif; ?>
+    <!-- Featured Badge -->
+    <?php if ($rating && floatval($rating) >= 9.0) : ?>
+        <div class="parfume-card-badge">
+            <span class="dashicons dashicons-star-filled"></span>
+            <?php _e('Топ Оценка', 'parfume-reviews'); ?>
         </div>
+    <?php endif; ?>
+    
+    <!-- Comparison Checkbox -->
+    <div class="parfume-card-compare">
+        <input type="checkbox" 
+               class="compare-checkbox" 
+               data-parfume-id="<?php echo $post_id; ?>"
+               id="compare-<?php echo $post_id; ?>">
+        <label for="compare-<?php echo $post_id; ?>" title="<?php _e('Добави за сравнение', 'parfume-reviews'); ?>">
+            <span class="dashicons dashicons-plus"></span>
+        </label>
+    </div>
+    
+    <!-- Image -->
+    <a href="<?php echo get_permalink($post_id); ?>" class="parfume-card-image">
+        <?php
+        if (has_post_thumbnail($post_id)) :
+            echo get_the_post_thumbnail($post_id, 'medium', [
+                'class' => 'card-thumbnail',
+                'loading' => 'lazy'
+            ]);
+        else :
+            ?>
+            <div class="card-placeholder">
+                <span class="dashicons dashicons-admin-customizer"></span>
+            </div>
+            <?php
+        endif;
+        ?>
         
-        <!-- Card Content -->
-        <div class="card-content">
-            
-            <!-- Brand -->
-            <?php if (!empty($brands) && !is_wp_error($brands)) : ?>
-                <div class="card-brand">
-                    <a href="<?php echo esc_url(get_term_link($brands[0])); ?>">
-                        <?php echo esc_html($brands[0]->name); ?>
-                    </a>
-                </div>
-            <?php endif; ?>
-            
-            <!-- Title -->
-            <h3 class="card-title">
-                <a href="<?php echo esc_url(get_permalink($post_id)); ?>">
-                    <?php echo esc_html(get_the_title($post_id)); ?>
+        <!-- Quick View Overlay -->
+        <div class="card-overlay">
+            <span class="quick-view-btn">
+                <span class="dashicons dashicons-visibility"></span>
+                <?php _e('Бърз преглед', 'parfume-reviews'); ?>
+            </span>
+        </div>
+    </a>
+    
+    <!-- Content -->
+    <div class="parfume-card-content">
+        
+        <!-- Brand -->
+        <?php if (!empty($brands)) : ?>
+            <div class="parfume-card-brand">
+                <a href="<?php echo get_term_link($brands[0]); ?>">
+                    <?php echo esc_html($brands[0]->name); ?>
                 </a>
-            </h3>
-            
-            <!-- Gender -->
-            <?php if (!empty($genders) && !is_wp_error($genders)) : ?>
-                <div class="card-gender">
-                    <?php foreach ($genders as $gender) : ?>
-                        <span class="gender-badge"><?php echo esc_html($gender->name); ?></span>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-            
-            <!-- Notes -->
-            <?php if (!empty($notes) && !is_wp_error($notes)) : ?>
-                <div class="card-notes">
-                    <?php foreach ($notes as $note) : ?>
-                        <span class="note-badge"><?php echo esc_html($note->name); ?></span>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+            </div>
+        <?php endif; ?>
+        
+        <!-- Title -->
+        <h3 class="parfume-card-title">
+            <a href="<?php echo get_permalink($post_id); ?>">
+                <?php echo get_the_title($post_id); ?>
+            </a>
+        </h3>
+        
+        <!-- Meta Info -->
+        <div class="parfume-card-meta">
             
             <!-- Rating -->
-            <?php if ($rating > 0) : ?>
-                <div class="card-rating">
+            <?php if ($rating && floatval($rating) > 0) : ?>
+                <div class="parfume-card-rating">
                     <div class="rating-stars">
                         <?php
-                        if (function_exists('parfume_reviews_get_rating_stars')) {
-                            echo parfume_reviews_get_rating_stars($rating);
-                        } else {
-                            // Fallback star display
-                            $stars_count = round($rating / 2); // Convert 0-10 to 0-5
-                            for ($i = 1; $i <= 5; $i++) {
-                                if ($i <= $stars_count) {
-                                    echo '<span class="star filled">★</span>';
-                                } else {
-                                    echo '<span class="star">☆</span>';
-                                }
-                            }
+                        $stars = floatval($rating) / 2; // Convert 0-10 to 0-5
+                        $full_stars = floor($stars);
+                        $half_star = ($stars - $full_stars) >= 0.5;
+                        
+                        for ($i = 0; $i < $full_stars; $i++) {
+                            echo '<span class="star star-full">★</span>';
+                        }
+                        if ($half_star) {
+                            echo '<span class="star star-half">★</span>';
                         }
                         ?>
                     </div>
-                    <span class="rating-value"><?php echo esc_html($rating); ?>/10</span>
+                    <span class="rating-value"><?php echo number_format($rating, 1); ?></span>
                 </div>
             <?php endif; ?>
             
-            <!-- Excerpt -->
-            <div class="card-excerpt">
+            <!-- Gender -->
+            <?php if (!empty($genders)) : ?>
+                <span class="parfume-card-gender">
+                    <?php echo esc_html($genders[0]->name); ?>
+                </span>
+            <?php endif; ?>
+            
+            <!-- Year -->
+            <?php if ($release_year) : ?>
+                <span class="parfume-card-year">
+                    <span class="dashicons dashicons-calendar-alt"></span>
+                    <?php echo esc_html($release_year); ?>
+                </span>
+            <?php endif; ?>
+        </div>
+        
+        <!-- Excerpt -->
+        <?php if (has_excerpt($post_id)) : ?>
+            <div class="parfume-card-excerpt">
                 <?php echo wp_trim_words(get_the_excerpt($post_id), 15, '...'); ?>
             </div>
+        <?php endif; ?>
+        
+        <!-- Type Tags -->
+        <?php if (!empty($types)) : ?>
+            <div class="parfume-card-tags">
+                <?php foreach (array_slice($types, 0, 2) as $type) : ?>
+                    <span class="type-tag"><?php echo esc_html($type->name); ?></span>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+        
+        <!-- Footer -->
+        <div class="parfume-card-footer">
             
-            <!-- View Button -->
-            <div class="card-footer">
-                <a href="<?php echo esc_url(get_permalink($post_id)); ?>" class="card-button">
-                    <?php _e('Виж повече', 'parfume-reviews'); ?>
-                    <span class="dashicons dashicons-arrow-right-alt2"></span>
-                </a>
+            <!-- Price -->
+            <div class="parfume-card-price">
+                <?php if ($lowest_price && $lowest_price > 0) : ?>
+                    <span class="price-label"><?php _e('от', 'parfume-reviews'); ?></span>
+                    <span class="price-value"><?php echo number_format($lowest_price, 2); ?></span>
+                    <span class="price-currency"><?php _e('лв', 'parfume-reviews'); ?></span>
+                <?php else : ?>
+                    <span class="price-na"><?php _e('Виж магазини', 'parfume-reviews'); ?></span>
+                <?php endif; ?>
             </div>
             
+            <!-- Action Button -->
+            <a href="<?php echo get_permalink($post_id); ?>" 
+               class="parfume-card-link"
+               title="<?php echo esc_attr(get_the_title($post_id)); ?>">
+                <?php _e('Детайли', 'parfume-reviews'); ?>
+                <span class="dashicons dashicons-arrow-right-alt2"></span>
+            </a>
         </div>
         
     </div>

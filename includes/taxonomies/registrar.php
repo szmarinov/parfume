@@ -4,7 +4,7 @@
  * 
  * Handles registration of all taxonomies
  * 
- * @package Parfume_Reviews
+ * @package ParfumeReviews
  * @subpackage Taxonomies
  * @since 2.0.0
  */
@@ -31,6 +31,14 @@ class Registrar {
      * @param array $config Taxonomy configuration
      */
     public function __construct($config) {
+        // ВАЖНО: Валидация на конфигурацията
+        if (!is_array($config)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('ParfumeReviews\Taxonomies\Registrar: Config is not an array! Type: ' . gettype($config));
+            }
+            $config = [];
+        }
+        
         $this->config = $config;
     }
     
@@ -38,10 +46,26 @@ class Registrar {
      * Register all taxonomies
      */
     public function register_all() {
+        // Проверка дали има конфигурация
+        if (empty($this->config) || !is_array($this->config)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('ParfumeReviews\Taxonomies\Registrar: No valid config for registration');
+            }
+            return;
+        }
+        
         // Get settings for dynamic slugs
         $settings = get_option('parfume_reviews_settings', []);
         
         foreach ($this->config as $taxonomy => $tax_config) {
+            // Валидация на taxonomy конфигурацията
+            if (!is_array($tax_config)) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("ParfumeReviews: Taxonomy '$taxonomy' config is not array! Skipping.");
+                }
+                continue;
+            }
+            
             $this->register_taxonomy($taxonomy, $tax_config, $settings);
         }
         
@@ -136,7 +160,17 @@ class Registrar {
      * Add default terms for all taxonomies
      */
     public function add_default_terms() {
+        // Проверка дали има конфигурация
+        if (empty($this->config) || !is_array($this->config)) {
+            return;
+        }
+        
         foreach ($this->config as $taxonomy => $config) {
+            // Валидация на конфигурацията
+            if (!is_array($config)) {
+                continue;
+            }
+            
             if (isset($config['default_terms']) && is_array($config['default_terms'])) {
                 $this->add_taxonomy_default_terms($taxonomy, $config['default_terms']);
             }
@@ -178,6 +212,9 @@ class Registrar {
      * @return array
      */
     public function get_registered_taxonomies() {
+        if (!is_array($this->config)) {
+            return [];
+        }
         return array_keys($this->config);
     }
     
@@ -207,7 +244,7 @@ class Registrar {
      * @return array
      */
     public function get_all_configs() {
-        return $this->config;
+        return is_array($this->config) ? $this->config : [];
     }
     
     /**

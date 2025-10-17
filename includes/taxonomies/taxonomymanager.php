@@ -57,6 +57,14 @@ class TaxonomyManager {
         $this->container = $container;
         $this->config = $this->get_config();
         
+        // ВАЖНО: Валидация на конфигурацията
+        if (!is_array($this->config)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('ParfumeReviews\Taxonomies\TaxonomyManager: Config is not an array! Type: ' . gettype($this->config));
+            }
+            $this->config = [];
+        }
+        
         // Initialize components
         $this->registrar = new Registrar($this->config);
         $this->rewrite_handler = new RewriteHandler($this->config);
@@ -68,7 +76,24 @@ class TaxonomyManager {
      * @return array
      */
     private function get_config() {
-        return $this->container->get('config.taxonomies');
+        try {
+            $config = $this->container->get('config.taxonomies');
+            
+            // Валидация на резултата
+            if (!is_array($config)) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('ParfumeReviews\Taxonomies\TaxonomyManager: Container returned non-array config. Type: ' . gettype($config));
+                }
+                return [];
+            }
+            
+            return $config;
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('ParfumeReviews\Taxonomies\TaxonomyManager: Error getting config: ' . $e->getMessage());
+            }
+            return [];
+        }
     }
     
     /**
@@ -103,6 +128,9 @@ class TaxonomyManager {
      * @return array
      */
     public function get_taxonomies() {
+        if (!is_array($this->config)) {
+            return [];
+        }
         return array_keys($this->config);
     }
     
@@ -131,7 +159,7 @@ class TaxonomyManager {
      * 
      * @param string $taxonomy Taxonomy name
      * @param array $args get_terms arguments
-     * @return array|WP_Error
+     * @return array|\WP_Error
      */
     public function get_terms($taxonomy, $args = []) {
         if (!$this->is_registered($taxonomy)) {
@@ -173,58 +201,11 @@ class TaxonomyManager {
     }
     
     /**
-     * Create new term
-     * 
-     * @param string $taxonomy Taxonomy name
-     * @param string $name Term name
-     * @param array $args Optional term arguments
-     * @return array|WP_Error
-     */
-    public function create_term($taxonomy, $name, $args = []) {
-        if (!$this->is_registered($taxonomy)) {
-            return new \WP_Error('invalid_taxonomy', __('Taxonomy does not exist', 'parfume-reviews'));
-        }
-        
-        return wp_insert_term($name, $taxonomy, $args);
-    }
-    
-    /**
-     * Update term
-     * 
-     * @param int $term_id Term ID
-     * @param string $taxonomy Taxonomy name
-     * @param array $args Term arguments to update
-     * @return array|WP_Error
-     */
-    public function update_term($term_id, $taxonomy, $args = []) {
-        if (!$this->is_registered($taxonomy)) {
-            return new \WP_Error('invalid_taxonomy', __('Taxonomy does not exist', 'parfume-reviews'));
-        }
-        
-        return wp_update_term($term_id, $taxonomy, $args);
-    }
-    
-    /**
-     * Delete term
-     * 
-     * @param int $term_id Term ID
-     * @param string $taxonomy Taxonomy name
-     * @return bool|WP_Error
-     */
-    public function delete_term($term_id, $taxonomy) {
-        if (!$this->is_registered($taxonomy)) {
-            return new \WP_Error('invalid_taxonomy', __('Taxonomy does not exist', 'parfume-reviews'));
-        }
-        
-        return wp_delete_term($term_id, $taxonomy);
-    }
-    
-    /**
      * Get post terms
      * 
      * @param int $post_id Post ID
      * @param string $taxonomy Taxonomy name
-     * @return array|WP_Error
+     * @return array|\WP_Error
      */
     public function get_post_terms($post_id, $taxonomy) {
         if (!$this->is_registered($taxonomy)) {
@@ -241,7 +222,7 @@ class TaxonomyManager {
      * @param string $taxonomy Taxonomy name
      * @param array|int|string $terms Terms to set
      * @param bool $append Whether to append or replace
-     * @return array|WP_Error
+     * @return array|\WP_Error
      */
     public function set_post_terms($post_id, $taxonomy, $terms, $append = false) {
         if (!$this->is_registered($taxonomy)) {
@@ -276,7 +257,7 @@ class TaxonomyManager {
      * 
      * @param int|\WP_Term $term Term ID or object
      * @param string $taxonomy Taxonomy name
-     * @return string|WP_Error
+     * @return string|\WP_Error
      */
     public function get_term_link($term, $taxonomy = '') {
         return get_term_link($term, $taxonomy);
@@ -383,6 +364,22 @@ class TaxonomyManager {
                 $this->create_term($taxonomy, $term_name);
             }
         }
+    }
+    
+    /**
+     * Create term
+     * 
+     * @param string $taxonomy Taxonomy name
+     * @param string $term_name Term name
+     * @param array $args Optional arguments
+     * @return array|\WP_Error
+     */
+    public function create_term($taxonomy, $term_name, $args = []) {
+        if (!$this->is_registered($taxonomy)) {
+            return new \WP_Error('invalid_taxonomy', __('Taxonomy does not exist', 'parfume-reviews'));
+        }
+        
+        return wp_insert_term($term_name, $taxonomy, $args);
     }
     
     /**

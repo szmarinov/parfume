@@ -4,7 +4,7 @@
  * 
  * Handles URL rewriting and template loading for taxonomies
  * 
- * @package Parfume_Reviews
+ * @package ParfumeReviews
  * @subpackage Taxonomies
  * @since 2.0.0
  */
@@ -38,8 +38,16 @@ class RewriteHandler {
      * @param array $config Taxonomy configuration
      */
     public function __construct($config) {
+        // ВАЖНО: Валидация на конфигурацията
+        if (!is_array($config)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('ParfumeReviews\Taxonomies\RewriteHandler: Config is not an array! Type: ' . gettype($config));
+            }
+            $config = [];
+        }
+        
         $this->config = $config;
-        $this->taxonomies = array_keys($config);
+        $this->taxonomies = !empty($config) ? array_keys($config) : [];
         
         // Add rewrite rules with high priority
         add_action('init', [$this, 'add_rewrite_rules'], 1);
@@ -49,11 +57,27 @@ class RewriteHandler {
      * Add custom rewrite rules
      */
     public function add_rewrite_rules() {
+        // Проверка дали има конфигурация
+        if (empty($this->config) || !is_array($this->config)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('ParfumeReviews\Taxonomies\RewriteHandler: No valid config for rewrite rules');
+            }
+            return;
+        }
+        
         $settings = get_option('parfume_reviews_settings', []);
         $parfume_slug = isset($settings['parfume_slug']) ? $settings['parfume_slug'] : 'parfiumi';
         
         // Add archive rules for each taxonomy
         foreach ($this->config as $taxonomy => $tax_config) {
+            // Валидация на taxonomy конфигурацията
+            if (!is_array($tax_config)) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("ParfumeReviews: Taxonomy '$taxonomy' config is not array! Skipping.");
+                }
+                continue;
+            }
+            
             $tax_slug = $this->get_taxonomy_slug($taxonomy, $settings);
             
             // Archive page rule (all terms)
@@ -126,69 +150,46 @@ class RewriteHandler {
     }
     
     /**
-     * Parse request and handle custom URLs
+     * Parse custom requests
      * 
      * @param \WP $wp WordPress environment object
      */
     public function parse_request($wp) {
-        global $wp_query;
-        
-        // Check if this is a taxonomy archive
+        // Check for taxonomy archive
         if (isset($wp->query_vars['taxonomy_archive'])) {
             $taxonomy = $wp->query_vars['taxonomy_archive'];
             
-            // Set up query for taxonomy archive
-            $wp_query->is_tax = true;
-            $wp_query->is_archive = true;
-            $wp_query->is_home = false;
-            
-            // Set taxonomy in query vars
-            $wp_query->query_vars['is_taxonomy_archive'] = $taxonomy;
-            
-            // Remove conflicting query vars
-            unset($wp_query->query_vars['name']);
-            unset($wp_query->query_vars['post_type']);
-            unset($wp_query->query_vars['pagename']);
-            
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    'Parfume Reviews: Handling taxonomy archive for: %s',
-                    $taxonomy
-                ));
+            // Validate taxonomy exists in config
+            if (!isset($this->config[$taxonomy])) {
+                return;
             }
-        }
-        
-        // Check if this is a single taxonomy term
-        foreach ($this->taxonomies as $taxonomy) {
-            if (isset($wp->query_vars[$taxonomy]) && !empty($wp->query_vars[$taxonomy])) {
-                $wp_query->is_tax = true;
-                $wp_query->is_archive = true;
-                $wp_query->is_home = false;
-                
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log(sprintf(
-                        'Parfume Reviews: Handling taxonomy term: %s = %s',
-                        $taxonomy,
-                        $wp->query_vars[$taxonomy]
-                    ));
-                }
-            }
+            
+            // Set query vars for archive
+            $wp->query_vars['post_type'] = 'parfume';
+            $wp->query_vars['taxonomy'] = $taxonomy;
+            $wp->is_tax = true;
+            $wp->is_archive = true;
         }
     }
     
     /**
-     * Load template for taxonomy pages
+     * Load taxonomy template
      * 
      * @param string $template Current template path
      * @return string Modified template path
      */
     public function load_template($template) {
-        global $wp_query;
+        // Проверка дали има валидна конфигурация
+        if (empty($this->taxonomies) || !is_array($this->taxonomies)) {
+            return $template;
+        }
         
-        // Check if this is a taxonomy archive (all terms page)
-        if (isset($wp_query->query_vars['is_taxonomy_archive'])) {
-            $taxonomy = $wp_query->query_vars['is_taxonomy_archive'];
-            $template_file = $this->locate_template('archive-' . $taxonomy . '.php');
+        // Check if this is a taxonomy archive page
+        if (isset($_GET['taxonomy_archive']) && in_array($_GET['taxonomy_archive'], $this->taxonomies)) {
+            $taxonomy = sanitize_text_field($_GET['taxonomy_archive']);
+            
+            // Try taxonomy-specific template
+            $template_file = $this->locate_template('taxonomy-' . $taxonomy . '.php');
             
             if ($template_file) {
                 return $template_file;
@@ -275,63 +276,5 @@ class RewriteHandler {
         $tax_slug = $this->get_taxonomy_slug($taxonomy, $settings);
         
         return home_url('/' . $parfume_slug . '/' . $tax_slug . '/');
-    }
-    
-    /**
-     * Check if current page is taxonomy archive
-     * 
-     * @param string $taxonomy Optional taxonomy name
-     * @return bool
-     */
-    public function is_taxonomy_archive($taxonomy = null) {
-        global $wp_query;
-        
-        if ($taxonomy) {
-            return isset($wp_query->query_vars['is_taxonomy_archive']) && 
-                   $wp_query->query_vars['is_taxonomy_archive'] === $taxonomy;
-        }
-        
-        return isset($wp_query->query_vars['is_taxonomy_archive']);
-    }
-    
-    /**
-     * Get current taxonomy
-     * 
-     * @return string|false
-     */
-    public function get_current_taxonomy() {
-        global $wp_query;
-        
-        if (isset($wp_query->query_vars['is_taxonomy_archive'])) {
-            return $wp_query->query_vars['is_taxonomy_archive'];
-        }
-        
-        if (is_tax($this->taxonomies)) {
-            $queried_object = get_queried_object();
-            return isset($queried_object->taxonomy) ? $queried_object->taxonomy : false;
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Get supported taxonomies
-     * 
-     * @return array
-     */
-    public function get_supported_taxonomies() {
-        return $this->taxonomies;
-    }
-    
-    /**
-     * Flush rewrite rules
-     */
-    public function flush_rules() {
-        $this->add_rewrite_rules();
-        flush_rewrite_rules();
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Parfume Reviews: Rewrite rules flushed');
-        }
     }
 }
