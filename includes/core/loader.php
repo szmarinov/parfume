@@ -9,7 +9,7 @@
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Core;
+namespace ParfumeReviews\Core;
 
 /**
  * Loader Class

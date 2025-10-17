@@ -74,8 +74,8 @@ function parfume_reviews_format_price($price, $currency = 'BGN') {
  * @param int $post_id Post ID
  */
 function parfume_reviews_display_parfume_card($post_id) {
-    $template_loader = new \Parfume_Reviews\Templates\Loader(
-        \Parfume_Reviews\Core\Plugin::get_instance()->get_container()
+    $template_loader = new \ParfumeReviews\Templates\Loader(
+        \ParfumeReviews\Core\Plugin::get_instance()->get_container()
     );
     
     $template_loader->get_template_part('parts/parfume-card', null, ['post_id' => $post_id]);
@@ -242,8 +242,8 @@ function parfume_reviews_get_term_link($taxonomy, $term) {
  * @param array $args Optional arguments
  */
 function parfume_reviews_display_filters($args = []) {
-    $template_loader = new \Parfume_Reviews\Templates\Loader(
-        \Parfume_Reviews\Core\Plugin::get_instance()->get_container()
+    $template_loader = new \ParfumeReviews\Templates\Loader(
+        \ParfumeReviews\Core\Plugin::get_instance()->get_container()
     );
     
     $template_loader->get_template_part('parts/filters', null, $args);
@@ -255,8 +255,8 @@ function parfume_reviews_display_filters($args = []) {
  * @param WP_Query $query Optional custom query
  */
 function parfume_reviews_display_pagination($query = null) {
-    $template_loader = new \Parfume_Reviews\Templates\Loader(
-        \Parfume_Reviews\Core\Plugin::get_instance()->get_container()
+    $template_loader = new \ParfumeReviews\Templates\Loader(
+        \ParfumeReviews\Core\Plugin::get_instance()->get_container()
     );
     
     $template_loader->get_template_part('parts/pagination', null, ['query' => $query]);
@@ -273,7 +273,7 @@ function parfume_reviews_get_comparison_button($post_id = null) {
         $post_id = get_the_ID();
     }
     
-    $container = \Parfume_Reviews\Core\Plugin::get_instance()->get_container();
+    $container = \ParfumeReviews\Core\Plugin::get_instance()->get_container();
     
     if (!$container->has('comparison')) {
         return '';

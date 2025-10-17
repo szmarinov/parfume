@@ -9,9 +9,9 @@
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Templates;
+namespace ParfumeReviews\Templates;
 
-use Parfume_Reviews\Core\Container;
+use ParfumeReviews\Core\Container;
 
 /**
  * Loader Class

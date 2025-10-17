@@ -4,14 +4,14 @@
  * 
  * Main class for managing all taxonomies
  * 
- * @package Parfume_Reviews
+ * @package ParfumeReviews
  * @subpackage Taxonomies
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Taxonomies;
+namespace ParfumeReviews\Taxonomies;
 
-use Parfume_Reviews\Core\Container;
+use ParfumeReviews\Core\Container;
 
 /**
  * TaxonomyManager Class

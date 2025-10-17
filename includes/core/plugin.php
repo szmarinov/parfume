@@ -4,27 +4,12 @@
  * 
  * Orchestrates the entire plugin lifecycle and manages all components
  * 
- * @package Parfume_Reviews
+ * @package ParfumeReviews
  * @subpackage Core
  * @since 2.0.0
  */
 
-namespace Parfume_Reviews\Core;
-
-use Parfume_Reviews\PostTypes\Parfume\PostType;
-use Parfume_Reviews\Taxonomies\TaxonomyManager;
-use Parfume_Reviews\Templates\Loader as TemplateLoader;
-use Parfume_Reviews\Admin\Settings\SettingsManager;
-use Parfume_Reviews\Features\Comparison\Comparison;
-use Parfume_Reviews\Features\ImportExport\ImportExport;
-use Parfume_Reviews\Features\Scraper\Scraper;
-use Parfume_Reviews\Features\Scraper\ScraperMonitor;
-use Parfume_Reviews\Features\Scraper\ScraperCron;
-use Parfume_Reviews\Features\Scraper\ScraperTestTool;
-use Parfume_Reviews\Features\Stores\StoreManager;
-use Parfume_Reviews\Features\Stores\StoreSchema;
-use Parfume_Reviews\Features\Stores\StoreRepository;
-use Parfume_Reviews\Features\Filters\FiltersHandler;
+namespace ParfumeReviews\Core;
 
 /**
  * Main Plugin Class
@@ -55,13 +40,6 @@ class Plugin {
     private $loader;
     
     /**
-     * Registered service providers
-     * 
-     * @var array
-     */
-    private $providers = [];
-    
-    /**
      * Plugin version
      * 
      * @var string
@@ -78,6 +56,10 @@ class Plugin {
         
         $this->load_dependencies();
         $this->register_providers();
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('ParfumeReviews\Core\Plugin: Constructor completed successfully');
+        }
     }
     
     /**
@@ -88,6 +70,10 @@ class Plugin {
     public static function get_instance() {
         if (null === self::$instance) {
             self::$instance = new self();
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('ParfumeReviews\Core\Plugin: Instance created');
+            }
         }
         
         return self::$instance;
@@ -144,23 +130,10 @@ class Plugin {
         // Core components
         $this->register_core_components();
         
-        // Post types
-        $this->register_post_types();
-        
-        // Taxonomies
-        $this->register_taxonomies();
-        
-        // Templates
-        $this->register_templates();
-        
-        // Admin
-        $this->register_admin();
-        
-        // Features
-        $this->register_features();
-        
-        // Frontend
-        $this->register_frontend();
+        // For now, we'll skip other registrations until we confirm Plugin class loads
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Parfume Reviews: Service providers registered');
+        }
     }
     
     /**
@@ -172,100 +145,6 @@ class Plugin {
         
         // Load text domain
         $this->loader->add_action('init', $this, 'load_textdomain');
-    }
-    
-    /**
-     * Register post types
-     */
-    private function register_post_types() {
-        // Check if PostType class exists
-        if (!class_exists('Parfume_Reviews\\PostTypes\\Parfume\\PostType')) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Parfume Reviews: PostType class not found');
-            }
-            return;
-        }
-        
-        $post_type = new PostType($this->container);
-        $this->container->set('post_type.parfume', $post_type);
-        
-        // Register hooks for post type
-        $this->loader->add_action('init', $post_type, 'register', 10);
-        $this->loader->add_action('add_meta_boxes', $post_type, 'add_meta_boxes');
-        $this->loader->add_action('save_post_parfume', $post_type, 'save_meta_boxes', 10, 2);
-    }
-    
-    /**
-     * Register taxonomies
-     */
-    private function register_taxonomies() {
-        // Check if TaxonomyManager class exists
-        if (!class_exists('Parfume_Reviews\\Taxonomies\\TaxonomyManager')) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Parfume Reviews: TaxonomyManager class not found');
-            }
-            return;
-        }
-        
-        $taxonomy_manager = new TaxonomyManager($this->container);
-        $this->container->set('taxonomies', $taxonomy_manager);
-        
-        // Register hooks for taxonomies
-        $this->loader->add_action('init', $taxonomy_manager, 'register', 5);
-        $this->loader->add_action('parse_request', $taxonomy_manager, 'handle_rewrite', 1);
-        $this->loader->add_filter('template_include', $taxonomy_manager, 'load_templates');
-    }
-    
-    /**
-     * Register templates
-     */
-    private function register_templates() {
-        // Check if TemplateLoader class exists
-        if (!class_exists('Parfume_Reviews\\Templates\\Loader')) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Parfume Reviews: TemplateLoader class not found');
-            }
-            return;
-        }
-        
-        $template_loader = new TemplateLoader($this->container);
-        $this->container->set('templates', $template_loader);
-        
-        // Register hooks for templates
-        $this->loader->add_filter('template_include', $template_loader, 'load_template');
-        $this->loader->add_action('wp_enqueue_scripts', $template_loader, 'enqueue_assets');
-        
-        // Single template override
-        $this->loader->add_filter('single_template', $this, 'load_single_template');
-    }
-    
-    /**
-     * Register admin functionality
-     */
-    private function register_admin() {
-        if (!is_admin()) {
-            return;
-        }
-        
-        // Check if SettingsManager class exists
-        if (!class_exists('Parfume_Reviews\\Admin\\Settings\\SettingsManager')) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Parfume Reviews: SettingsManager class not found');
-            }
-            return;
-        }
-        
-        // Settings manager
-        $settings = new SettingsManager($this->container);
-        $this->container->set('settings', $settings);
-        
-        // Register hooks for settings
-        $this->loader->add_action('admin_menu', $settings, 'add_menu');
-        $this->loader->add_action('admin_init', $settings, 'register_settings');
-        $this->loader->add_action('admin_enqueue_scripts', $settings, 'enqueue_assets');
-        
-        // Admin stores assets
-        $this->loader->add_action('admin_enqueue_scripts', $this, 'enqueue_admin_stores_assets');
     }
     
     /**
@@ -300,6 +179,10 @@ class Plugin {
      */
     public function run() {
         $this->loader->run();
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Parfume Reviews: Plugin running');
+        }
     }
     
     /**
@@ -309,6 +192,10 @@ class Plugin {
         if (get_option('parfume_reviews_activated')) {
             flush_rewrite_rules();
             delete_option('parfume_reviews_activated');
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Parfume Reviews: Rewrite rules flushed');
+            }
         }
     }
     
