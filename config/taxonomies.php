@@ -1,108 +1,357 @@
 <?php
 /**
- * Taxonomy Meta Fields Handler
- * Manages custom meta fields for taxonomies (especially notes group field)
+ * Taxonomy Configuration
+ * 
+ * Defines all custom taxonomies for the Parfume post type
+ * 
+ * @package ParfumeReviews
+ * @subpackage Config
+ * @since 2.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class Parfume_Taxonomy_Meta {
-    
-    public function __construct() {
-        // Add form fields
-        add_action('notes_add_form_fields', [$this, 'add_group_field']);
-        add_action('notes_edit_form_fields', [$this, 'edit_group_field']);
-        
-        // Save meta
-        add_action('created_notes', [$this, 'save_group_field']);
-        add_action('edited_notes', [$this, 'save_group_field']);
-        
-        // Add column to taxonomy list
-        add_filter('manage_edit-notes_columns', [$this, 'add_group_column']);
-        add_filter('manage_notes_custom_column', [$this, 'show_group_column'], 10, 3);
-    }
+return [
     
     /**
-     * Add group field to add term form
+     * Марки (Brands)
      */
-    public function add_group_field() {
-        ?>
-        <div class="form-field term-group-wrap">
-            <label for="note-group">Група</label>
-            <select name="note_group" id="note-group" class="postform">
-                <option value="">Изберете група</option>
-                <option value="дървесни">Дървесни</option>
-                <option value="цветни">Цветни</option>
-                <option value="ориенталски">Ориенталски</option>
-                <option value="плодови">Плодови</option>
-                <option value="зелени">Зелени</option>
-                <option value="гурме">Гурме</option>
-                <option value="морски">Морски</option>
-                <option value="ароматни">Ароматни</option>
-            </select>
-            <p class="description">Изберете групата, към която спада нотката</p>
-        </div>
-        <?php
-    }
+    'marki' => [
+        'post_type' => 'parfume',
+        'labels' => [
+            'name' => __('Марки', 'parfume-reviews'),
+            'singular_name' => __('Марка', 'parfume-reviews'),
+            'search_items' => __('Търсене на марки', 'parfume-reviews'),
+            'all_items' => __('Всички марки', 'parfume-reviews'),
+            'parent_item' => __('Родителска марка', 'parfume-reviews'),
+            'parent_item_colon' => __('Родителска марка:', 'parfume-reviews'),
+            'edit_item' => __('Редактиране на марка', 'parfume-reviews'),
+            'update_item' => __('Актуализиране на марка', 'parfume-reviews'),
+            'add_new_item' => __('Добавяне на нова марка', 'parfume-reviews'),
+            'new_item_name' => __('Име на нова марка', 'parfume-reviews'),
+            'menu_name' => __('Марки', 'parfume-reviews'),
+        ],
+        'hierarchical' => true,
+        'public' => true,
+        'publicly_queryable' => true,
+        'show_ui' => true,
+        'show_admin_column' => true,
+        'show_in_nav_menus' => true,
+        'show_tagcloud' => true,
+        'show_in_rest' => true,
+        'rewrite' => [
+            'slug' => 'parfiumi/marki',
+            'with_front' => false,
+            'hierarchical' => true,
+        ],
+        'meta_box_cb' => 'post_categories_meta_box',
+        'default_terms' => [
+            'Chanel',
+            'Dior',
+            'Tom Ford',
+            'Guerlain',
+            'Yves Saint Laurent',
+            'Giorgio Armani',
+            'Givenchy',
+            'Lancôme',
+            'Prada',
+            'Versace',
+            'Dolce & Gabbana',
+            'Bvlgari',
+            'Hermès',
+            'Burberry',
+            'Calvin Klein',
+            'Hugo Boss',
+            'Carolina Herrera',
+            'Viktor & Rolf',
+            'Kilian',
+            'Creed',
+        ],
+    ],
     
     /**
-     * Add group field to edit term form
+     * Пол (Gender)
      */
-    public function edit_group_field($term) {
-        $group = get_term_meta($term->term_id, 'note_group', true);
-        ?>
-        <tr class="form-field term-group-wrap">
-            <th scope="row">
-                <label for="note-group">Група</label>
-            </th>
-            <td>
-                <select name="note_group" id="note-group" class="postform">
-                    <option value="">Изберете група</option>
-                    <option value="дървесни" <?php selected($group, 'дървесни'); ?>>Дървесни</option>
-                    <option value="цветни" <?php selected($group, 'цветни'); ?>>Цветни</option>
-                    <option value="ориенталски" <?php selected($group, 'ориенталски'); ?>>Ориенталски</option>
-                    <option value="плодови" <?php selected($group, 'плодови'); ?>>Плодови</option>
-                    <option value="зелени" <?php selected($group, 'зелени'); ?>>Зелени</option>
-                    <option value="гурме" <?php selected($group, 'гурме'); ?>>Гурме</option>
-                    <option value="морски" <?php selected($group, 'морски'); ?>>Морски</option>
-                    <option value="ароматни" <?php selected($group, 'ароматни'); ?>>Ароматни</option>
-                </select>
-                <p class="description">Изберете групата, към която спада нотката</p>
-            </td>
-        </tr>
-        <?php
-    }
+    'gender' => [
+        'post_type' => 'parfume',
+        'labels' => [
+            'name' => __('Пол', 'parfume-reviews'),
+            'singular_name' => __('Пол', 'parfume-reviews'),
+            'search_items' => __('Търсене по пол', 'parfume-reviews'),
+            'all_items' => __('Всички', 'parfume-reviews'),
+            'parent_item' => null,
+            'parent_item_colon' => null,
+            'edit_item' => __('Редактиране', 'parfume-reviews'),
+            'update_item' => __('Актуализиране', 'parfume-reviews'),
+            'add_new_item' => __('Добавяне', 'parfume-reviews'),
+            'new_item_name' => __('Ново име', 'parfume-reviews'),
+            'menu_name' => __('Пол', 'parfume-reviews'),
+        ],
+        'hierarchical' => false,
+        'public' => true,
+        'publicly_queryable' => true,
+        'show_ui' => true,
+        'show_admin_column' => true,
+        'show_in_nav_menus' => true,
+        'show_tagcloud' => false,
+        'show_in_rest' => true,
+        'rewrite' => [
+            'slug' => 'parfiumi/pol',
+            'with_front' => false,
+            'hierarchical' => false,
+        ],
+        'meta_box_cb' => 'post_tags_meta_box',
+        'default_terms' => [
+            'Мъжки',
+            'Дамски',
+            'Унисекс',
+        ],
+    ],
     
     /**
-     * Save group field
+     * Тип Аромат (Aroma Type)
      */
-    public function save_group_field($term_id) {
-        if (isset($_POST['note_group'])) {
-            update_term_meta($term_id, 'note_group', sanitize_text_field($_POST['note_group']));
-        }
-    }
+    'aroma_type' => [
+        'post_type' => 'parfume',
+        'labels' => [
+            'name' => __('Тип Аромат', 'parfume-reviews'),
+            'singular_name' => __('Тип', 'parfume-reviews'),
+            'search_items' => __('Търсене по тип', 'parfume-reviews'),
+            'all_items' => __('Всички типове', 'parfume-reviews'),
+            'parent_item' => null,
+            'parent_item_colon' => null,
+            'edit_item' => __('Редактиране на тип', 'parfume-reviews'),
+            'update_item' => __('Актуализиране на тип', 'parfume-reviews'),
+            'add_new_item' => __('Добавяне на нов тип', 'parfume-reviews'),
+            'new_item_name' => __('Име на нов тип', 'parfume-reviews'),
+            'menu_name' => __('Тип Аромат', 'parfume-reviews'),
+        ],
+        'hierarchical' => false,
+        'public' => true,
+        'publicly_queryable' => true,
+        'show_ui' => true,
+        'show_admin_column' => true,
+        'show_in_nav_menus' => true,
+        'show_tagcloud' => true,
+        'show_in_rest' => true,
+        'rewrite' => [
+            'slug' => 'parfiumi/tip',
+            'with_front' => false,
+            'hierarchical' => false,
+        ],
+        'meta_box_cb' => 'post_tags_meta_box',
+        'default_terms' => [
+            'Тоалетна вода',
+            'Парфюмна вода',
+            'Парфюм',
+            'Одеколон',
+            'Eau Fraiche',
+        ],
+    ],
     
     /**
-     * Add group column to notes list
+     * Сезон (Season)
      */
-    public function add_group_column($columns) {
-        $columns['group'] = 'Група';
-        return $columns;
-    }
+    'season' => [
+        'post_type' => 'parfume',
+        'labels' => [
+            'name' => __('Сезон', 'parfume-reviews'),
+            'singular_name' => __('Сезон', 'parfume-reviews'),
+            'search_items' => __('Търсене по сезон', 'parfume-reviews'),
+            'all_items' => __('Всички сезони', 'parfume-reviews'),
+            'parent_item' => null,
+            'parent_item_colon' => null,
+            'edit_item' => __('Редактиране на сезон', 'parfume-reviews'),
+            'update_item' => __('Актуализиране на сезон', 'parfume-reviews'),
+            'add_new_item' => __('Добавяне на нов сезон', 'parfume-reviews'),
+            'new_item_name' => __('Име на нов сезон', 'parfume-reviews'),
+            'menu_name' => __('Сезон', 'parfume-reviews'),
+        ],
+        'hierarchical' => false,
+        'public' => true,
+        'publicly_queryable' => true,
+        'show_ui' => true,
+        'show_admin_column' => true,
+        'show_in_nav_menus' => true,
+        'show_tagcloud' => true,
+        'show_in_rest' => true,
+        'rewrite' => [
+            'slug' => 'parfiumi/sezon',
+            'with_front' => false,
+            'hierarchical' => false,
+        ],
+        'meta_box_cb' => 'post_tags_meta_box',
+        'default_terms' => [
+            'Пролет',
+            'Лято',
+            'Есен',
+            'Зима',
+            'Целогодишен',
+        ],
+    ],
     
     /**
-     * Show group in column
+     * Интензитет (Intensity)
      */
-    public function show_group_column($content, $column_name, $term_id) {
-        if ($column_name === 'group') {
-            $group = get_term_meta($term_id, 'note_group', true);
-            return $group ? esc_html($group) : '—';
-        }
-        return $content;
-    }
-}
-
-// Initialize
-new Parfume_Taxonomy_Meta();
+    'intensity' => [
+        'post_type' => 'parfume',
+        'labels' => [
+            'name' => __('Интензитет', 'parfume-reviews'),
+            'singular_name' => __('Интензитет', 'parfume-reviews'),
+            'search_items' => __('Търсене по интензитет', 'parfume-reviews'),
+            'all_items' => __('Всички нива', 'parfume-reviews'),
+            'parent_item' => null,
+            'parent_item_colon' => null,
+            'edit_item' => __('Редактиране на ниво', 'parfume-reviews'),
+            'update_item' => __('Актуализиране на ниво', 'parfume-reviews'),
+            'add_new_item' => __('Добавяне на ново ниво', 'parfume-reviews'),
+            'new_item_name' => __('Име на ново ниво', 'parfume-reviews'),
+            'menu_name' => __('Интензитет', 'parfume-reviews'),
+        ],
+        'hierarchical' => false,
+        'public' => true,
+        'publicly_queryable' => true,
+        'show_ui' => true,
+        'show_admin_column' => true,
+        'show_in_nav_menus' => true,
+        'show_tagcloud' => false,
+        'show_in_rest' => true,
+        'rewrite' => [
+            'slug' => 'parfiumi/intenzitet',
+            'with_front' => false,
+            'hierarchical' => false,
+        ],
+        'meta_box_cb' => 'post_tags_meta_box',
+        'default_terms' => [
+            'Силен',
+            'Среден',
+            'Лек',
+        ],
+    ],
+    
+    /**
+     * Нотки (Notes)
+     */
+    'notes' => [
+        'post_type' => 'parfume',
+        'labels' => [
+            'name' => __('Нотки', 'parfume-reviews'),
+            'singular_name' => __('Нотка', 'parfume-reviews'),
+            'search_items' => __('Търсене на нотки', 'parfume-reviews'),
+            'all_items' => __('Всички нотки', 'parfume-reviews'),
+            'parent_item' => null,
+            'parent_item_colon' => null,
+            'edit_item' => __('Редактиране на нотка', 'parfume-reviews'),
+            'update_item' => __('Актуализиране на нотка', 'parfume-reviews'),
+            'add_new_item' => __('Добавяне на нова нотка', 'parfume-reviews'),
+            'new_item_name' => __('Име на нова нотка', 'parfume-reviews'),
+            'menu_name' => __('Нотки', 'parfume-reviews'),
+        ],
+        'hierarchical' => false,
+        'public' => true,
+        'publicly_queryable' => true,
+        'show_ui' => true,
+        'show_admin_column' => false,
+        'show_in_nav_menus' => true,
+        'show_tagcloud' => true,
+        'show_in_rest' => true,
+        'rewrite' => [
+            'slug' => 'parfiumi/notki',
+            'with_front' => false,
+            'hierarchical' => false,
+        ],
+        'meta_box_cb' => 'post_tags_meta_box',
+        'default_terms' => [
+            // Дървесни
+            'Кедър',
+            'Сандалово дърво',
+            'Пачули',
+            'Ветивер',
+            'Oud',
+            // Цветни
+            'Роза',
+            'Жасмин',
+            'Иланг-иланг',
+            'Лилия',
+            'Лавандула',
+            // Цитрусови
+            'Бергамот',
+            'Лимон',
+            'Портокал',
+            'Грейпфрут',
+            'Мандарина',
+            // Плодови
+            'Ябълка',
+            'Праскова',
+            'Малина',
+            'Круша',
+            'Черна касис',
+            // Ориенталски
+            'Ванилия',
+            'Амбър',
+            'Бензоин',
+            'Ладан',
+            'Мирта',
+            // Зелени
+            'Зелен чай',
+            'Мента',
+            'Босилек',
+            'Мъх',
+            'Папрат',
+            // Подправки
+            'Канела',
+            'Карамфил',
+            'Джинджифил',
+            'Черен пипер',
+            'Кардамон',
+        ],
+    ],
+    
+    /**
+     * Парфюмери (Perfumers)
+     */
+    'perfumer' => [
+        'post_type' => 'parfume',
+        'labels' => [
+            'name' => __('Парфюмери', 'parfume-reviews'),
+            'singular_name' => __('Парфюмер', 'parfume-reviews'),
+            'search_items' => __('Търсене на парфюмери', 'parfume-reviews'),
+            'all_items' => __('Всички парфюмери', 'parfume-reviews'),
+            'parent_item' => null,
+            'parent_item_colon' => null,
+            'edit_item' => __('Редактиране на парфюмер', 'parfume-reviews'),
+            'update_item' => __('Актуализиране на парфюмер', 'parfume-reviews'),
+            'add_new_item' => __('Добавяне на нов парфюмер', 'parfume-reviews'),
+            'new_item_name' => __('Име на нов парфюмер', 'parfume-reviews'),
+            'menu_name' => __('Парфюмери', 'parfume-reviews'),
+        ],
+        'hierarchical' => false,
+        'public' => true,
+        'publicly_queryable' => true,
+        'show_ui' => true,
+        'show_admin_column' => false,
+        'show_in_nav_menus' => true,
+        'show_tagcloud' => false,
+        'show_in_rest' => true,
+        'rewrite' => [
+            'slug' => 'parfiumi/parfumeri',
+            'with_front' => false,
+            'hierarchical' => false,
+        ],
+        'meta_box_cb' => 'post_tags_meta_box',
+        'default_terms' => [
+            'Jacques Polge',
+            'Olivier Polge',
+            'François Demachy',
+            'Christine Nagel',
+            'Alberto Morillas',
+            'Francis Kurkdjian',
+            'Jean-Claude Ellena',
+            'Dominique Ropion',
+            'Pierre Negrin',
+            'Nathalie Feisthauer',
+        ],
+    ],
+];
