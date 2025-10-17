@@ -14,7 +14,7 @@
  * Domain Path: /languages
  */
 
-namespace Parfume_Reviews;
+namespace ParfumeReviews;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -41,8 +41,8 @@ define('PARFUME_REVIEWS_MIN_WP', '5.8');
  * PSR-4 compatible autoloader for plugin classes
  */
 spl_autoload_register(function ($class) {
-    // Project namespace prefix
-    $prefix = 'Parfume_Reviews\\';
+    // Project namespace prefix (БЕЗ underscore!)
+    $prefix = 'ParfumeReviews\\';
     
     // Base directory for the namespace prefix
     $base_dir = PARFUME_REVIEWS_PATH . 'includes/';
@@ -57,12 +57,25 @@ spl_autoload_register(function ($class) {
     $relative_class = substr($class, $len);
     
     // Replace namespace separators with directory separators
-    // Replace underscores with dashes in file names (PSR-4 style)
-    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
+    // Convert to lowercase for file paths
+    $file_path = strtolower(str_replace('\\', '/', $relative_class));
+    $file = $base_dir . $file_path . '.php';
+    
+    // Debug logging
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log("Parfume Reviews Autoloader: Trying to load class '$class' from '$file'");
+    }
     
     // If the file exists, require it
     if (file_exists($file)) {
         require_once $file;
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Parfume Reviews Autoloader: Successfully loaded '$file'");
+        }
+    } else {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Parfume Reviews Autoloader ERROR: File not found - '$file'");
+        }
     }
 });
 
@@ -70,7 +83,14 @@ spl_autoload_register(function ($class) {
  * Load helper functions
  * These are global functions used in templates
  */
-require_once PARFUME_REVIEWS_PATH . 'includes/helpers.php';
+$helpers_file = PARFUME_REVIEWS_PATH . 'includes/helpers.php';
+if (file_exists($helpers_file)) {
+    require_once $helpers_file;
+} else {
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log("Parfume Reviews: helpers.php not found at: $helpers_file");
+    }
+}
 
 /**
  * Check minimum requirements before activation
@@ -97,111 +117,148 @@ function check_requirements() {
         );
     }
     
-    return $errors;
+    // Display errors if any
+    if (!empty($errors)) {
+        deactivate_plugins(PARFUME_REVIEWS_BASENAME);
+        wp_die(
+            '<h1>' . __('Plugin Activation Error', 'parfume-reviews') . '</h1>' .
+            '<p>' . implode('</p><p>', $errors) . '</p>' .
+            '<p><a href="' . admin_url('plugins.php') . '">' . __('&larr; Back to Plugins', 'parfume-reviews') . '</a></p>'
+        );
+    }
 }
+register_activation_hook(__FILE__, __NAMESPACE__ . '\\check_requirements');
 
 /**
- * Display admin notice for requirement errors
- */
-function display_requirement_errors($errors) {
-    ?>
-    <div class="notice notice-error">
-        <p><strong><?php _e('Parfume Reviews Plugin Error:', 'parfume-reviews'); ?></strong></p>
-        <ul>
-            <?php foreach ($errors as $error): ?>
-                <li><?php echo esc_html($error); ?></li>
-            <?php endforeach; ?>
-        </ul>
-    </div>
-    <?php
-}
-
-/**
- * Initialize the plugin
+ * Initialize plugin
  */
 function init() {
-    // Check requirements
-    $errors = check_requirements();
-    
-    if (!empty($errors)) {
-        add_action('admin_notices', function() use ($errors) {
-            display_requirement_errors($errors);
-        });
-        return;
+    // Log initialization
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('Parfume Reviews: Initializing plugin...');
     }
     
-    // Initialize the main plugin class
-    try {
-        $plugin = Core\Plugin::get_instance();
-        $plugin->run();
-    } catch (\Exception $e) {
-        add_action('admin_notices', function() use ($e) {
+    // Check if Plugin class exists
+    if (!class_exists('ParfumeReviews\\Core\\Plugin')) {
+        // Log detailed error
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Parfume Reviews ERROR: Plugin class not found!');
+            error_log('Expected class: ParfumeReviews\\Core\\Plugin');
+            error_log('Expected file: ' . PARFUME_REVIEWS_PATH . 'includes/core/plugin.php');
+            error_log('File exists: ' . (file_exists(PARFUME_REVIEWS_PATH . 'includes/core/plugin.php') ? 'YES' : 'NO'));
+            
+            // List all PHP files in includes/core/
+            $core_dir = PARFUME_REVIEWS_PATH . 'includes/core/';
+            if (is_dir($core_dir)) {
+                $files = scandir($core_dir);
+                error_log('Files in includes/core/: ' . implode(', ', array_filter($files, function($f) { 
+                    return pathinfo($f, PATHINFO_EXTENSION) === 'php'; 
+                })));
+            } else {
+                error_log('Directory not found: ' . $core_dir);
+            }
+        }
+        
+        // Display admin notice
+        add_action('admin_notices', function() {
             ?>
             <div class="notice notice-error">
-                <p>
-                    <strong>Parfume Reviews Plugin Error:</strong>
-                    <?php echo esc_html($e->getMessage()); ?>
-                </p>
+                <p><strong>Parfume Reviews Error:</strong> Plugin class not found. Please check the installation.</p>
+                <p>Expected file: <code><?php echo PARFUME_REVIEWS_PATH; ?>includes/core/plugin.php</code></p>
+                <p>File exists: <strong><?php echo file_exists(PARFUME_REVIEWS_PATH . 'includes/core/plugin.php') ? 'YES' : 'NO'; ?></strong></p>
+                <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+                <p><em>Check wp-content/debug.log for more details</em></p>
+                <?php endif; ?>
             </div>
             <?php
         });
         
-        // Log error if WP_DEBUG is enabled
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Parfume Reviews Error: ' . $e->getMessage());
-        }
-    }
-}
-
-/**
- * Activation hook
- */
-function activate() {
-    // Check requirements before activation
-    $errors = check_requirements();
-    
-    if (!empty($errors)) {
-        wp_die(
-            implode('<br>', $errors),
-            __('Plugin Activation Error', 'parfume-reviews'),
-            ['back_link' => true]
-        );
+        return;
     }
     
+    // Get plugin instance and run
     try {
-        // Store plugin version
-        update_option('parfume_reviews_version', PARFUME_REVIEWS_VERSION);
+        $plugin = \ParfumeReviews\Core\Plugin::get_instance();
+        $plugin->run();
         
-        // Set flag to flush rewrite rules on next init
-        update_option('parfume_reviews_flush_rewrite_rules', 1);
-        
-        // Log activation
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Parfume Reviews: Plugin activated successfully - v' . PARFUME_REVIEWS_VERSION);
+            error_log('Parfume Reviews: Plugin initialized successfully');
         }
     } catch (\Exception $e) {
-        wp_die(
-            $e->getMessage(),
-            __('Plugin Activation Error', 'parfume-reviews'),
-            ['back_link' => true]
-        );
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Parfume Reviews ERROR: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+        }
+        
+        add_action('admin_notices', function() use ($e) {
+            ?>
+            <div class="notice notice-error">
+                <p><strong>Parfume Reviews Error:</strong> <?php echo esc_html($e->getMessage()); ?></p>
+            </div>
+            <?php
+        });
     }
 }
+add_action('plugins_loaded', __NAMESPACE__ . '\\init');
 
 /**
- * Deactivation hook
+ * Plugin activation
+ */
+function activate() {
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('Parfume Reviews: Activating plugin...');
+    }
+    
+    // Check requirements
+    check_requirements();
+    
+    // Initialize plugin
+    if (class_exists('ParfumeReviews\\Core\\Plugin')) {
+        try {
+            $plugin = \ParfumeReviews\Core\Plugin::get_instance();
+            $plugin->run();
+            
+            // Flush rewrite rules
+            flush_rewrite_rules();
+            
+            // Set activation flag
+            update_option('parfume_reviews_activated', true);
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Parfume Reviews: Plugin activated successfully');
+            }
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Parfume Reviews Activation ERROR: ' . $e->getMessage());
+            }
+            
+            deactivate_plugins(PARFUME_REVIEWS_BASENAME);
+            wp_die(
+                '<h1>' . __('Plugin Activation Error', 'parfume-reviews') . '</h1>' .
+                '<p>' . esc_html($e->getMessage()) . '</p>' .
+                '<p><a href="' . admin_url('plugins.php') . '">' . __('&larr; Back to Plugins', 'parfume-reviews') . '</a></p>'
+            );
+        }
+    }
+}
+register_activation_hook(__FILE__, __NAMESPACE__ . '\\activate');
+
+/**
+ * Plugin deactivation
  */
 function deactivate() {
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('Parfume Reviews: Deactivating plugin...');
+    }
+    
     // Flush rewrite rules
     flush_rewrite_rules();
     
-    // Log deactivation
+    // Remove activation flag
+    delete_option('parfume_reviews_activated');
+    
     if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log('Parfume Reviews: Plugin deactivated');
+        error_log('Parfume Reviews: Plugin deactivated successfully');
     }
 }
-
-// Register hooks
-add_action('plugins_loaded', __NAMESPACE__ . '\\init');
-register_activation_hook(__FILE__, __NAMESPACE__ . '\\activate');
 register_deactivation_hook(__FILE__, __NAMESPACE__ . '\\deactivate');
